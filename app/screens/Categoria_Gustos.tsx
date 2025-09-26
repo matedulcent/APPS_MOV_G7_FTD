@@ -1,10 +1,10 @@
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React, { useState } from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Dropdown from "../../components/Dropdown";
 import NavButton from "../../components/NavButton";
-import PedidoCard from "../../components/PedidoCard";
+import PedidoCardBottom from "../../components/PedidoCardBottom";
 import { RootStackParamList } from "../types";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -15,13 +15,13 @@ export default function CategoriaGustosScreen() {
     const previousRoute = "../";
     const nextRoute = "./screens/Detalle_Pedido";
 
-    const [selecciones, setSelecciones] = useState<{
-        [key: string]: string[];
-    }>({
+    const [selecciones, setSelecciones] = useState<{ [key: string]: string[] }>({
         "Gustos Frutales": [],
         "Chocolate / DDL": [],
         "Otras Cosas": [],
     });
+
+    const [pedidoVisible, setPedidoVisible] = useState(false);
 
     const categorias = [
         { label: "Gustos Frutales", options: ["Frutilla", "Banana", "Frambuesa", "Banana Split"] },
@@ -30,82 +30,63 @@ export default function CategoriaGustosScreen() {
     ];
 
     const toggleSeleccion = (categoria: string, opcion: string) => {
-        console.log(`Toggling ${opcion} in ${categoria}`);
         setSelecciones((prev) => {
-            const yaSeleccionado = prev[categoria].includes(opcion);
+            const prevItems = prev[categoria] || [];
+            const yaSeleccionado = prevItems.includes(opcion);
             const nuevasOpciones = yaSeleccionado
-                ? prev[categoria].filter((o) => o !== opcion)
-                : [...prev[categoria], opcion];
+                ? prevItems.filter((o) => o !== opcion)
+                : [...prevItems, opcion];
             return { ...prev, [categoria]: nuevasOpciones };
         });
     };
 
+    // Contador total de productos
+    const totalProductos = Object.values(selecciones).flat().length;
+
     return (
         <View style={styles.container}>
-            {/* Scroll para que todo el contenido sea visible */}
-            <ScrollView contentContainerStyle={{ paddingBottom: 320 }}>
-                {/* Botones de navegación */}
-                <View style={styles.navContainer}>
-                    <NavButton text="Anterior" route={`/${previousRoute.toLowerCase()}`} style={{ margin: 10 }} />
-                    <NavButton text="Siguiente" route={`/${nextRoute.toLowerCase()}`} style={{ margin: 10 }} />
+            <View style={styles.navContainer}>
+                <NavButton text="Anterior" route={`/${previousRoute.toLowerCase()}`} style={{ margin: 10 }} />
+                <NavButton text="Siguiente" route={`/${nextRoute.toLowerCase()}`} style={{ margin: 10 }} />
+            </View>
+
+            {categorias.map((cat) => (
+                <View key={cat.label} style={{ marginBottom: 20 }}>
+                    <Dropdown
+                        label={cat.label}
+                        options={cat.options}
+                        selected={selecciones[cat.label]}
+                        onSelect={(item) => toggleSeleccion(cat.label, item)}
+                    />
                 </View>
+            ))}
 
-                {/* Dropdowns y lista de selecciones */}
-                {categorias.map((cat) => (
-                    <View key={cat.label} style={{ marginBottom: 20 }}>
-                        <Dropdown
-                            label={cat.label}
-                            options={cat.options}
-                            onSelect={(item) => toggleSeleccion(cat.label, item)}
-                        />
+            {/* Barra inferior: toggle para desplegar/retraer carta */}
+            <TouchableOpacity
+                style={styles.triggerBar}
+                onPress={() => setPedidoVisible(!pedidoVisible)}
+            >
+                <Text style={styles.triggerText}>Ver Pedido ({totalProductos})</Text>
+            </TouchableOpacity>
 
-                        <View style={styles.seleccionesContainer}>
-                            {selecciones[cat.label].map((item) => (
-                                <TouchableOpacity
-                                    key={item}
-                                    style={styles.seleccionItem}
-                                    onPress={() => toggleSeleccion(cat.label, item)}
-                                >
-                                    <Text style={styles.seleccionText}>{item}</Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-                    </View>
-                ))}
-            </ScrollView>
-
-            {/* PedidoCard fija abajo */}
-            <PedidoCard selecciones={selecciones || {}} />
+            <PedidoCardBottom selecciones={selecciones} visible={pedidoVisible} />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: "#f5f5f5" },
-    navContainer: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        marginBottom: 20,
-        paddingHorizontal: 20,
-        paddingTop: 20,
+    container: { flex: 1, padding: 20 },
+    navContainer: { flexDirection: "row", justifyContent: "space-between", marginBottom: 20 },
+    triggerBar: {
+        position: "absolute",
+        bottom: 0,
+        left: 0,
+        right: 0,
+        padding: 16,
+        backgroundColor: "#2196f3",
+        alignItems: "center",
+        borderTopLeftRadius: 12,
+        borderTopRightRadius: 12,
     },
-    seleccionesContainer: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        marginTop: 10,
-        gap: 10,
-        paddingHorizontal: 10,
-    },
-    seleccionItem: {
-        paddingVertical: 6,
-        paddingHorizontal: 12,
-        borderWidth: 1,
-        borderColor: "#4caf50",
-        borderRadius: 8,
-        backgroundColor: "#e8f5e9",
-    },
-    seleccionText: {
-        color: "#2e7d32",
-        fontWeight: "bold",
-    },
+    triggerText: { color: "white", fontWeight: "bold" },
 });

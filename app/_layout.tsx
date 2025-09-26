@@ -1,5 +1,4 @@
 // app/_layout.tsx
-import PedidoCard from "@/components/PedidoCard"; // 👈 tu tarjeta de pedido
 import { Stack } from "expo-router";
 import { StyleSheet, View } from "react-native";
 
@@ -10,7 +9,7 @@ export default function Layout() {
       <Stack screenOptions={{ headerShown: false }} />
 
       {/* PedidoCard siempre visible abajo */}
-      <PedidoCard />
+      
     </View>
   );
 }
@@ -20,3 +19,4 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
+//<PedidoCard />

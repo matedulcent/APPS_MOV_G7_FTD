@@ -4,33 +4,36 @@ import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 interface DropdownProps {
     label: string;
     options: string[];
+    selected: string[];
     onSelect: (value: string) => void;
 }
 
-export default function Dropdown({ label, options, onSelect }: DropdownProps) {
+export default function Dropdown({ label, options, selected, onSelect }: DropdownProps) {
     const [open, setOpen] = useState(false);
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { borderColor: selected.length ? "green" : "#ccc" }]}>
             <Pressable style={styles.header} onPress={() => setOpen(!open)}>
-                <Text style={styles.label}>{label}</Text>
+                <Text style={styles.label}>
+                    {label} {selected.length ? `(${selected.length})` : ""}
+                </Text>
             </Pressable>
 
             {open && (
                 <FlatList
                     data={options}
                     keyExtractor={(item) => item}
-                    renderItem={({ item }) => (
-                        <Pressable
-                            style={styles.option}
-                            onPress={() => {
-                                onSelect(item);
-                                setOpen(false);
-                            }}
-                        >
-                            <Text>{item}</Text>
-                        </Pressable>
-                    )}
+                    renderItem={({ item }) => {
+                        const isSelected = selected.includes(item);
+                        return (
+                            <Pressable
+                                style={[styles.option, isSelected && styles.optionSelected]}
+                                onPress={() => onSelect(item)}
+                            >
+                                <Text style={isSelected ? { fontWeight: "bold" } : {}}>{item}</Text>
+                            </Pressable>
+                        );
+                    }}
                 />
             )}
         </View>
@@ -38,8 +41,9 @@ export default function Dropdown({ label, options, onSelect }: DropdownProps) {
 }
 
 const styles = StyleSheet.create({
-    container: { marginVertical: 10, borderWidth: 1, borderRadius: 8 },
+    container: { marginVertical: 10, borderWidth: 2, borderRadius: 8, padding: 2 },
     header: { padding: 12, backgroundColor: "#f2f2f2" },
     label: { fontWeight: "bold" },
     option: { padding: 12, borderTopWidth: 1, borderColor: "#ddd" },
+    optionSelected: { backgroundColor: "#e8f5e9" },
 });
