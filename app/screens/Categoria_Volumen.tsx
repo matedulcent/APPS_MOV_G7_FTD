@@ -1,33 +1,40 @@
-// app/screens/Categoria_Gustos.tsx
-import { useLocalSearchParams, useRouter } from "expo-router";
+// app/screens/Categoria_Volumen.tsx
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Dropdown from "../../components/Dropdown";
 import PedidoCardBottom from "../../components/PedidoCardBottom";
 
-export default function CategoriaGustosScreen() {
-    const { pedido } = useLocalSearchParams<{ pedido?: string }>();
+export default function CategoriaVolumenScreen() {
     const router = useRouter();
 
-    // Parseamos el pedido enviado desde CategoriaVolumen
-    const pedidoInicial: { [key: string]: string[] } = pedido
-        ? JSON.parse(decodeURIComponent(pedido))
-        : {};
-
-    // Estado de selecciones de gustos, inicializamos con el pedido de volúmenes
+    // Selecciones de cantidades por categoría
     const [selecciones, setSelecciones] = useState<{ [key: string]: string[] }>({
-        ...pedidoInicial,
-        "Gustos Frutales": [],
-        "Chocolate / DDL": [],
-        "Otras Cosas": [],
+        "Porciones": [],
+        "Cucuruchos": [],
+        "Vasos": [],
+        "Kilos": [],
     });
 
     const [pedidoVisible, setPedidoVisible] = useState(true);
 
     const categorias = [
-        { label: "Gustos Frutales", options: ["Frutilla", "Banana", "Frambuesa", "Banana Split"] },
-        { label: "Chocolate / DDL", options: ["Chocolate", "DDL", "Choco amargo"] },
-        { label: "Otras Cosas", options: ["Crema americana", "Granizado"] },
+        {
+            label: "Porciones",
+            options: ["1/4 kg", "1/2 kg", "3/4 kg"],
+        },
+        {
+            label: "Cucuruchos",
+            options: ["1 bola", "2 bolas", "3 bolas", "4 bolas"],
+        },
+        {
+            label: "Vasos",
+            options: ["1 gusto", "2 gustos", "3 gustos"],
+        },
+        {
+            label: "Kilos",
+            options: ["1 kg", "2 kg", "3 kg"],
+        },
     ];
 
     const toggleSeleccion = (categoria: string, opcion: string) => {
@@ -43,7 +50,7 @@ export default function CategoriaGustosScreen() {
 
     const handleConfirm = () => {
         const pedidoString = encodeURIComponent(JSON.stringify(selecciones));
-        router.push(`/screens/Detalle_Pedido?pedido=${pedidoString}`);
+        router.push(`/screens/Categoria_Gustos?pedido=${pedidoString}`);
     };
 
     return (
@@ -51,12 +58,11 @@ export default function CategoriaGustosScreen() {
             {/* Botón volver */}
             <Pressable
                 style={styles.backButton}
-                onPress={() => router.push("/screens/Categoria_Volumen")}
+                onPress={() => router.push("/")}
             >
                 <Text style={styles.backButtonText}>← Volver</Text>
             </Pressable>
 
-            {/* Dropdowns de categorías de gustos */}
             {categorias.map((cat) => (
                 <View key={cat.label} style={{ marginBottom: 20 }}>
                     <Dropdown
@@ -68,7 +74,7 @@ export default function CategoriaGustosScreen() {
                 </View>
             ))}
 
-            {/* PedidoCardBottom con todos los productos (volúmenes + gustos) */}
+            {/* PedidoCardBottom */}
             <PedidoCardBottom
                 selecciones={selecciones}
                 visible={pedidoVisible}
