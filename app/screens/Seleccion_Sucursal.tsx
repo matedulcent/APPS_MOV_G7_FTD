@@ -1,5 +1,5 @@
 // app/screens/SeleccionSucursal.tsx
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 
@@ -11,6 +11,7 @@ type Sucursal = {
 
 export default function SeleccionSucursalScreen() {
     const router = useRouter();
+    const { userId } = useLocalSearchParams<{ userId: string }>(); // Recibe el parámetro userId
     const [sucursalSeleccionada, setSucursalSeleccionada] = useState<string | null>(null);
 
     // Lista de sucursales de ejemplo
@@ -22,10 +23,11 @@ export default function SeleccionSucursalScreen() {
 
     const handleSeleccion = (sucursal: Sucursal) => {
         setSucursalSeleccionada(sucursal.id);
-        // Navegar a la pantalla de volumen pasando la sucursal seleccionada
+
+        // Navegar a la pantalla de volumen pasando la sucursal y userId
         router.push({
             pathname: "/screens/Categoria_Envase",
-            params: { sucursal: sucursal.id },
+            params: { sucursal: sucursal.id, userId },
         });
     };
 

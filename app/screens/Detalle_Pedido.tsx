@@ -32,7 +32,7 @@ export default function DetallePedidoScreen() {
                 {/* Botón para confirmar pedido */}
                 <Pressable
                     style={[styles.button, { backgroundColor: "#ff5722", marginTop: 12 }]}
-                    onPress={() => router.push("/screens/NumeroOrden")}
+                    onPress={() => router.push("/screens/Numero_Orden")}
                 >
                     <Text style={[styles.buttonText, { fontSize: 18 }]}>Confirmar Pedido</Text>
                 </Pressable>

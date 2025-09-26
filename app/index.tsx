@@ -9,7 +9,7 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <Pressable
         style={styles.button}
-        onPress={() => router.push("./screens/SeleccionSucursal")}
+        onPress={() => router.push("./screens/Seleccion_Sucursal")}
       >
         <Text style={styles.buttonText}>Elegir Sucursal</Text>
       </Pressable>
