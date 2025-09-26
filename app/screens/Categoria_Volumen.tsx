@@ -7,7 +7,8 @@ import Dropdown from "../../components/Dropdown";
 export default function CategoriaVolumenScreen() {
     const router = useRouter();
 
-    const [selecciones, setSelecciones] = useState<{ [key: string]: string[] }>({
+    // Selecciones con cantidades
+    const [selecciones, setSelecciones] = useState<{ [key: string]: { opcion: string; cantidad: number }[] }>({
         Cucuruchos: [],
         Kilos: [],
         Vasos: [],
@@ -21,18 +22,35 @@ export default function CategoriaVolumenScreen() {
 
     // Diccionario de cantidad de sabores por categoría
     const cantidadSabores: { [key: string]: number } = {
-        Cucuruchos: 0, // se determina por el número de bolas seleccionado
-        Kilos: 4,      // siempre 4 sabores
-        Vasos: 0,      // se determina por el número de bolas seleccionado
+        Cucuruchos: 0,
+        Kilos: 4,
+        Vasos: 0,
     };
 
     const toggleSeleccion = (categoria: string, opcion: string) => {
         setSelecciones((prev) => {
             const prevItems = prev[categoria] || [];
-            const yaSeleccionado = prevItems.includes(opcion);
-            const nuevasOpciones = yaSeleccionado
-                ? prevItems.filter((o) => o !== opcion)
-                : [...prevItems, opcion];
+            const existe = prevItems.find((i) => i.opcion === opcion);
+
+            let nuevasOpciones;
+            if (existe) {
+                // Si ya estaba, lo sacamos
+                nuevasOpciones = prevItems.filter((i) => i.opcion !== opcion);
+            } else {
+                // Lo agregamos con cantidad inicial 1
+                nuevasOpciones = [...prevItems, { opcion, cantidad: 1 }];
+            }
+            return { ...prev, [categoria]: nuevasOpciones };
+        });
+    };
+
+    const updateCantidad = (categoria: string, opcion: string, delta: number) => {
+        setSelecciones((prev) => {
+            const nuevasOpciones = prev[categoria].map((item) =>
+                item.opcion === opcion
+                    ? { ...item, cantidad: Math.max(1, item.cantidad + delta) }
+                    : item
+            );
             return { ...prev, [categoria]: nuevasOpciones };
         });
     };
@@ -41,15 +59,15 @@ export default function CategoriaVolumenScreen() {
         const pedidoFinal: { [key: string]: number } = {};
 
         Object.entries(selecciones).forEach(([categoria, items]) => {
-            items.forEach((item, index) => {
-                let cantidad = cantidadSabores[categoria] || 1;
+            items.forEach(({ opcion, cantidad }, index) => {
+                let sabores = cantidadSabores[categoria] || 1;
 
-                // Si es Cucuruchos o Vasos, tomamos la cantidad del string
                 if (categoria === "Cucuruchos" || categoria === "Vasos") {
-                    cantidad = parseInt(item[0]);
+                    sabores = parseInt(opcion[0]);
                 }
 
-                pedidoFinal[`${categoria} ${index + 1} (${item})`] = cantidad;
+                // Guardamos multiplicado por la cantidad elegida
+                pedidoFinal[`${categoria} ${index + 1} (${opcion})`] = sabores * cantidad;
             });
         });
 
@@ -68,9 +86,31 @@ export default function CategoriaVolumenScreen() {
                     <Dropdown
                         label={cat.label}
                         options={cat.options}
-                        selected={selecciones[cat.label]}
+                        selected={selecciones[cat.label].map((i) => i.opcion)}
                         onSelect={(item) => toggleSeleccion(cat.label, item)}
                     />
+
+                    {/* Mostrar seleccionados con contador */}
+                    {selecciones[cat.label].map(({ opcion, cantidad }) => (
+                        <View key={opcion} style={styles.itemRow}>
+                            <Text style={styles.itemText}>{opcion}</Text>
+                            <View style={styles.counter}>
+                                <Pressable
+                                    style={styles.counterButton}
+                                    onPress={() => updateCantidad(cat.label, opcion, -1)}
+                                >
+                                    <Text style={styles.counterText}>−</Text>
+                                </Pressable>
+                                <Text style={styles.counterValue}>{cantidad}</Text>
+                                <Pressable
+                                    style={styles.counterButton}
+                                    onPress={() => updateCantidad(cat.label, opcion, 1)}
+                                >
+                                    <Text style={styles.counterText}>＋</Text>
+                                </Pressable>
+                            </View>
+                        </View>
+                    ))}
                 </View>
             ))}
 
@@ -92,11 +132,36 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     backButtonText: { fontSize: 16, fontWeight: "bold" },
+    itemRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginTop: 8,
+        padding: 8,
+        borderWidth: 1,
+        borderColor: "#ddd",
+        borderRadius: 6,
+    },
+    itemText: { fontSize: 16 },
+    counter: {
+        flexDirection: "row",
+        alignItems: "center",
+    },
+    counterButton: {
+        backgroundColor: "#eee",
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 4,
+        marginHorizontal: 4,
+    },
+    counterText: { fontSize: 18, fontWeight: "bold" },
+    counterValue: { fontSize: 16, fontWeight: "bold", minWidth: 20, textAlign: "center" },
     button: {
         backgroundColor: "#6200ee",
         padding: 12,
         borderRadius: 8,
         alignItems: "center",
+        marginTop: 20,
     },
     buttonText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
 });
