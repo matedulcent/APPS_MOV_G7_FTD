@@ -1,4 +1,4 @@
-// app/screens/Categoria_Volumen.tsx
+import { Ionicons } from "@expo/vector-icons"; // importamos los iconos
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -7,7 +7,8 @@ import Dropdown from "../../components/Dropdown";
 export default function CategoriaVolumenScreen() {
     const router = useRouter();
 
-    const [selecciones, setSelecciones] = useState<{ [key: string]: string[] }>({
+    // Selecciones con cantidades
+    const [selecciones, setSelecciones] = useState<{ [key: string]: { opcion: string; cantidad: number }[] }>({
         Cucuruchos: [],
         Kilos: [],
         Vasos: [],
@@ -19,20 +20,34 @@ export default function CategoriaVolumenScreen() {
         { label: "Vasos", options: ["1 bola", "2 bolas", "3 bolas", "4 bolas"] },
     ];
 
-    // Diccionario de cantidad de sabores por categoría
     const cantidadSabores: { [key: string]: number } = {
-        Cucuruchos: 0, // se determina por el número de bolas seleccionado
-        Kilos: 4,      // siempre 4 sabores
-        Vasos: 0,      // se determina por el número de bolas seleccionado
+        Cucuruchos: 0,
+        Kilos: 4,
+        Vasos: 0,
     };
 
     const toggleSeleccion = (categoria: string, opcion: string) => {
         setSelecciones((prev) => {
             const prevItems = prev[categoria] || [];
-            const yaSeleccionado = prevItems.includes(opcion);
-            const nuevasOpciones = yaSeleccionado
-                ? prevItems.filter((o) => o !== opcion)
-                : [...prevItems, opcion];
+            const existe = prevItems.find((i) => i.opcion === opcion);
+
+            let nuevasOpciones;
+            if (existe) {
+                nuevasOpciones = prevItems.filter((i) => i.opcion !== opcion);
+            } else {
+                nuevasOpciones = [...prevItems, { opcion, cantidad: 1 }];
+            }
+            return { ...prev, [categoria]: nuevasOpciones };
+        });
+    };
+
+    const updateCantidad = (categoria: string, opcion: string, delta: number) => {
+        setSelecciones((prev) => {
+            const nuevasOpciones = prev[categoria].map((item) =>
+                item.opcion === opcion
+                    ? { ...item, cantidad: Math.max(1, item.cantidad + delta) }
+                    : item
+            );
             return { ...prev, [categoria]: nuevasOpciones };
         });
     };
@@ -41,15 +56,15 @@ export default function CategoriaVolumenScreen() {
         const pedidoFinal: { [key: string]: number } = {};
 
         Object.entries(selecciones).forEach(([categoria, items]) => {
-            items.forEach((item, index) => {
-                let cantidad = cantidadSabores[categoria] || 1;
-
-                // Si es Cucuruchos o Vasos, tomamos la cantidad del string
+            items.forEach(({ opcion, cantidad }) => {
+                let sabores = cantidadSabores[categoria] || 1;
                 if (categoria === "Cucuruchos" || categoria === "Vasos") {
-                    cantidad = parseInt(item[0]);
+                    sabores = parseInt(opcion[0]);
                 }
 
-                pedidoFinal[`${categoria} ${index + 1} (${item})`] = cantidad;
+                for (let i = 1; i <= cantidad; i++) {
+                    pedidoFinal[`${categoria} ${i} (${opcion})`] = sabores;
+                }
             });
         });
 
@@ -59,8 +74,9 @@ export default function CategoriaVolumenScreen() {
 
     return (
         <View style={styles.container}>
+            {/* Flecha de volver */}
             <Pressable style={styles.backButton} onPress={() => router.back()}>
-                <Text style={styles.backButtonText}>← Volver</Text>
+                <Ionicons name="arrow-back" size={24} color="black" />
             </Pressable>
 
             {categorias.map((cat) => (
@@ -68,9 +84,30 @@ export default function CategoriaVolumenScreen() {
                     <Dropdown
                         label={cat.label}
                         options={cat.options}
-                        selected={selecciones[cat.label]}
+                        selected={selecciones[cat.label].map((i) => i.opcion)}
                         onSelect={(item) => toggleSeleccion(cat.label, item)}
                     />
+
+                    {selecciones[cat.label].map(({ opcion, cantidad }) => (
+                        <View key={opcion} style={styles.itemRow}>
+                            <Text style={styles.itemText}>{opcion}</Text>
+                            <View style={styles.counter}>
+                                <Pressable
+                                    style={styles.counterButton}
+                                    onPress={() => updateCantidad(cat.label, opcion, -1)}
+                                >
+                                    <Text style={styles.counterText}>−</Text>
+                                </Pressable>
+                                <Text style={styles.counterValue}>{cantidad}</Text>
+                                <Pressable
+                                    style={styles.counterButton}
+                                    onPress={() => updateCantidad(cat.label, opcion, 1)}
+                                >
+                                    <Text style={styles.counterText}>＋</Text>
+                                </Pressable>
+                            </View>
+                        </View>
+                    ))}
                 </View>
             ))}
 
@@ -86,17 +123,38 @@ const styles = StyleSheet.create({
     backButton: {
         marginBottom: 20,
         padding: 8,
-        backgroundColor: "#ccc",
         borderRadius: 6,
-        width: 100,
+        width: 50,
         alignItems: "center",
+        justifyContent: "center",
     },
-    backButtonText: { fontSize: 16, fontWeight: "bold" },
+    itemRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginTop: 8,
+        padding: 8,
+        borderWidth: 1,
+        borderColor: "#ddd",
+        borderRadius: 6,
+    },
+    itemText: { fontSize: 16 },
+    counter: { flexDirection: "row", alignItems: "center" },
+    counterButton: {
+        backgroundColor: "#eee",
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 4,
+        marginHorizontal: 4,
+    },
+    counterText: { fontSize: 18, fontWeight: "bold" },
+    counterValue: { fontSize: 16, fontWeight: "bold", minWidth: 20, textAlign: "center" },
     button: {
         backgroundColor: "#6200ee",
         padding: 12,
         borderRadius: 8,
         alignItems: "center",
+        marginTop: 20,
     },
     buttonText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
 });
