@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { Animated, Dimensions, PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 type PedidoCardProps = {
-    selecciones?: { [key: string]: string[] };
+    selecciones?: { [key: string]: string[] | number }; // ahora puede ser string[] o cantidad final
     visible: boolean;
     onConfirm?: () => void;
 };
@@ -13,7 +13,16 @@ export default function PedidoCardBottom({ selecciones = {}, visible, onConfirm 
     const maxHeight = screenHeight / 2;
     const translateY = useRef(new Animated.Value(screenHeight - peekHeight)).current;
 
-    const productosSeleccionados = Object.values(selecciones).flat();
+    // Transformamos el diccionario en un array de strings con cantidad si es un objeto
+    const productosSeleccionados: string[] = Object.entries(selecciones).map(([key, value]) => {
+        if (typeof value === "number") {
+            return `${key} - ${value} sabor${value > 1 ? "es" : ""}`;
+        } else if (Array.isArray(value)) {
+            return `${key} (${value.join(", ")})`;
+        } else {
+            return key;
+        }
+    });
 
     const animateTo = (toValue: number) => {
         Animated.spring(translateY, {
