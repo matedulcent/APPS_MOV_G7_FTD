@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { Animated, Dimensions, PanResponder, StyleSheet, Text, View } from "react-native";
+import { Animated, Dimensions, PanResponder, ScrollView, StyleSheet, Text, View } from "react-native";
 
 type PedidoCardProps = {
     selecciones?: { [key: string]: string[] };
@@ -8,30 +8,35 @@ type PedidoCardProps = {
 
 export default function PedidoCardBottom({ selecciones = {}, visible }: PedidoCardProps) {
     const screenHeight = Dimensions.get("window").height;
-    const translateY = useRef(new Animated.Value(screenHeight)).current;
+    const peekHeight = 60; // altura mínima visible
+    const maxHeight = screenHeight / 2; // hasta media pantalla
+    const translateY = useRef(new Animated.Value(screenHeight - peekHeight)).current;
 
     const productosSeleccionados = Object.entries(selecciones)
         .flatMap(([categoria, items]) => items.map((i) => ({ categoria, item: i })));
 
-    // Animación de apertura/cierre
-    useEffect(() => {
+    const animateTo = (toValue: number) => {
         Animated.spring(translateY, {
-            toValue: visible ? screenHeight - 300 : screenHeight,
+            toValue,
             useNativeDriver: true,
+            bounciness: 12, // efecto de resorte más visible
+            speed: 12,
         }).start();
+    };
+
+    useEffect(() => {
+        animateTo(visible ? screenHeight - maxHeight : screenHeight - peekHeight);
     }, [visible]);
 
-    // Drag para cerrar
     const panResponder = PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onPanResponderMove: (_, gestureState) => {
-            translateY.setValue(Math.max(screenHeight - 400, screenHeight - 300 + gestureState.dy));
+            const newY = Math.min(screenHeight - peekHeight, Math.max(screenHeight - maxHeight, screenHeight - peekHeight + gestureState.dy));
+            translateY.setValue(newY);
         },
         onPanResponderRelease: (_, gestureState) => {
-            Animated.spring(translateY, {
-                toValue: gestureState.dy > 50 ? screenHeight : screenHeight - 300,
-                useNativeDriver: true,
-            }).start();
+            const shouldClose = gestureState.dy > 50; // si arrastró hacia abajo
+            animateTo(shouldClose ? screenHeight - peekHeight : screenHeight - maxHeight);
         },
     });
 
@@ -40,8 +45,12 @@ export default function PedidoCardBottom({ selecciones = {}, visible }: PedidoCa
             style={[styles.card, { transform: [{ translateY }] }]}
             {...panResponder.panHandlers}
         >
+            {/* Muesca tipo ticket */}
+            <View style={styles.ticketNotch} />
             <Text style={styles.title}>Pedido</Text>
-            <View style={styles.content}>
+
+            {/* Scroll de productos */}
+            <ScrollView style={styles.content} showsVerticalScrollIndicator={true}>
                 {productosSeleccionados.length ? (
                     productosSeleccionados.map(({ categoria, item }) => (
                         <Text key={`${categoria}-${item}`} style={styles.item}>
@@ -51,7 +60,7 @@ export default function PedidoCardBottom({ selecciones = {}, visible }: PedidoCa
                 ) : (
                     <Text>No hay productos seleccionados</Text>
                 )}
-            </View>
+            </ScrollView>
         </Animated.View>
     );
 }
@@ -59,20 +68,32 @@ export default function PedidoCardBottom({ selecciones = {}, visible }: PedidoCa
 const styles = StyleSheet.create({
     card: {
         position: "absolute",
-        left: 0,
-        right: 0,
-        height: 300,
-        backgroundColor: "white",
+        left: 16,
+        right: 16,
+        height: Dimensions.get("window").height / 2, // media pantalla
+        backgroundColor: "#fff8e1",
         borderTopLeftRadius: 16,
         borderTopRightRadius: 16,
         padding: 16,
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: -2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        shadowOffset: { width: 0, height: -3 },
+        shadowOpacity: 0.15,
+        shadowRadius: 5,
         elevation: 5,
+        borderWidth: 1,
+        borderColor: "#ffd54f",
     },
-    title: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
-    content: {},
-    item: { marginBottom: 6 },
+    ticketNotch: {
+        width: 40,
+        height: 5,
+        backgroundColor: "#ffd54f",
+        borderRadius: 3,
+        alignSelf: "center",
+        marginBottom: 10,
+    },
+    title: { fontSize: 20, fontWeight: "bold", marginBottom: 12, textAlign: "center" },
+    content: {
+        maxHeight: Dimensions.get("window").height / 2 - 60, // permite scroll dentro del ticket
+    },
+    item: { marginBottom: 8, fontSize: 16 },
 });

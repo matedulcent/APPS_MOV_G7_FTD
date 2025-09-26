@@ -1,7 +1,7 @@
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React, { useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import Dropdown from "../../components/Dropdown";
 import NavButton from "../../components/NavButton";
 import PedidoCardBottom from "../../components/PedidoCardBottom";
@@ -40,9 +40,6 @@ export default function CategoriaGustosScreen() {
         });
     };
 
-    // Contador total de productos
-    const totalProductos = Object.values(selecciones).flat().length;
-
     return (
         <View style={styles.container}>
             <View style={styles.navContainer}>
@@ -61,14 +58,7 @@ export default function CategoriaGustosScreen() {
                 </View>
             ))}
 
-            {/* Barra inferior: toggle para desplegar/retraer carta */}
-            <TouchableOpacity
-                style={styles.triggerBar}
-                onPress={() => setPedidoVisible(!pedidoVisible)}
-            >
-                <Text style={styles.triggerText}>Ver Pedido ({totalProductos})</Text>
-            </TouchableOpacity>
-
+            {/* PedidoCardBottom maneja su propio trigger y animación */}
             <PedidoCardBottom selecciones={selecciones} visible={pedidoVisible} />
         </View>
     );
@@ -77,16 +67,4 @@ export default function CategoriaGustosScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1, padding: 20 },
     navContainer: { flexDirection: "row", justifyContent: "space-between", marginBottom: 20 },
-    triggerBar: {
-        position: "absolute",
-        bottom: 0,
-        left: 0,
-        right: 0,
-        padding: 16,
-        backgroundColor: "#2196f3",
-        alignItems: "center",
-        borderTopLeftRadius: 12,
-        borderTopRightRadius: 12,
-    },
-    triggerText: { color: "white", fontWeight: "bold" },
 });
