@@ -2,18 +2,35 @@ import React, { useEffect, useRef } from "react";
 import { Animated, Dimensions, PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 type PedidoCardProps = {
-    selecciones?: { [key: string]: string[] };
+    selecciones?: { [key: string]: string[] | number };
     visible: boolean;
     onConfirm?: () => void;
+    currentIndex?: number;   // índice del volumen actual
+    totalVolumenes?: number; // cantidad total de volúmenes
 };
 
-export default function PedidoCardBottom({ selecciones = {}, visible, onConfirm }: PedidoCardProps) {
+export default function PedidoCardBottom({
+    selecciones = {},
+    visible,
+    onConfirm,
+    currentIndex = 0,
+    totalVolumenes = 1,
+}: PedidoCardProps) {
     const screenHeight = Dimensions.get("window").height;
     const peekHeight = 60;
     const maxHeight = screenHeight / 2;
     const translateY = useRef(new Animated.Value(screenHeight - peekHeight)).current;
 
-    const productosSeleccionados = Object.values(selecciones).flat();
+    // Transformamos el diccionario en estructura jerárquica
+    const productosJerarquicos = Object.entries(selecciones).map(([key, value]) => {
+        if (typeof value === "number") {
+            return { nombre: key, subitems: Array.from({ length: value }, (_, i) => `Sabor ${i + 1}`) };
+        } else if (Array.isArray(value)) {
+            return { nombre: key, subitems: value };
+        } else {
+            return { nombre: key, subitems: [] };
+        }
+    });
 
     const animateTo = (toValue: number) => {
         Animated.spring(translateY, {
@@ -40,15 +57,26 @@ export default function PedidoCardBottom({ selecciones = {}, visible, onConfirm 
         },
     });
 
+    // Texto dinámico del botón
+    const botonTexto =
+        currentIndex < (totalVolumenes - 1)
+            ? "Confirmar Sabores"
+            : "Confirmar Pedido";
+
     return (
         <Animated.View style={[styles.card, { transform: [{ translateY }] }]} {...panResponder.panHandlers}>
             <View style={styles.ticketNotch} />
             <Text style={styles.title}>Pedido</Text>
 
             <ScrollView style={styles.content} showsVerticalScrollIndicator={true}>
-                {productosSeleccionados.length ? (
-                    productosSeleccionados.map((item, i) => (
-                        <Text key={i} style={styles.item}>🍦 {item}</Text>
+                {productosJerarquicos.length ? (
+                    productosJerarquicos.map((prod, i) => (
+                        <View key={i} style={{ marginBottom: 12 }}>
+                            <Text style={styles.itemTitle}>🍦 {prod.nombre}</Text>
+                            {prod.subitems.map((sub, j) => (
+                                <Text key={j} style={styles.subItem}>• {sub}</Text>
+                            ))}
+                        </View>
                     ))
                 ) : (
                     <Text>No hay productos seleccionados</Text>
@@ -57,7 +85,7 @@ export default function PedidoCardBottom({ selecciones = {}, visible, onConfirm 
 
             {onConfirm && (
                 <Pressable style={[styles.button, { backgroundColor: "#6200ee" }]} onPress={onConfirm}>
-                    <Text style={styles.buttonText}>Confirmar Pedido</Text>
+                    <Text style={styles.buttonText}>{botonTexto}</Text>
                 </Pressable>
             )}
         </Animated.View>
@@ -92,7 +120,8 @@ const styles = StyleSheet.create({
     },
     title: { fontSize: 20, fontWeight: "bold", marginBottom: 12, textAlign: "center" },
     content: { maxHeight: Dimensions.get("window").height / 2 - 100 },
-    item: { marginBottom: 8, fontSize: 16 },
+    itemTitle: { fontSize: 16, fontWeight: "bold", marginBottom: 4 },
+    subItem: { marginLeft: 12, fontSize: 14, marginBottom: 2 },
     button: {
         padding: 12,
         borderRadius: 8,
