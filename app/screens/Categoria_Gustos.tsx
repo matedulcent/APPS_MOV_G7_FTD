@@ -1,9 +1,9 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import Dropdown from "../../components/Dropdown";
 import PedidoCardBottom from "../../components/PedidoCardBottom";
+import ScreenHeader from "../../components/ScreenHeader";
 import SearchBar from "../../components/SearchBar";
 
 export default function CategoriaGustosScreen() {
@@ -73,15 +73,11 @@ export default function CategoriaGustosScreen() {
     return (
         <View style={styles.container}>
             {/* HEADER */}
-            <View style={styles.header}>
-                <Pressable onPress={() => router.back()} style={styles.iconButton}>
-                    <Ionicons name="arrow-back" size={24} color="black" />
-                </Pressable>
-                <Text style={styles.title}>Categorías de Gustos</Text>
-                <Pressable onPress={() => setShowSearch(!showSearch)} style={styles.iconButton}>
-                    <Ionicons name="search" size={24} color="black" />
-                </Pressable>
-            </View>
+            <ScreenHeader
+                title="Categorías de Gustos"
+                showSearch={showSearch}
+                onToggleSearch={() => setShowSearch(!showSearch)}
+            />
 
             {/* Banner */}
             <Text style={styles.banner}>

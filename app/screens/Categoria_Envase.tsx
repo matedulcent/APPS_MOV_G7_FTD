@@ -1,8 +1,9 @@
-import { Ionicons } from "@expo/vector-icons"; // importamos los iconos
+// app/screens/Categoria_Volumen.tsx
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Dropdown from "../../components/Dropdown";
+import ScreenHeader from "../../components/ScreenHeader";
 
 export default function CategoriaVolumenScreen() {
     const router = useRouter();
@@ -74,10 +75,8 @@ export default function CategoriaVolumenScreen() {
 
     return (
         <View style={styles.container}>
-            {/* Flecha de volver */}
-            <Pressable style={styles.backButton} onPress={() => router.back()}>
-                <Ionicons name="arrow-back" size={24} color="black" />
-            </Pressable>
+            {/* HEADER modular */}
+            <ScreenHeader title="Seleccionar Envase" />
 
             {categorias.map((cat) => (
                 <View key={cat.label} style={{ marginBottom: 20 }}>
@@ -120,14 +119,6 @@ export default function CategoriaVolumenScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, padding: 20 },
-    backButton: {
-        marginBottom: 20,
-        padding: 8,
-        borderRadius: 6,
-        width: 50,
-        alignItems: "center",
-        justifyContent: "center",
-    },
     itemRow: {
         flexDirection: "row",
         justifyContent: "space-between",
