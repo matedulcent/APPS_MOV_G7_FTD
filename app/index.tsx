@@ -1,44 +1,36 @@
 // app/index.tsx
-import { Link } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import NavButton from "@/components/NavButton";
+import { StyleSheet, Text, View } from "react-native";
 
 export default function HomeScreen() {
+  // Definimos la ruta correcta para Expo Router
+  const nextRoute = "./screens/categoria_gustos"; // solo ruta relativa en minúsculas
+
   return (
     <View style={styles.container}>
-      {/* Botón arriba a la derecha */}
-      <View style={styles.header}>
-        <Link href="/explore" asChild>
-          <Pressable style={styles.button}>
-            <Text style={styles.buttonText}>➡ Ir a Explore</Text>
-          </Pressable>
-        </Link>
+      <View style={styles.navContainer}>
+        <NavButton
+          text="Siguiente"
+          route={`/${nextRoute}`} // ya está en el formato correcto
+          style={{ margin: 10 }}
+        />
       </View>
-
       <Text style={styles.text}>🏠 Esta es la pantalla Home</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "flex-start",
-    padding: 16,
-    paddingTop: 50, // margen superior
+  container: { flex: 1, justifyContent: "flex-start", padding: 16, paddingTop: 50 },
+  navContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 20,
   },
   header: {
     flexDirection: "row",
     justifyContent: "flex-end",
     marginBottom: 20,
-  },
-  button: {
-    backgroundColor: "#6200ee",
-    padding: 10,
-    borderRadius: 8,
-  },
-  buttonText: {
-    color: "white",
-    fontWeight: "bold",
   },
   text: {
     fontSize: 20,
