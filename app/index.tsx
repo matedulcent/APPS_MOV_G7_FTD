@@ -10,7 +10,7 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <NavButton
         text="Ir a Gustos"
-        onPress={() => router.push("/screens/Categoria_Gustos")}
+        onPress={() => router.push("/screens/Categoria_Volumen")}
       />
       <Text style={styles.text}>🏠 Esta es la pantalla Home</Text>
     </View>
