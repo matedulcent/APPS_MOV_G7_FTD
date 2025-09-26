@@ -1,40 +1,43 @@
-// components/PedidoCard.tsx
 import { useState } from "react";
-import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 
 type PedidoCardProps = {
-    selecciones: { [categoria: string]: string[] };
-    total?: number;
+    selecciones?: { [key: string]: string[] }; // opcional
 };
 
-export default function PedidoCard({ selecciones, total = 0 }: PedidoCardProps) {
+export default function PedidoCard({ selecciones = {} }: PedidoCardProps) {
     const [expanded, setExpanded] = useState(false);
+
+    const safeSelecciones = selecciones || {}; // asegurar objeto
+    const total = Object.values(safeSelecciones).reduce(
+        (acc, items) => acc + items.length * 1000,
+        0
+    );
 
     return (
         <Animated.View
-            style={[
-                styles.card,
-                expanded ? styles.expanded : styles.collapsed,
-            ]}
+            style={[styles.card, expanded ? styles.expanded : styles.collapsed]}
         >
             <Pressable onPress={() => setExpanded(!expanded)} style={styles.header}>
-                <Text style={styles.title}>Pedido</Text>
+                <Text style={styles.title}>Pedido {expanded ? "▲" : "▼"}</Text>
             </Pressable>
 
             {expanded && (
-                <ScrollView style={styles.content}>
-                    {Object.entries(selecciones).map(([categoria, items]) => (
-                        items.length > 0 && (
-                            <View key={categoria} style={{ marginBottom: 10 }}>
+                <View style={styles.content}>
+                    {Object.entries(safeSelecciones).map(([categoria, items]) =>
+                        items.length > 0 ? (
+                            <View key={categoria} style={{ marginBottom: 8 }}>
                                 <Text style={styles.categoria}>{categoria}:</Text>
                                 {items.map((item) => (
-                                    <Text key={item} style={styles.item}>🍦 {item}</Text>
+                                    <Text key={`${categoria}-${item}`} style={styles.item}>
+                                        🍦 {item}
+                                    </Text>
                                 ))}
                             </View>
-                        )
-                    ))}
+                        ) : null
+                    )}
                     <Text style={styles.total}>Total: ${total}</Text>
-                </ScrollView>
+                </View>
             )}
         </Animated.View>
     );
@@ -73,7 +76,6 @@ const styles = StyleSheet.create({
     },
     categoria: {
         fontWeight: "bold",
-        marginBottom: 4,
     },
     item: {
         marginLeft: 8,
