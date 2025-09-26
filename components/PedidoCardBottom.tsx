@@ -71,7 +71,7 @@ export default function PedidoCardBottom({ selecciones = {}, visible, onConfirm 
 
             {onConfirm && (
                 <Pressable style={[styles.button, { backgroundColor: "#6200ee" }]} onPress={onConfirm}>
-                    <Text style={styles.buttonText}>Confirmar Pedido</Text>
+                    <Text style={styles.buttonText}>Confirmar Sabores</Text>
                 </Pressable>
             )}
         </Animated.View>
