@@ -3,37 +3,28 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Dropdown from "../../components/Dropdown";
-import PedidoCardBottom from "../../components/PedidoCardBottom";
 
 export default function CategoriaVolumenScreen() {
     const router = useRouter();
 
-    // Selecciones de cantidades por categoría
     const [selecciones, setSelecciones] = useState<{ [key: string]: string[] }>({
-        "Porciones": [],
-        "Cucuruchos": [],
-        "Vasos": [],
-        "Kilos": [],
+        Cucuruchos: [],
+        Kilos: [],
+        Vasos: [],
     });
 
-    const [pedidoVisible, setPedidoVisible] = useState(true);
-
     const categorias = [
-        {
-            label: "Porciones",
-            options: ["1/4 kg", "1/2 kg", "3/4 kg"],
-        },
         {
             label: "Cucuruchos",
             options: ["1 bola", "2 bolas", "3 bolas", "4 bolas"],
         },
         {
-            label: "Vasos",
-            options: ["1 gusto", "2 gustos", "3 gustos"],
+            label: "Kilos",
+            options: ["1/4 Kg", "1/2 Kg", "1 Kg"],
         },
         {
-            label: "Kilos",
-            options: ["1 kg", "2 kg", "3 kg"],
+            label: "Vasos",
+            options: ["1 bola", "2 bolas", "3 bolas", "4 bolas"],
         },
     ];
 
@@ -49,17 +40,29 @@ export default function CategoriaVolumenScreen() {
     };
 
     const handleConfirm = () => {
-        const pedidoString = encodeURIComponent(JSON.stringify(selecciones));
+        const pedidoFinal: { [key: string]: number } = {};
+
+        Object.entries(selecciones).forEach(([categoria, items]) => {
+            items.forEach((item, index) => {
+                let cantidad = 1;
+                if (categoria === "Cucuruchos" || categoria === "Vasos") {
+                    cantidad = parseInt(item[0]); // "2 bolas" → 2
+                } else if (categoria === "Kilos") {
+                    cantidad = 4; // siempre 4 sabores por kilo
+                }
+                pedidoFinal[`${categoria} ${index + 1} (${item})`] = cantidad;
+            });
+        });
+
+        const pedidoString = encodeURIComponent(JSON.stringify(pedidoFinal));
         router.push(`/screens/Categoria_Gustos?pedido=${pedidoString}`);
     };
 
+
     return (
         <View style={styles.container}>
-            {/* Botón volver */}
-            <Pressable
-                style={styles.backButton}
-                onPress={() => router.push("/")}
-            >
+            {/* Botón Volver */}
+            <Pressable style={styles.backButton} onPress={() => router.back()}>
                 <Text style={styles.backButtonText}>← Volver</Text>
             </Pressable>
 
@@ -74,12 +77,9 @@ export default function CategoriaVolumenScreen() {
                 </View>
             ))}
 
-            {/* PedidoCardBottom */}
-            <PedidoCardBottom
-                selecciones={selecciones}
-                visible={pedidoVisible}
-                onConfirm={handleConfirm}
-            />
+            <Pressable style={styles.button} onPress={handleConfirm}>
+                <Text style={styles.buttonText}>Siguiente</Text>
+            </Pressable>
         </View>
     );
 }
@@ -98,4 +98,11 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: "bold",
     },
+    button: {
+        backgroundColor: "#6200ee",
+        padding: 12,
+        borderRadius: 8,
+        alignItems: "center",
+    },
+    buttonText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
 });
