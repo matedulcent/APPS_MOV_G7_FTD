@@ -1,11 +1,12 @@
 // app/screens/Categoria_Volumen.tsx
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Dropdown from "../../components/Dropdown";
 import ScreenHeader from "../../components/ScreenHeader";
 
 export default function CategoriaVolumenScreen() {
+    const { sucursalId, userId } = useLocalSearchParams<{ sucursalId: string; userId: string }>();
     const router = useRouter();
 
     // Selecciones con cantidades
@@ -70,7 +71,16 @@ export default function CategoriaVolumenScreen() {
         });
 
         const pedidoString = encodeURIComponent(JSON.stringify(pedidoFinal));
-        router.push(`/screens/Categoria_Gustos?pedido=${pedidoString}`);
+
+        // Incluimos sucursalId y userId en la siguiente pantalla
+        router.push({
+            pathname: "/screens/Categoria_Gustos",
+            params: {
+                pedido: pedidoString,
+                sucursalId,
+                userId,
+            },
+        });
     };
 
     return (

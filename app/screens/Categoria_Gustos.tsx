@@ -1,3 +1,4 @@
+// app/screens/Categoria_Gustos.tsx
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -7,7 +8,11 @@ import ScreenHeader from "../../components/ScreenHeader";
 import SearchBar from "../../components/SearchBar";
 
 export default function CategoriaGustosScreen() {
-    const { pedido } = useLocalSearchParams<{ pedido: string }>();
+    const { pedido, sucursalId, userId } = useLocalSearchParams<{
+        pedido: string;
+        sucursalId: string;
+        userId: string;
+    }>();
     const router = useRouter();
 
     const cucuruchos: { [key: string]: number } = pedido
@@ -21,10 +26,6 @@ export default function CategoriaGustosScreen() {
     const [showSearch, setShowSearch] = useState(false);
     const [searchText, setSearchText] = useState("");
 
-    //!!!!!!!!!!!!!!!!!!!!!!!!!!
-    //!      REEMPLAZA DB      !
-    //!!!!!!!!!!!!!!!!!!!!!!!!!!
-    
     const categorias = [
         { label: "Frutales", options: ["Frutilla", "Banana", "Frambuesa", "Durazno", "Cereza", "Arándano", "Mango", "Kiwi", "Maracuyá"] },
         { label: "Chocolates", options: ["Chocolate", "Choco blanco", "Chocolate amargo", "Chocolate con almendras", "DDL", "Choco menta"] },
@@ -63,7 +64,11 @@ export default function CategoriaGustosScreen() {
             setCurrentIndex(currentIndex + 1);
         } else {
             const pedidoString = encodeURIComponent(JSON.stringify(selecciones));
-            router.push(`/screens/Detalle_Pedido?pedido=${pedidoString}`);
+            // Pasamos sucursalId y userId junto con el pedido
+            router.push({
+                pathname: "/screens/Detalle_Pedido",
+                params: { pedido: pedidoString, sucursalId, userId },
+            });
         }
     };
 
@@ -84,7 +89,7 @@ export default function CategoriaGustosScreen() {
                 Seleccione los gustos para {cucuruchoActual} ({gustosSeleccionados.length}/{cucuruchos[cucuruchoActual]})
             </Text>
 
-            {/* Input de búsqueda modular */}
+            {/* Input de búsqueda */}
             {showSearch && (
                 <SearchBar
                     value={searchText}
@@ -119,12 +124,7 @@ export default function CategoriaGustosScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, padding: 20, backgroundColor: "#fff" },
-    header: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        marginBottom: 16,
-    },
+    header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 },
     iconButton: { padding: 8 },
     title: { fontSize: 20, fontWeight: "bold", textAlign: "center", flex: 1 },
     banner: { fontSize: 16, fontWeight: "600", marginBottom: 12 },

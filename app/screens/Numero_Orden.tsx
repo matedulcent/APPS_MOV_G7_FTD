@@ -1,15 +1,27 @@
-import { useRouter } from "expo-router";
+// app/screens/Numero_Orden.tsx
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 export default function NumeroOrdenScreen() {
     const router = useRouter();
+    const { sucursalId, userId } = useLocalSearchParams<{
+        sucursalId?: string;
+        userId?: string;
+    }>();
+
     const [numeroOrden, setNumeroOrden] = useState<number>(0);
 
     useEffect(() => {
         // Genera un número de orden aleatorio entre 1000 y 9999
-        setNumeroOrden(Math.floor(1000 + Math.random() * 9000));
-    }, []);
+        const orden = Math.floor(1000 + Math.random() * 9000);
+        setNumeroOrden(orden);
+
+        // Imprime por consola los IDs y el número de orden
+        console.log("Número de Orden:", orden);
+        console.log("Sucursal ID:", sucursalId);
+        console.log("Usuario ID:", userId);
+    }, [sucursalId, userId]);
 
     return (
         <View style={styles.container}>

@@ -1,9 +1,14 @@
+// app/screens/Detalle_Pedido.tsx
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React from "react";
 import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 export default function DetallePedidoScreen() {
-    const { pedido } = useLocalSearchParams<{ pedido: string }>();
+    const { pedido, sucursalId, userId } = useLocalSearchParams<{
+        pedido: string;
+        sucursalId: string;
+        userId: string;
+    }>();
     const router = useRouter();
 
     const pedidoObj: { [key: string]: string[] } = pedido
@@ -32,7 +37,12 @@ export default function DetallePedidoScreen() {
                 {/* Botón para confirmar pedido */}
                 <Pressable
                     style={[styles.button, { backgroundColor: "#ff5722", marginTop: 12 }]}
-                    onPress={() => router.push("/screens/Numero_Orden")}
+                    onPress={() => {
+                        router.push({
+                            pathname: "/screens/Numero_Orden",
+                            params: { pedido, sucursalId, userId },
+                        });
+                    }}
                 >
                     <Text style={[styles.buttonText, { fontSize: 18 }]}>Confirmar Pedido</Text>
                 </Pressable>
