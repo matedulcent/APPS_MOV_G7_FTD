@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from "react-native";
 
 export default function HomeScreen() {
   // Definimos la ruta correcta para Expo Router
-  const nextRoute = "./screens/categoria_gustos"; // solo ruta relativa en minúsculas
+  const nextRoute = "./screens/Categoria_Gustos"; // solo ruta relativa en minúsculas
 
   return (
     <View style={styles.container}>
