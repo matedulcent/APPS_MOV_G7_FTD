@@ -19,10 +19,28 @@ export default function CategoriaGustosScreen() {
     const [selecciones, setSelecciones] = useState<{ [key: string]: string[] }>({});
 
     const categorias = [
-        { label: "Gustos Frutales", options: ["Frutilla", "Banana", "Frambuesa", "Banana Split"] },
-        { label: "Chocolate / DDL", options: ["Chocolate", "DDL", "Choco amargo"] },
-        { label: "Otras Cosas", options: ["Crema americana", "Granizado"] },
+        {
+            label: "Frutales",
+            options: ["Frutilla", "Banana", "Frambuesa", "Durazno", "Cereza", "Arándano", "Mango", "Kiwi", "Maracuyá"]
+        },
+        {
+            label: "Chocolates",
+            options: ["Chocolate", "Choco blanco", "Chocolate amargo", "Chocolate con almendras", "DDL", "Choco menta"]
+        },
+        {
+            label: "Cremas y Dulces",
+            options: ["Crema americana", "Dulce de leche", "Caramelo", "Cheesecake", "Tiramisu", "Vainilla"]
+        },
+        {
+            label: "Frutos Secos",
+            options: ["Maní", "Almendra", "Avellana", "Pistacho", "Nuez"]
+        },
+        {
+            label: "Exóticos",
+            options: ["Menta granizada", "Café", "Matcha", "Mango", "Maracuyá", "Yogur"]
+        },
     ];
+
 
     const toggleSeleccion = (categoria: string, opcion: string) => {
         const cucurucho = cucuruchoKeys[currentIndex];
@@ -76,7 +94,13 @@ export default function CategoriaGustosScreen() {
                 </View>
             ))}
 
-            <PedidoCardBottom selecciones={selecciones} visible={true} onConfirm={handleConfirm} />
+            <PedidoCardBottom
+                selecciones={selecciones}
+                visible={true}
+                onConfirm={handleConfirm}
+                currentIndex={currentIndex}
+                totalVolumenes={cucuruchoKeys.length}
+            />
         </View>
     );
 }

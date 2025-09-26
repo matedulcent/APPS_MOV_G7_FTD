@@ -5,9 +5,17 @@ type PedidoCardProps = {
     selecciones?: { [key: string]: string[] | number };
     visible: boolean;
     onConfirm?: () => void;
+    currentIndex?: number;   // índice del volumen actual
+    totalVolumenes?: number; // cantidad total de volúmenes
 };
 
-export default function PedidoCardBottom({ selecciones = {}, visible, onConfirm }: PedidoCardProps) {
+export default function PedidoCardBottom({
+    selecciones = {},
+    visible,
+    onConfirm,
+    currentIndex = 0,
+    totalVolumenes = 1,
+}: PedidoCardProps) {
     const screenHeight = Dimensions.get("window").height;
     const peekHeight = 60;
     const maxHeight = screenHeight / 2;
@@ -49,6 +57,12 @@ export default function PedidoCardBottom({ selecciones = {}, visible, onConfirm 
         },
     });
 
+    // Texto dinámico del botón
+    const botonTexto =
+        currentIndex < (totalVolumenes - 1)
+            ? "Confirmar Sabores"
+            : "Confirmar Pedido";
+
     return (
         <Animated.View style={[styles.card, { transform: [{ translateY }] }]} {...panResponder.panHandlers}>
             <View style={styles.ticketNotch} />
@@ -71,7 +85,7 @@ export default function PedidoCardBottom({ selecciones = {}, visible, onConfirm 
 
             {onConfirm && (
                 <Pressable style={[styles.button, { backgroundColor: "#6200ee" }]} onPress={onConfirm}>
-                    <Text style={styles.buttonText}>Confirmar Sabores</Text>
+                    <Text style={styles.buttonText}>{botonTexto}</Text>
                 </Pressable>
             )}
         </Animated.View>
