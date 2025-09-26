@@ -1,14 +1,22 @@
 // app/screens/Categoria_Gustos.tsx
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Dropdown from "../../components/Dropdown";
 import PedidoCardBottom from "../../components/PedidoCardBottom";
 
 export default function CategoriaGustosScreen() {
+    const { pedido } = useLocalSearchParams<{ pedido?: string }>();
     const router = useRouter();
 
+    // Parseamos el pedido enviado desde CategoriaVolumen
+    const pedidoInicial: { [key: string]: string[] } = pedido
+        ? JSON.parse(decodeURIComponent(pedido))
+        : {};
+
+    // Estado de selecciones de gustos, inicializamos con el pedido de volúmenes
     const [selecciones, setSelecciones] = useState<{ [key: string]: string[] }>({
+        ...pedidoInicial,
         "Gustos Frutales": [],
         "Chocolate / DDL": [],
         "Otras Cosas": [],
@@ -40,14 +48,15 @@ export default function CategoriaGustosScreen() {
 
     return (
         <View style={styles.container}>
-            {/* Botón volver funcional */}
+            {/* Botón volver */}
             <Pressable
                 style={styles.backButton}
-                onPress={() => router.push("/")} // siempre va a volver al home
+                onPress={() => router.push("/screens/Categoria_Volumen")}
             >
                 <Text style={styles.backButtonText}>← Volver</Text>
             </Pressable>
 
+            {/* Dropdowns de categorías de gustos */}
             {categorias.map((cat) => (
                 <View key={cat.label} style={{ marginBottom: 20 }}>
                     <Dropdown
@@ -59,7 +68,7 @@ export default function CategoriaGustosScreen() {
                 </View>
             ))}
 
-            {/* PedidoCardBottom con botón Confirmar */}
+            {/* PedidoCardBottom con todos los productos (volúmenes + gustos) */}
             <PedidoCardBottom
                 selecciones={selecciones}
                 visible={pedidoVisible}
