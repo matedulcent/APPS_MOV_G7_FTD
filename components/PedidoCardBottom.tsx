@@ -1,22 +1,19 @@
 import React, { useEffect, useRef } from "react";
-import { Animated, Dimensions, PanResponder, ScrollView, StyleSheet, Text, View } from "react-native";
-import NavButton from "./NavButton";
+import { Animated, Dimensions, PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 type PedidoCardProps = {
     selecciones?: { [key: string]: string[] };
-    visible?: boolean;
-    onConfirm: () => void;
+    visible: boolean;
+    onConfirm?: () => void;
 };
 
-export default function PedidoCardBottom({ selecciones = {}, visible = true, onConfirm }: PedidoCardProps) {
+export default function PedidoCardBottom({ selecciones = {}, visible, onConfirm }: PedidoCardProps) {
     const screenHeight = Dimensions.get("window").height;
     const peekHeight = 60;
     const maxHeight = screenHeight / 2;
     const translateY = useRef(new Animated.Value(screenHeight - peekHeight)).current;
 
-    const productosSeleccionados = Object.entries(selecciones).flatMap(([categoria, items]) =>
-        items.map((i) => ({ categoria, item: i }))
-    );
+    const productosSeleccionados = Object.values(selecciones).flat();
 
     const animateTo = (toValue: number) => {
         Animated.spring(translateY, {
@@ -48,19 +45,21 @@ export default function PedidoCardBottom({ selecciones = {}, visible = true, onC
             <View style={styles.ticketNotch} />
             <Text style={styles.title}>Pedido</Text>
 
-            <ScrollView style={styles.content}>
+            <ScrollView style={styles.content} showsVerticalScrollIndicator={true}>
                 {productosSeleccionados.length ? (
-                    productosSeleccionados.map(({ categoria, item }) => (
-                        <Text key={`${categoria}-${item}`} style={styles.item}>
-                            🍦 {item} ({categoria})
-                        </Text>
+                    productosSeleccionados.map((item, i) => (
+                        <Text key={i} style={styles.item}>🍦 {item}</Text>
                     ))
                 ) : (
                     <Text>No hay productos seleccionados</Text>
                 )}
             </ScrollView>
 
-            <NavButton text="Confirmar Pedido" onPress={onConfirm} style={{ marginTop: 10 }} />
+            {onConfirm && (
+                <Pressable style={[styles.button, { backgroundColor: "#6200ee" }]} onPress={onConfirm}>
+                    <Text style={styles.buttonText}>Confirmar Pedido</Text>
+                </Pressable>
+            )}
         </Animated.View>
     );
 }
@@ -94,4 +93,11 @@ const styles = StyleSheet.create({
     title: { fontSize: 20, fontWeight: "bold", marginBottom: 12, textAlign: "center" },
     content: { maxHeight: Dimensions.get("window").height / 2 - 100 },
     item: { marginBottom: 8, fontSize: 16 },
+    button: {
+        padding: 12,
+        borderRadius: 8,
+        marginTop: 10,
+        alignItems: "center",
+    },
+    buttonText: { color: "white", fontWeight: "bold", fontSize: 16 },
 });
