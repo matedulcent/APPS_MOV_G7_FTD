@@ -1,9 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import Dropdown from "../../components/Dropdown";
 import PedidoCardBottom from "../../components/PedidoCardBottom";
+import SearchBar from "../../components/SearchBar";
 
 export default function CategoriaGustosScreen() {
     const { pedido } = useLocalSearchParams<{ pedido: string }>();
@@ -20,6 +21,10 @@ export default function CategoriaGustosScreen() {
     const [showSearch, setShowSearch] = useState(false);
     const [searchText, setSearchText] = useState("");
 
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!
+    //!      REEMPLAZA DB      !
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!
+    
     const categorias = [
         { label: "Frutales", options: ["Frutilla", "Banana", "Frambuesa", "Durazno", "Cereza", "Arándano", "Mango", "Kiwi", "Maracuyá"] },
         { label: "Chocolates", options: ["Chocolate", "Choco blanco", "Chocolate amargo", "Chocolate con almendras", "DDL", "Choco menta"] },
@@ -28,12 +33,14 @@ export default function CategoriaGustosScreen() {
         { label: "Exóticos", options: ["Menta granizada", "Café", "Matcha", "Yogur", "Limoncello", "Ron con pasas"] },
     ];
 
-    const categoriasFiltradas = categorias.map((cat) => ({
-        ...cat,
-        options: cat.options.filter((op) =>
-            op.toLowerCase().includes(searchText.toLowerCase())
-        ),
-    })).filter((cat) => cat.options.length > 0);
+    const categoriasFiltradas = categorias
+        .map((cat) => ({
+            ...cat,
+            options: cat.options.filter((op) =>
+                op.toLowerCase().includes(searchText.toLowerCase())
+            ),
+        }))
+        .filter((cat) => cat.options.length > 0);
 
     const toggleSeleccion = (categoria: string, opcion: string) => {
         const cucurucho = cucuruchoKeys[currentIndex];
@@ -81,13 +88,12 @@ export default function CategoriaGustosScreen() {
                 Seleccione los gustos para {cucuruchoActual} ({gustosSeleccionados.length}/{cucuruchos[cucuruchoActual]})
             </Text>
 
-            {/* Input de búsqueda */}
+            {/* Input de búsqueda modular */}
             {showSearch && (
-                <TextInput
-                    style={styles.searchInput}
-                    placeholder="Buscar gusto..."
+                <SearchBar
                     value={searchText}
                     onChangeText={setSearchText}
+                    placeholder="Buscar gusto..."
                 />
             )}
 
@@ -123,25 +129,7 @@ const styles = StyleSheet.create({
         justifyContent: "space-between",
         marginBottom: 16,
     },
-    iconButton: {
-        padding: 8,
-    },
-    title: {
-        fontSize: 20,
-        fontWeight: "bold",
-        textAlign: "center",
-        flex: 1,
-    },
-    banner: {
-        fontSize: 16,
-        fontWeight: "600",
-        marginBottom: 12,
-    },
-    searchInput: {
-        borderWidth: 1,
-        borderColor: "#ccc",
-        borderRadius: 6,
-        padding: 8,
-        marginBottom: 16,
-    },
+    iconButton: { padding: 8 },
+    title: { fontSize: 20, fontWeight: "bold", textAlign: "center", flex: 1 },
+    banner: { fontSize: 16, fontWeight: "600", marginBottom: 12 },
 });
