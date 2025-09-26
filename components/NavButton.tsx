@@ -1,23 +1,21 @@
-import { Link } from "expo-router";
+import React from "react";
 import { Pressable, StyleSheet, Text, ViewStyle } from "react-native";
 
 type NavButtonProps = {
     text: string;
-    route: string;
-    color?: string;
+    onPress?: () => void;
     style?: ViewStyle | ViewStyle[];
+    color?: string;
 };
 
-export default function NavButton({ text, route, color = "#6200ee", style }: NavButtonProps) {
-    // Combinar estilos manualmente para web
-    const combinedStyle = StyleSheet.flatten([styles.button, { backgroundColor: color }, style]);
-
+export default function NavButton({ text, onPress, style, color = "#6200ee" }: NavButtonProps) {
     return (
-        <Link href={route as any} asChild>
-            <Pressable style={combinedStyle}>
-                <Text style={styles.text}>{text}</Text>
-            </Pressable>
-        </Link>
+        <Pressable
+            onPress={onPress}
+            style={[styles.button, { backgroundColor: color }, style]}
+        >
+            <Text style={styles.text}>{text}</Text>
+        </Pressable>
     );
 }
 
@@ -27,7 +25,8 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         alignItems: "center",
         justifyContent: "center",
-        minWidth: 100,
+        minWidth: 120,
+        marginVertical: 6,
     },
     text: {
         color: "white",

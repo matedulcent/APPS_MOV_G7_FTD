@@ -1,49 +1,44 @@
-import { useNavigation, useRoute } from "@react-navigation/native";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
-import NavButton from "../../components/NavButton"; // importa tu NavButton
-import { RootStackParamList } from "../types";
-
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import NavButton from "../../components/NavButton";
 
 export default function DetallePedidoScreen() {
-    const navigation = useNavigation<NavigationProp>();
-    const route = useRoute();
-    const { pedido } = route.params as { pedido: string };
+    const { pedido } = useLocalSearchParams<{ pedido: string }>(); // ✅ corregido
+    const router = useRouter();
 
-    // Rutas de navegación
-    const previousRoute = "./screens/Categoria_Gustos"; // pantalla anterior
-    const nextRoute = "./screens/Lista_Gustos";       // pantalla siguiente (ejemplo)
+    const pedidoObj = pedido ? JSON.parse(decodeURIComponent(pedido)) : {};
 
     return (
         <View style={styles.container}>
-            {/* Botones de navegación */}
-            <View style={styles.navContainer}>
-                <NavButton
-                    text="Anterior"
-                    route={`/${previousRoute.toLowerCase()}`}
-                    style={{ margin: 10 }}
-                />
-                <NavButton
-                    text="Siguiente"
-                    route={`/${nextRoute.toLowerCase()}`}
-                    style={{ margin: 10 }}
-                />
-            </View>
+            <ScrollView style={styles.scroll}>
+                <Text style={styles.title}>Detalle del Pedido</Text>
+                {Object.keys(pedidoObj).length > 0 ? (
+                    Object.entries(pedidoObj).map(([categoria, items], i) => (
+                        <View key={i} style={styles.categoria}>
+                            <Text style={styles.categoriaTitle}>{categoria}</Text>
+                            {(items as string[]).map((item, j) => (
+                                <Text key={j} style={styles.item}>
+                                    - {item}
+                                </Text>
+                            ))}
+                        </View>
+                    ))
+                ) : (
+                    <Text>No hay productos seleccionados</Text>
+                )}
+            </ScrollView>
 
-            {/* Contenido */}
-            <Text style={styles.text}>Pedido: {pedido}</Text>
+            <NavButton text="Volver" onPress={() => router.back()} />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 20 },
-    navContainer: {
-        flexDirection: "row",
-        justifyContent: "space-between", // botones en los extremos
-        marginBottom: 20,
-    },
-    text: { fontSize: 18, marginBottom: 20 },
+    container: { flex: 1, padding: 20, backgroundColor: "#fff" },
+    scroll: { flex: 1 },
+    title: { fontSize: 22, fontWeight: "bold", marginBottom: 20 },
+    categoria: { marginBottom: 15 },
+    categoriaTitle: { fontSize: 18, fontWeight: "600" },
+    item: { fontSize: 16, marginLeft: 10 },
 });

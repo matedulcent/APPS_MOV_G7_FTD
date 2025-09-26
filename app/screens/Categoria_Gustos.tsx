@@ -1,27 +1,16 @@
-import { useNavigation } from "@react-navigation/native";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import Dropdown from "../../components/Dropdown";
-import NavButton from "../../components/NavButton";
 import PedidoCardBottom from "../../components/PedidoCardBottom";
-import { RootStackParamList } from "../types";
-
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function CategoriaGustosScreen() {
-    const navigation = useNavigation<NavigationProp>();
-
-    const previousRoute = "../";
-    const nextRoute = "./screens/Detalle_Pedido";
-
+    const router = useRouter();
     const [selecciones, setSelecciones] = useState<{ [key: string]: string[] }>({
         "Gustos Frutales": [],
         "Chocolate / DDL": [],
         "Otras Cosas": [],
     });
-
-    const [pedidoVisible, setPedidoVisible] = useState(false);
 
     const categorias = [
         { label: "Gustos Frutales", options: ["Frutilla", "Banana", "Frambuesa", "Banana Split"] },
@@ -40,13 +29,14 @@ export default function CategoriaGustosScreen() {
         });
     };
 
+    const handleConfirm = () => {
+        // Serializamos a JSON y codificamos para la URL
+        const pedidoString = encodeURIComponent(JSON.stringify(selecciones));
+        router.push(`/screens/Detalle_Pedido?pedido=${pedidoString}`);
+    };
+
     return (
         <View style={styles.container}>
-            <View style={styles.navContainer}>
-                <NavButton text="Anterior" route={`/${previousRoute.toLowerCase()}`} style={{ margin: 10 }} />
-                <NavButton text="Siguiente" route={`/${nextRoute.toLowerCase()}`} style={{ margin: 10 }} />
-            </View>
-
             {categorias.map((cat) => (
                 <View key={cat.label} style={{ marginBottom: 20 }}>
                     <Dropdown
@@ -58,13 +48,11 @@ export default function CategoriaGustosScreen() {
                 </View>
             ))}
 
-            {/* PedidoCardBottom maneja su propio trigger y animación */}
-            <PedidoCardBottom selecciones={selecciones} visible={pedidoVisible} />
+            <PedidoCardBottom selecciones={selecciones} onConfirm={handleConfirm} />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: { flex: 1, padding: 20 },
-    navContainer: { flexDirection: "row", justifyContent: "space-between", marginBottom: 20 },
 });
