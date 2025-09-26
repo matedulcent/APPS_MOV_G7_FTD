@@ -1,4 +1,4 @@
-// app/screens/Categoria_Volumen.tsx
+import { Ionicons } from "@expo/vector-icons"; // importamos los iconos
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -20,7 +20,6 @@ export default function CategoriaVolumenScreen() {
         { label: "Vasos", options: ["1 bola", "2 bolas", "3 bolas", "4 bolas"] },
     ];
 
-    // Diccionario de cantidad de sabores por categoría
     const cantidadSabores: { [key: string]: number } = {
         Cucuruchos: 0,
         Kilos: 4,
@@ -34,10 +33,8 @@ export default function CategoriaVolumenScreen() {
 
             let nuevasOpciones;
             if (existe) {
-                // Si ya estaba, lo sacamos
                 nuevasOpciones = prevItems.filter((i) => i.opcion !== opcion);
             } else {
-                // Lo agregamos con cantidad inicial 1
                 nuevasOpciones = [...prevItems, { opcion, cantidad: 1 }];
             }
             return { ...prev, [categoria]: nuevasOpciones };
@@ -59,15 +56,15 @@ export default function CategoriaVolumenScreen() {
         const pedidoFinal: { [key: string]: number } = {};
 
         Object.entries(selecciones).forEach(([categoria, items]) => {
-            items.forEach(({ opcion, cantidad }, index) => {
+            items.forEach(({ opcion, cantidad }) => {
                 let sabores = cantidadSabores[categoria] || 1;
-
                 if (categoria === "Cucuruchos" || categoria === "Vasos") {
                     sabores = parseInt(opcion[0]);
                 }
 
-                // Guardamos multiplicado por la cantidad elegida
-                pedidoFinal[`${categoria} ${index + 1} (${opcion})`] = sabores * cantidad;
+                for (let i = 1; i <= cantidad; i++) {
+                    pedidoFinal[`${categoria} ${i} (${opcion})`] = sabores;
+                }
             });
         });
 
@@ -77,8 +74,9 @@ export default function CategoriaVolumenScreen() {
 
     return (
         <View style={styles.container}>
+            {/* Flecha de volver */}
             <Pressable style={styles.backButton} onPress={() => router.back()}>
-                <Text style={styles.backButtonText}>← Volver</Text>
+                <Ionicons name="arrow-back" size={24} color="black" />
             </Pressable>
 
             {categorias.map((cat) => (
@@ -90,7 +88,6 @@ export default function CategoriaVolumenScreen() {
                         onSelect={(item) => toggleSeleccion(cat.label, item)}
                     />
 
-                    {/* Mostrar seleccionados con contador */}
                     {selecciones[cat.label].map(({ opcion, cantidad }) => (
                         <View key={opcion} style={styles.itemRow}>
                             <Text style={styles.itemText}>{opcion}</Text>
@@ -126,12 +123,11 @@ const styles = StyleSheet.create({
     backButton: {
         marginBottom: 20,
         padding: 8,
-        backgroundColor: "#ccc",
         borderRadius: 6,
-        width: 100,
+        width: 50,
         alignItems: "center",
+        justifyContent: "center",
     },
-    backButtonText: { fontSize: 16, fontWeight: "bold" },
     itemRow: {
         flexDirection: "row",
         justifyContent: "space-between",
@@ -143,10 +139,7 @@ const styles = StyleSheet.create({
         borderRadius: 6,
     },
     itemText: { fontSize: 16 },
-    counter: {
-        flexDirection: "row",
-        alignItems: "center",
-    },
+    counter: { flexDirection: "row", alignItems: "center" },
     counterButton: {
         backgroundColor: "#eee",
         paddingHorizontal: 8,
