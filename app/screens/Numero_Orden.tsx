@@ -35,7 +35,7 @@ export default function NumeroOrdenScreen() {
                 <Text style={styles.title}>¡Pedido Confirmado!</Text>
                 <Text style={styles.numero}>Orden #: {numeroOrden}</Text>
 
-                <Pressable style={styles.button} onPress={() => router.push("/")}>
+                <Pressable style={[styles.button, { backgroundColor: "#f4679fff", marginTop: 12 }]} onPress={() => router.push("/")}>
                     <Text style={styles.buttonText}>Volver a Inicio</Text>
                 </Pressable>
             </View>

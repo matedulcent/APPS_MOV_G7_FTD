@@ -84,7 +84,7 @@ export default function PedidoCardBottom({
             </ScrollView>
 
             {onConfirm && (
-                <Pressable style={[styles.button, { backgroundColor: "#6200ee" }]} onPress={onConfirm}>
+                <Pressable style={[styles.button, { backgroundColor: "#4cd7c7ff" }]} onPress={onConfirm}>
                     <Text style={styles.buttonText}>{botonTexto}</Text>
                 </Pressable>
             )}

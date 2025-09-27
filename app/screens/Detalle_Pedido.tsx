@@ -47,7 +47,7 @@ export default function DetallePedidoScreen() {
                     </ScrollView>
 
                     <Pressable
-                        style={[styles.button, { backgroundColor: "#ff5722", marginTop: 12 }]}
+                        style={[styles.button, { backgroundColor: "#42e9e9ff", marginTop: 12 }]}
                         onPress={() => {
                             router.push({
                                 pathname: "/screens/Numero_Orden",
@@ -58,7 +58,7 @@ export default function DetallePedidoScreen() {
                         <Text style={[styles.buttonText, { fontSize: 18 }]}>Confirmar Pedido</Text>
                     </Pressable>
 
-                    <Pressable style={styles.button} onPress={() => router.back()}>
+                    <Pressable style={[styles.button, { backgroundColor: "#f4679fff", marginTop: 12 }]} onPress={() => router.back()}>
                         <Text style={styles.buttonText}>Volver</Text>
                     </Pressable>
                 </View>

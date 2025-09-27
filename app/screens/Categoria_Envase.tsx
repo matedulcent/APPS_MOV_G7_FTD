@@ -128,7 +128,7 @@ export default function CategoriaVolumenScreen() {
                     </View>
                 ))}
 
-                <Pressable style={styles.button} onPress={handleConfirm}>
+                <Pressable style={[styles.button, { backgroundColor: "#f4679fff", marginTop: 12 }]} onPress={handleConfirm}>
                     <Text style={styles.buttonText}>Siguiente</Text>
                 </Pressable>
             </View>
