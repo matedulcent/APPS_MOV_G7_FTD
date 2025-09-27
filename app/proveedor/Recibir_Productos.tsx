@@ -1,13 +1,12 @@
 import React, { useState } from "react";
 import {
-    Alert,
     ImageBackground,
     Pressable,
     ScrollView,
     StyleSheet,
     Text,
     TextInput,
-    View,
+    View
 } from "react-native";
 import ScreenHeader from "../../components/ScreenHeader";
 
@@ -40,7 +39,7 @@ export default function RecibirProductosScreen() {
     ]);
 
     const recibirPedido = (numero: number) => {
-        Alert.alert("Recibido", `Pedido #${numero} marcado como recibido`);
+        // Eliminamos el pedido sin mostrar popup
         setPedidos((prev) => prev.filter((p) => p.numero !== numero));
     };
 
