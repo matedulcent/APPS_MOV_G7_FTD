@@ -27,7 +27,7 @@ export default function NumeroOrdenScreen() {
 
     return (
         <ImageBackground
-            source={require("../../assets/images/backgrounds/fondo4.jpg")} // 👈 ruta de tu imagen
+            source={require("../../assets/images/backgrounds/fondo4.jpg")}
             style={styles.background}
             resizeMode="cover"
         >
