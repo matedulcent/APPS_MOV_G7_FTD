@@ -6,28 +6,30 @@ export default function HomeScreen() {
   const router = useRouter();
 
   const handleElegirSucursal = () => {
-    // Generar un ID de cliente aleatorio
     const userId = Math.floor(100000 + Math.random() * 900000).toString();
 
-    ////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////
-    console.log("##########################################################################");
     console.log("##########################################################################");
     console.log("(INDEX) Usuario ID:", userId);
-    ////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////
+    console.log("##########################################################################");
 
-    // Navegar a la pantalla de selección de sucursal pasando el userId
     router.push({
       pathname: "./screens/Seleccion_Sucursal",
       params: { userId },
     });
   };
 
+  const handleVendedorProductos = () => {
+    router.push("./proveedor/Vendedor_Productos");
+  };
+
   return (
     <View style={styles.container}>
-      <Pressable style={styles.button} onPress={handleElegirSucursal}>
+      <Pressable style={[styles.button, { backgroundColor: "#6200ee" }]} onPress={handleElegirSucursal}>
         <Text style={styles.buttonText}>Elegir Sucursal</Text>
+      </Pressable>
+
+      <Pressable style={[styles.button, { backgroundColor: "#03dac6", marginTop: 16 }]} onPress={handleVendedorProductos}>
+        <Text style={[styles.buttonText, { color: "#000" }]}>Ir a Panel de Vendedor</Text>
       </Pressable>
 
       <Text style={styles.text}>🏠 Esta es la pantalla Home</Text>
@@ -37,13 +39,12 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: "flex-start", padding: 16, paddingTop: 50 },
-  text: { fontSize: 20, marginTop: 20 },
+  text: { fontSize: 20, marginTop: 20, textAlign: "center" },
   button: {
-    backgroundColor: "#6200ee",
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 10,
     alignItems: "center",
   },
-  buttonText: { color: "#fff", fontWeight: "bold", fontSize: 18 },
+  buttonText: { fontWeight: "bold", fontSize: 18 },
 });
