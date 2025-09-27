@@ -1,7 +1,13 @@
 // app/screens/Categoria_Gustos.tsx
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
-import { ImageBackground, StyleSheet, Text, View } from "react-native";
+import {
+    ImageBackground,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
+} from "react-native";
 import Dropdown from "../../components/Dropdown";
 import PedidoCardBottom from "../../components/PedidoCardBottom";
 import ScreenHeader from "../../components/ScreenHeader";
@@ -27,11 +33,26 @@ export default function CategoriaGustosScreen() {
     const [searchText, setSearchText] = useState("");
 
     const categorias = [
-        { label: "Frutales", options: ["Frutilla", "Banana", "Frambuesa", "Durazno", "Cereza", "Arándano", "Mango", "Kiwi", "Maracuyá"] },
-        { label: "Chocolates", options: ["Chocolate", "Choco blanco", "Chocolate amargo", "Chocolate con almendras", "DDL", "Choco menta"] },
-        { label: "Cremas y Dulces", options: ["Crema americana", "Dulce de leche", "Caramelo", "Cheesecake", "Tiramisu", "Vainilla"] },
-        { label: "Frutos Secos", options: ["Maní", "Almendra", "Avellana", "Pistacho", "Nuez"] },
-        { label: "Exóticos", options: ["Menta granizada", "Café", "Matcha", "Yogur", "Limoncello", "Ron con pasas"] },
+        {
+            label: "Frutales",
+            options: ["Frutilla", "Banana", "Frambuesa", "Durazno", "Cereza", "Arándano", "Mango", "Kiwi", "Maracuyá"],
+        },
+        {
+            label: "Chocolates",
+            options: ["Chocolate", "Choco blanco", "Chocolate amargo", "Chocolate con almendras", "DDL", "Choco menta"],
+        },
+        {
+            label: "Cremas y Dulces",
+            options: ["Crema americana", "Dulce de leche", "Caramelo", "Cheesecake", "Tiramisu", "Vainilla"],
+        },
+        {
+            label: "Frutos Secos",
+            options: ["Maní", "Almendra", "Avellana", "Pistacho", "Nuez"],
+        },
+        {
+            label: "Exóticos",
+            options: ["Menta granizada", "Café", "Matcha", "Yogur", "Limoncello", "Ron con pasas"],
+        },
     ];
 
     const categoriasFiltradas = categorias
@@ -53,7 +74,8 @@ export default function CategoriaGustosScreen() {
                 : [...prevItems, opcion];
 
             const maxGustos = cucuruchos[cucurucho];
-            if (nuevasOpciones.length > maxGustos) nuevasOpciones = nuevasOpciones.slice(0, maxGustos);
+            if (nuevasOpciones.length > maxGustos)
+                nuevasOpciones = nuevasOpciones.slice(0, maxGustos);
 
             return { ...prev, [cucurucho]: nuevasOpciones };
         });
@@ -83,11 +105,10 @@ export default function CategoriaGustosScreen() {
 
     return (
         <ImageBackground
-            source={require("../../assets/images/backgrounds/fondo2.jpg")} // 🔹 poné tu imagen aquí
+            source={require("../../assets/images/backgrounds/fondo2.jpg")}
             style={styles.background}
             resizeMode="cover"
         >
-
             <View style={styles.container}>
                 {/* HEADER */}
                 <ScreenHeader
@@ -98,7 +119,8 @@ export default function CategoriaGustosScreen() {
 
                 {/* Banner */}
                 <Text style={styles.banner}>
-                    Seleccione los gustos para {cucuruchoActual} ({gustosSeleccionados.length}/{cucuruchos[cucuruchoActual]})
+                    Seleccione los gustos para {cucuruchoActual} ({gustosSeleccionados.length}/
+                    {cucuruchos[cucuruchoActual]})
                 </Text>
 
                 {/* Input de búsqueda */}
@@ -110,17 +132,25 @@ export default function CategoriaGustosScreen() {
                     />
                 )}
 
-                {/* Categorías */}
-                {categoriasFiltradas.map((cat) => (
-                    <View key={cat.label} style={{ marginBottom: 20 }}>
-                        <Dropdown
-                            label={cat.label}
-                            options={cat.options}
-                            selected={gustosSeleccionados.filter((g) => cat.options.includes(g))}
-                            onSelect={(item) => toggleSeleccion(cat.label, item)}
-                        />
-                    </View>
-                ))}
+                {/* 🔹 Scroll general */}
+                <ScrollView
+                    style={{ flex: 1 }}
+                    contentContainerStyle={{ paddingBottom: 120 }}
+                    showsVerticalScrollIndicator={false}
+                >
+                    {categoriasFiltradas.map((cat) => (
+                        <View key={cat.label} style={{ marginBottom: 20 }}>
+                            <Dropdown
+                                label={cat.label}
+                                options={cat.options}
+                                selected={gustosSeleccionados.filter((g) =>
+                                    cat.options.includes(g)
+                                )}
+                                onSelect={(item) => toggleSeleccion(cat.label, item)}
+                            />
+                        </View>
+                    ))}
+                </ScrollView>
 
                 {/* Pedido abajo */}
                 <PedidoCardBottom
@@ -141,13 +171,10 @@ const styles = StyleSheet.create({
         flex: 1,
         padding: 20,
     },
-    header: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        marginBottom: 16,
+    banner: {
+        fontSize: 16,
+        fontWeight: "600",
+        marginBottom: 12,
+        color: "#222",
     },
-    iconButton: { padding: 8 },
-    title: { fontSize: 20, fontWeight: "bold", textAlign: "center", flex: 1 },
-    banner: { fontSize: 16, fontWeight: "600", marginBottom: 12, color: "#222" },
 });

@@ -1,6 +1,8 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
+    Dimensions,
+    FlatList,
     ImageBackground,
     Pressable,
     StyleSheet,
@@ -9,6 +11,8 @@ import {
 } from "react-native";
 import Dropdown from "../../components/Dropdown";
 import ScreenHeader from "../../components/ScreenHeader";
+
+const { height } = Dimensions.get("window"); // Para mover el botón proporcionalmente
 
 export default function CategoriaVolumenScreen() {
     const { sucursalId, userId } = useLocalSearchParams<{ sucursalId: string; userId: string }>();
@@ -22,8 +26,8 @@ export default function CategoriaVolumenScreen() {
 
     const categorias = [
         { label: "Cucuruchos", options: ["1 bola", "2 bolas", "3 bolas", "4 bolas"], icon: "icecream" as const },
-        { label: "Kilos", options: ["1/4 Kg", "1/2 Kg", "1 Kg"], icon: "shopping-bag" as const },
-        { label: "Vasos", options: ["1 bola", "2 bolas", "3 bolas", "4 bolas"], icon: "local-cafe" as const },
+        { label: "Kilos", options: ["1/4 Kg", "1/2 Kg", "1 Kg"], icon: "whatshot" as const },
+        { label: "Vasos", options: ["1 bola", "2 bolas", "3 bolas", "4 bolas"], icon: "local-drink" as const },
     ];
 
     const cantidadSabores: { [key: string]: number } = {
@@ -76,7 +80,6 @@ export default function CategoriaVolumenScreen() {
 
         const pedidoString = encodeURIComponent(JSON.stringify(pedidoFinal));
 
-        console.log("##########################################################################");
         console.log("(SELECCION ENVASE) SUCURSAL ID:", sucursalId);
         console.log("(SELECCION ENVASE) Usuario ID:", userId);
         console.log("(SELECCION ENVASE) Pedido:", pedidoFinal);
@@ -89,62 +92,69 @@ export default function CategoriaVolumenScreen() {
 
     return (
         <ImageBackground
-            source={require("../../assets/images/backgrounds/fondo1.jpg")} // 👈 poné acá tu ruta
+            source={require("../../assets/images/backgrounds/fondo1.jpg")}
             style={styles.background}
         >
             <View style={styles.overlay}>
                 <ScreenHeader title="Seleccionar Envase" />
 
-                {categorias.map((cat) => (
-                    <View key={cat.label} style={{ marginBottom: 20 }}>
-                        <Dropdown
-                            label={cat.label}
-                            options={cat.options}
-                            selected={selecciones[cat.label].map((i) => i.opcion)}
-                            onSelect={(item) => toggleSeleccion(cat.label, item)}
-                            icon={cat.icon}
-                        />
+                {/* Lista de categorías */}
+                <FlatList
+                    data={categorias}
+                    keyExtractor={(item) => item.label}
+                    contentContainerStyle={{ paddingBottom: height * 0.15 }} // espaciado para el botón
+                    renderItem={({ item: cat }) => (
+                        <View style={{ marginBottom: 20 }}>
+                            <Dropdown
+                                label={cat.label}
+                                options={cat.options}
+                                selected={selecciones[cat.label].map((i) => i.opcion)}
+                                onSelect={(item) => toggleSeleccion(cat.label, item)}
+                                icon={cat.icon}
+                            />
 
-                        {selecciones[cat.label].map(({ opcion, cantidad }) => (
-                            <View key={opcion} style={styles.itemRow}>
-                                <Text style={styles.itemText}>{opcion}</Text>
-                                <View style={styles.counter}>
-                                    <Pressable
-                                        style={styles.counterButton}
-                                        onPress={() => updateCantidad(cat.label, opcion, -1)}
-                                    >
-                                        <Text style={styles.counterText}>-</Text>
-                                    </Pressable>
-                                    <Text style={styles.counterValue}>{cantidad}</Text>
-                                    <Pressable
-                                        style={styles.counterButton}
-                                        onPress={() => updateCantidad(cat.label, opcion, 1)}
-                                    >
-                                        <Text style={styles.counterText}>+</Text>
-                                    </Pressable>
+                            {selecciones[cat.label].map(({ opcion, cantidad }) => (
+                                <View key={opcion} style={styles.itemRow}>
+                                    <Text style={styles.itemText}>{opcion}</Text>
+                                    <View style={styles.counter}>
+                                        <Pressable
+                                            style={styles.counterButton}
+                                            onPress={() => updateCantidad(cat.label, opcion, -1)}
+                                        >
+                                            <Text style={styles.counterText}>-</Text>
+                                        </Pressable>
+                                        <Text style={styles.counterValue}>{cantidad}</Text>
+                                        <Pressable
+                                            style={styles.counterButton}
+                                            onPress={() => updateCantidad(cat.label, opcion, 1)}
+                                        >
+                                            <Text style={styles.counterText}>+</Text>
+                                        </Pressable>
+                                    </View>
                                 </View>
-                            </View>
-                        ))}
-                    </View>
-                ))}
+                            ))}
+                        </View>
+                    )}
+                />
 
-                <Pressable style={[styles.button, { backgroundColor: "#f4679fff", marginTop: 12 }]} onPress={handleConfirm}>
-                    <Text style={styles.buttonText}>Siguiente</Text>
-                </Pressable>
+                {/* Botón fijo */}
+                <View style={[styles.footer, { bottom: height * 0.13 }]}>
+                    <Pressable
+                        style={[styles.button, { backgroundColor: "#f4679fff" }]}
+                        onPress={handleConfirm}
+                    >
+                        <Text style={styles.buttonText}>Siguiente</Text>
+                    </Pressable>
+                </View>
             </View>
         </ImageBackground>
     );
 }
-//backgroundColor: "rgba(255,255,255,0.8)", 
+
 const styles = StyleSheet.create({
-    background: {
-        flex: 1,
-        resizeMode: "cover",
-    },
-    overlay: {
-        flex: 1,
-        padding: 20,
-    },
+    background: { flex: 1, resizeMode: "cover" },
+    overlay: { flex: 1, padding: 20 },
+
     itemRow: {
         flexDirection: "row",
         justifyContent: "space-between",
@@ -167,13 +177,17 @@ const styles = StyleSheet.create({
     },
     counterText: { fontSize: 18, fontWeight: "bold" },
     counterValue: { fontSize: 16, fontWeight: "bold", minWidth: 20, textAlign: "center" },
+
+    footer: {
+        position: "absolute",
+        left: 20,
+        right: 20,
+    },
     button: {
         backgroundColor: "#6200ee",
-        padding: 12,
+        padding: 14,
         borderRadius: 8,
         alignItems: "center",
-        marginTop: 20,
     },
     buttonText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
-    
 });

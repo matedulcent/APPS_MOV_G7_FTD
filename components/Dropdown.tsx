@@ -10,11 +10,18 @@ interface DropdownProps {
     icon?: keyof typeof MaterialIcons.glyphMap; // ✅ clave del glyphMap
 }
 
-export default function Dropdown({ label, options, selected, onSelect, icon }: DropdownProps) {
+export default function Dropdown({
+    label,
+    options,
+    selected,
+    onSelect,
+    icon,
+}: DropdownProps) {
     const [open, setOpen] = useState(false);
 
     return (
         <View style={[styles.container, open && styles.containerOpen]}>
+            {/* Header */}
             <Pressable style={styles.header} onPress={() => setOpen(!open)}>
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
                     {icon && (
@@ -25,7 +32,6 @@ export default function Dropdown({ label, options, selected, onSelect, icon }: D
                             style={{ marginRight: 8 }}
                         />
                     )}
-
                     <Text style={styles.label}>
                         {label} {selected.length ? `(${selected.length})` : ""}
                     </Text>
@@ -37,11 +43,13 @@ export default function Dropdown({ label, options, selected, onSelect, icon }: D
                 />
             </Pressable>
 
+            {/* Lista */}
             {open && (
                 <FlatList
                     data={options}
                     keyExtractor={(item) => item}
                     style={styles.dropdownList}
+                    scrollEnabled={false} // 👈 evita conflicto con ScrollView padre
                     renderItem={({ item }) => {
                         const isSelected = selected.includes(item);
                         return (
@@ -49,7 +57,12 @@ export default function Dropdown({ label, options, selected, onSelect, icon }: D
                                 style={[styles.option, isSelected && styles.optionSelected]}
                                 onPress={() => onSelect(item)}
                             >
-                                <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
+                                <Text
+                                    style={[
+                                        styles.optionText,
+                                        isSelected && styles.optionTextSelected,
+                                    ]}
+                                >
                                     {item}
                                 </Text>
                             </Pressable>
@@ -65,7 +78,7 @@ const styles = StyleSheet.create({
     container: {
         marginVertical: 10,
         borderWidth: 2,
-        borderRadius: 12,
+        borderRadius: 12, // ✅ redondea todas las esquinas
         borderColor: "#ccc",
         backgroundColor: "#fff",
         shadowColor: "#000",
@@ -73,6 +86,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 3,
+        overflow: "hidden", // ✅ asegura que las opciones sigan el borde redondeado
     },
     containerOpen: { borderColor: "#6200ee" },
     header: {
@@ -81,12 +95,17 @@ const styles = StyleSheet.create({
         justifyContent: "space-between",
         alignItems: "center",
         backgroundColor: "#f9f9f9",
-        borderTopLeftRadius: 10,
-        borderTopRightRadius: 10,
     },
     label: { fontWeight: "bold", fontSize: 16 },
-    dropdownList: { borderTopWidth: 1, borderColor: "#ddd" },
-    option: { padding: 12, borderBottomWidth: 1, borderColor: "#eee" },
+    dropdownList: {
+        borderTopWidth: 1,
+        borderColor: "#ddd",
+    },
+    option: {
+        padding: 12,
+        borderBottomWidth: 1,
+        borderColor: "#eee",
+    },
     optionSelected: { backgroundColor: "#e8f5e9" },
     optionText: { fontSize: 15 },
     optionTextSelected: { fontWeight: "bold", color: "#388e3c" },

@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
         overflow: "hidden", // 🔹 asegura que el gradiente respete los bordes redondeados
-        marginBottom: 10,
+        marginBottom: 30,
     },
     header: {
         flexDirection: "row",
