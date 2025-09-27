@@ -16,12 +16,11 @@ export default function SeleccionSucursalScreen() {
 
     const sucursales: Sucursal[] = [
         { id: "1", nombre: "Heladería A", direccion: "Av. Córdoba 1234", imagen: "https://www.compagniedesdesserts.com/wp-content/uploads/como-abrir-una-heladeria.webp" },
-        { id: "2", nombre: "Heladería B", direccion: "Calle San Juan 456", imagen: "https://images.adsttc.com/media/images/5f3d/a112/b357/6531/7a00/0246/newsletter/Coolhaus_Ice_Cream.jpg?1597874435" },
+        { id: "2", nombre: "Heladería B", direccion: "9 de Julio", imagen: "https://images.adsttc.com/media/images/5f3d/a112/b357/6531/7a00/0246/newsletter/Coolhaus_Ice_Cream.jpg?1597874435" },
         { id: "3", nombre: "Heladería C", direccion: "Av. Rivadavia 789", imagen: "https://themonopolitan.com/wp-content/uploads/2018/07/gelato-dal-cuore-4.png" },
         { id: "4", nombre: "Heladería D", direccion: "Paseo Colón 1800", imagen: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTAjKlwUz2pnxJ1Ej3S3ULLAGO5dCW3IsLVxA&s" },
-        { id: "5", nombre: "Heladería E", direccion: "Calle 43 y Cabildo", imagen: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSu_cc69y1wybOb3epdibyOMxNlMuXiVkFyqw&s" },
-        { id: "6", nombre: "Heladería F", direccion: "Av. Moreau D Justo", imagen: "https://files.vilbo.com/img/2024/old/b49e6ca4-4dc0-4fac-9882-56ab7b2bc668.webp" },
-        { id: "7", nombre: "Heladería G", direccion: "Calle 13", imagen: "https://cdn.prod.website-files.com/642f26ea0d34e06e4c51fef2/642f26ea0d34e047c051ff66_header_montar-negocio%401280.webp" },
+        { id: "5", nombre: "Heladería E", direccion: "Calle 13", imagen: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSu_cc69y1wybOb3epdibyOMxNlMuXiVkFyqw&s" },
+        { id: "6", nombre: "Heladería F", direccion: "Av. Moreau D Justo", imagen: "https://cdn.prod.website-files.com/642f26ea0d34e06e4c51fef2/642f26ea0d34e047c051ff66_header_montar-negocio%401280.webp" },
     ];
 
     const handleSeleccion = (sucursal: Sucursal) => {

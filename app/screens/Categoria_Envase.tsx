@@ -17,10 +17,12 @@ export default function CategoriaVolumenScreen() {
     });
 
     const categorias = [
-        { label: "Cucuruchos", options: ["1 bola", "2 bolas", "3 bolas", "4 bolas"] },
-        { label: "Kilos", options: ["1/4 Kg", "1/2 Kg", "1 Kg"] },
-        { label: "Vasos", options: ["1 bola", "2 bolas", "3 bolas", "4 bolas"] },
+        { label: "Cucuruchos", options: ["1 bola", "2 bolas", "3 bolas", "4 bolas"], icon: "icecream" as const },
+        { label: "Kilos", options: ["1/4 Kg", "1/2 Kg", "1 Kg"], icon: "shopping-bag" as const },
+        { label: "Vasos", options: ["1 bola", "2 bolas", "3 bolas", "4 bolas"], icon: "local-cafe" as const },
     ];
+
+
 
     const cantidadSabores: { [key: string]: number } = {
         Cucuruchos: 0,
@@ -103,6 +105,7 @@ export default function CategoriaVolumenScreen() {
                         options={cat.options}
                         selected={selecciones[cat.label].map((i) => i.opcion)}
                         onSelect={(item) => toggleSeleccion(cat.label, item)}
+                        icon={cat.icon} // ⚡ aquí se pasa
                     />
 
                     {selecciones[cat.label].map(({ opcion, cantidad }) => (
