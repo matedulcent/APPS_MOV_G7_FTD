@@ -11,37 +11,49 @@ import {
 } from "react-native";
 import ScreenHeader from "../../components/ScreenHeader";
 
-
-type PedidoCompleto = {
-    [envase: string]: string[];
+type Pedido = {
+    numero: number;
+    envases: {
+        nombre: string;
+        sabores: string[];
+    }[];
 };
 
 export default function RecibirProductosScreen() {
     const [searchText, setSearchText] = useState("");
     const [searchVisible, setSearchVisible] = useState(false);
 
-    const [pedidos, setPedidos] = useState<PedidoCompleto>({
-        "Cucuruchos 1 (1 bola)": ["Ron con pasas"],
-        "Kilos 1 (1/4 Kg)": ["Choco blanco", "Chocolate con almendras"],
-    });
+    const [pedidos, setPedidos] = useState<Pedido[]>([
+        {
+            numero: 1,
+            envases: [
+                { nombre: "Cucuruchos 1 (1 bola)", sabores: ["Ron con pasas"] },
+                { nombre: "Kilos 1 (1/4 Kg)", sabores: ["Choco blanco", "Chocolate con almendras"] },
+            ],
+        },
+        {
+            numero: 2,
+            envases: [
+                { nombre: "Cucuruchos 2 (2 bolas)", sabores: ["Frutilla", "Banana"] },
+            ],
+        },
+    ]);
 
-    const pedidosFiltrados = Object.entries(pedidos).filter(([envase]) =>
-        envase.toLowerCase().includes(searchText.toLowerCase())
-    );
-
-    const recibirPedido = (envase: string) => {
-        Alert.alert("Recibido", `${envase} marcado como recibido`);
-        setPedidos((prev) => {
-            const copy = { ...prev };
-            delete copy[envase];
-            return copy;
-        });
+    const recibirPedido = (numero: number) => {
+        Alert.alert("Recibido", `Pedido #${numero} marcado como recibido`);
+        setPedidos((prev) => prev.filter((p) => p.numero !== numero));
     };
 
+    const pedidosFiltrados = pedidos.filter((pedido) =>
+        pedido.envases.some((env) => env.nombre.toLowerCase().includes(searchText.toLowerCase()))
+    );
+
     return (
-        <ImageBackground source={require("../../assets/images/backgrounds/fondo4.jpg")} style={styles.container}>
+        <ImageBackground
+            source={require("../../assets/images/backgrounds/fondo4.jpg")}
+            style={styles.container}
+        >
             <View style={styles.overlay}>
-                {/* Header */}
                 <View style={styles.headerWrapper}>
                     <ScreenHeader
                         title="Recibir Pedidos"
@@ -58,23 +70,27 @@ export default function RecibirProductosScreen() {
                     )}
                 </View>
 
-                {/* Lista de pedidos */}
                 <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
                     {pedidosFiltrados.length === 0 && (
                         <Text style={styles.emptyText}>No hay pedidos por recibir</Text>
                     )}
 
-                    {pedidosFiltrados.map(([envase, sabores]) => (
-                        <View key={envase} style={styles.card}>
-                            <Text style={styles.envaseText}>{envase}</Text>
-                            {sabores.map((sabor, idx) => (
-                                <Text key={idx} style={styles.saborText}>
-                                    • {sabor}
-                                </Text>
+                    {pedidosFiltrados.map((pedido) => (
+                        <View key={pedido.numero} style={styles.card}>
+                            <Text style={styles.orderNumber}>Pedido #{pedido.numero}</Text>
+                            {pedido.envases.map((env, idx) => (
+                                <View key={idx} style={{ marginBottom: 8 }}>
+                                    <Text style={styles.envaseText}>{env.nombre}</Text>
+                                    {env.sabores.map((sabor, sIdx) => (
+                                        <Text key={sIdx} style={styles.saborText}>
+                                            • {sabor}
+                                        </Text>
+                                    ))}
+                                </View>
                             ))}
                             <Pressable
                                 style={styles.recibirButton}
-                                onPress={() => recibirPedido(envase)}
+                                onPress={() => recibirPedido(pedido.numero)}
                             >
                                 <Text style={styles.recibirText}>Recibir</Text>
                             </Pressable>
@@ -88,7 +104,7 @@ export default function RecibirProductosScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, width: "100%", height: "100%" },
-    overlay: { flex: 1 }, // overlay semitransparente
+    overlay: { flex: 1},
     headerWrapper: { marginTop: 20, marginHorizontal: 20 },
     searchInput: {
         marginVertical: 10,
@@ -111,7 +127,8 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 2,
     },
-    envaseText: { fontSize: 16, fontWeight: "bold", marginBottom: 6 },
+    orderNumber: { fontSize: 16, fontWeight: "bold", marginBottom: 8, color: "#333" },
+    envaseText: { fontSize: 15, fontWeight: "600", marginBottom: 2 },
     saborText: { fontSize: 14, marginLeft: 12, marginBottom: 2 },
     recibirButton: {
         backgroundColor: "#4cd7c7",
