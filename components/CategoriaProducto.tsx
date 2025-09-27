@@ -7,7 +7,7 @@ type Props = {
     nuevoProducto: string;
     onChangeNuevoProducto: (text: string) => void;
     onAgregar: () => void;
-    onRemover: (index: number) => void;
+    onRemover: (producto: string) => void;
 };
 
 export default function CategoriaProducto({
@@ -19,27 +19,30 @@ export default function CategoriaProducto({
     onRemover,
 }: Props) {
     return (
-        <View style={styles.categoria}>
-            <Text style={styles.categoriaLabel}>{label}</Text>
+        <View style={styles.container}>
+            <Text style={styles.label}>{label}</Text>
 
-            {productos.map((prod, index) => (
-                <View key={prod} style={styles.producto}>
-                    <Text>{prod}</Text>
-                    <Pressable style={styles.removerBtn} onPress={() => onRemover(index)}>
-                        <Text style={{ color: "white" }}>X</Text>
+            {productos.map((prod) => (
+                <View key={prod} style={styles.productRow}>
+                    <Text style={styles.productText}>{prod}</Text>
+                    <Pressable
+                        style={styles.removeButton}
+                        onPress={() => onRemover(prod)}
+                    >
+                        <Text style={styles.removeText}>X</Text>
                     </Pressable>
                 </View>
             ))}
 
-            <View style={styles.nuevoProductoContainer}>
+            <View style={styles.addRow}>
                 <TextInput
-                    placeholder="Nuevo producto..."
+                    style={styles.input}
+                    placeholder="Nuevo producto"
                     value={nuevoProducto}
                     onChangeText={onChangeNuevoProducto}
-                    style={styles.input}
                 />
-                <Pressable style={styles.agregarBtn} onPress={onAgregar}>
-                    <Text style={{ color: "white" }}>Agregar</Text>
+                <Pressable style={styles.addButton} onPress={onAgregar}>
+                    <Text style={styles.addText}>Agregar</Text>
                 </Pressable>
             </View>
         </View>
@@ -47,41 +50,42 @@ export default function CategoriaProducto({
 }
 
 const styles = StyleSheet.create({
-    categoria: {
-        marginHorizontal: 16,
-        marginBottom: 24,
-        padding: 12,
-        backgroundColor: "#ffd8d8",
-        borderRadius: 12,
-    },
-    categoriaLabel: { fontSize: 18, fontWeight: "bold", marginBottom: 8 },
-    producto: {
+    container: { marginHorizontal: 16, marginBottom: 16 },
+    label: { fontSize: 18, fontWeight: "bold", marginBottom: 8 },
+    productRow: {
         flexDirection: "row",
         justifyContent: "space-between",
-        marginBottom: 6,
-        padding: 6,
+        alignItems: "center",
+        paddingVertical: 4,
+        paddingHorizontal: 8,
         backgroundColor: "#fff",
         borderRadius: 8,
+        marginBottom: 4,
+        borderWidth: 1,
+        borderColor: "#ccc",
     },
-    removerBtn: {
-        backgroundColor: "#e91e63",
+    productText: { fontSize: 16 },
+    removeButton: {
+        backgroundColor: "#ff6b6b",
         paddingHorizontal: 8,
-        borderRadius: 6,
-        justifyContent: "center",
+        paddingVertical: 2,
+        borderRadius: 4,
     },
-    nuevoProductoContainer: { flexDirection: "row", marginTop: 8 },
+    removeText: { color: "#fff", fontWeight: "bold" },
+    addRow: { flexDirection: "row", marginTop: 8, gap: 8 },
     input: {
         flex: 1,
         borderWidth: 1,
         borderColor: "#ccc",
         borderRadius: 8,
         paddingHorizontal: 8,
+        backgroundColor: "#fff",
     },
-    agregarBtn: {
+    addButton: {
         backgroundColor: "#4cd7c7",
-        marginLeft: 8,
         paddingHorizontal: 12,
         justifyContent: "center",
         borderRadius: 8,
     },
+    addText: { fontWeight: "bold", color: "#000" },
 });

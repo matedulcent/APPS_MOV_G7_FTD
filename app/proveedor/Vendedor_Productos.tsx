@@ -7,7 +7,7 @@ import {
     StyleSheet,
     Text,
     TextInput,
-    View
+    View,
 } from "react-native";
 import CategoriaProducto from "../../components/CategoriaProducto";
 import ScreenHeader from "../../components/ScreenHeader";
@@ -20,7 +20,8 @@ type Categoria = {
 };
 
 export default function VendedorProductosScreen() {
-    //! REEMPLAZA LA BD
+    const router = useRouter();
+
     const [categorias, setCategorias] = useState<Categoria[]>([
         { label: "Frutales", options: ["Frutilla", "Banana", "Frambuesa"] },
         { label: "Chocolates", options: ["Chocolate", "Choco blanco"] },
@@ -45,22 +46,20 @@ export default function VendedorProductosScreen() {
         setNuevoProductoInputs((prev) => ({ ...prev, [label]: "" }));
     };
 
-    const removerProducto = (catIndex: number, prodIndex: number) => {
+    const removerProducto = (catIndex: number, producto: string) => {
         setCategorias((prev) => {
             const newCats = [...prev];
-            newCats[catIndex].options.splice(prodIndex, 1);
+            newCats[catIndex].options = newCats[catIndex].options.filter(
+                (p) => p !== producto
+            );
             return newCats;
         });
     };
 
-    // dentro del componente
-    const router = useRouter();
-
     const handleIrRecibirOrdenes = () => {
-        router.push("/proveedor/Recibir_Productos"); // ruta real de tu pantalla de recibir órdenes
+        router.push("/proveedor/Recibir_Productos");
     };
 
-    // Filtrar productos por buscador
     const categoriasFiltradas = categorias.map((cat) => ({
         ...cat,
         options: cat.options.filter((prod) =>
@@ -97,7 +96,7 @@ export default function VendedorProductosScreen() {
                             setNuevoProductoInputs((prev) => ({ ...prev, [cat.label]: text }))
                         }
                         onAgregar={() => agregarProducto(catIndex)}
-                        onRemover={(prodIndex) => removerProducto(catIndex, prodIndex)}
+                        onRemover={(producto) => removerProducto(catIndex, producto)}
                     />
                 ))}
             </ScrollView>

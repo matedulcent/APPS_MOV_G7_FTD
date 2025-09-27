@@ -2,32 +2,33 @@ import React, { useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import ScreenHeader from "../../components/ScreenHeader";
 
-type Producto = {
-    id: string;
-    nombre: string;
-    cantidad: number;
-    cliente: string;
+// Diccionario ejemplo: envase -> lista de sabores
+type PedidoCompleto = {
+    [envase: string]: string[];
 };
 
 export default function RecibirProductosScreen() {
     const [searchText, setSearchText] = useState("");
     const [searchVisible, setSearchVisible] = useState(false);
 
-    // Órdenes de ejemplo
-    const [ordenes, setOrdenes] = useState<Producto[]>([
-        { id: "1", nombre: "Frutilla", cantidad: 2, cliente: "Juan Pérez" },
-        { id: "2", nombre: "Chocolate", cantidad: 1, cliente: "María López" },
-        { id: "3", nombre: "Banana", cantidad: 3, cliente: "Carlos García" },
-    ]);
+    // Pedidos de ejemplo
+    const [pedidos, setPedidos] = useState<PedidoCompleto>({
+        "Cucuruchos 1 (1 bola)": ["Ron con pasas"],
+        "Kilos 1 (1/4 Kg)": ["Choco blanco", "Chocolate con almendras"],
+    });
 
-    const ordenesFiltradas = ordenes.filter((o) =>
-        o.nombre.toLowerCase().includes(searchText.toLowerCase())
+    // Filtrado de envases por buscador
+    const pedidosFiltrados = Object.entries(pedidos).filter(([envase]) =>
+        envase.toLowerCase().includes(searchText.toLowerCase())
     );
 
-    const recibirProducto = (id: string) => {
-        Alert.alert("Recibido", "Producto marcado como recibido");
-        // opcional: eliminar de la lista de ejemplo
-        setOrdenes((prev) => prev.filter((o) => o.id !== id));
+    const recibirPedido = (envase: string) => {
+        Alert.alert("Recibido", `${envase} marcado como recibido`);
+        setPedidos((prev) => {
+            const copy = { ...prev };
+            delete copy[envase];
+            return copy;
+        });
     };
 
     return (
@@ -35,13 +36,13 @@ export default function RecibirProductosScreen() {
             {/* Header */}
             <View style={styles.headerWrapper}>
                 <ScreenHeader
-                    title="Recibir Productos"
+                    title="Recibir Pedidos"
                     showSearch
                     onToggleSearch={() => setSearchVisible((prev) => !prev)}
                 />
                 {searchVisible && (
                     <TextInput
-                        placeholder="Buscar producto..."
+                        placeholder="Buscar envase..."
                         style={styles.searchInput}
                         value={searchText}
                         onChangeText={setSearchText}
@@ -49,20 +50,23 @@ export default function RecibirProductosScreen() {
                 )}
             </View>
 
-            {/* Lista de órdenes */}
+            {/* Lista de pedidos */}
             <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
-                {ordenesFiltradas.length === 0 && (
-                    <Text style={styles.emptyText}>No hay productos por recibir</Text>
+                {pedidosFiltrados.length === 0 && (
+                    <Text style={styles.emptyText}>No hay pedidos por recibir</Text>
                 )}
-                {ordenesFiltradas.map((orden) => (
-                    <View key={orden.id} style={styles.card}>
-                        <Text style={styles.productText}>
-                            {orden.nombre} x {orden.cantidad}
-                        </Text>
-                        <Text style={styles.clienteText}>Cliente: {orden.cliente}</Text>
+
+                {pedidosFiltrados.map(([envase, sabores]) => (
+                    <View key={envase} style={styles.card}>
+                        <Text style={styles.envaseText}>{envase}</Text>
+                        {sabores.map((sabor, idx) => (
+                            <Text key={idx} style={styles.saborText}>
+                                • {sabor}
+                            </Text>
+                        ))}
                         <Pressable
                             style={styles.recibirButton}
-                            onPress={() => recibirProducto(orden.id)}
+                            onPress={() => recibirPedido(envase)}
                         >
                             <Text style={styles.recibirText}>Recibir</Text>
                         </Pressable>
@@ -97,9 +101,9 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 2,
     },
-    productText: { fontSize: 16, fontWeight: "bold", marginBottom: 4 },
-    clienteText: { fontSize: 14, marginBottom: 8 },
-    recibirButton: { backgroundColor: "#4cd7c7", paddingVertical: 10, borderRadius: 8, alignItems: "center" },
+    envaseText: { fontSize: 16, fontWeight: "bold", marginBottom: 6 },
+    saborText: { fontSize: 14, marginLeft: 12, marginBottom: 2 },
+    recibirButton: { backgroundColor: "#4cd7c7", paddingVertical: 10, borderRadius: 8, alignItems: "center", marginTop: 8 },
     recibirText: { color: "#000", fontWeight: "bold" },
     emptyText: { textAlign: "center", marginTop: 40, fontSize: 16, color: "#999" },
 });
