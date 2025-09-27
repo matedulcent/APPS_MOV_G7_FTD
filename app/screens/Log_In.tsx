@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -8,75 +8,120 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-        
-      <TouchableOpacity
-            style={styles.backButton} 
-            onPress={() => router.push("/")}
-            >
-            <Text style={styles.backText}>⬅️ Volver al inicio</Text>
-      </TouchableOpacity>
-
+      {/* Botón de volver */}
+      <Pressable
+        style={({ pressed }) => [
+          styles.backButton,
+          pressed && { opacity: 0.7 },
+        ]}
+        onPress={() => router.push("/")}
+      >
+        <Text style={styles.backText}>⬅️ Volver al inicio</Text>
+      </Pressable>
 
       <Text style={styles.title}>Login</Text>
 
+      {/* Switch de Cliente / Vendedor */}
       <View style={styles.switchContainer}>
-        <TouchableOpacity
-          style={[styles.switchButton, role === "cliente" && styles.activeButton]}
+        <Pressable
+          style={({ pressed }) => [
+            styles.switchButton,
+            role === "cliente" && styles.activeButton,
+            pressed && { opacity: 0.8 },
+          ]}
           onPress={() => setRole("cliente")}
         >
-          <Text style={[styles.switchText, role === "cliente" && styles.activeText]}>
+          <Text
+            style={[
+              styles.switchText,
+              role === "cliente" && styles.activeText,
+            ]}
+          >
             Cliente
           </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.switchButton, role === "vendedor" && styles.activeButton]}
+        </Pressable>
+        <Pressable
+          style={({ pressed }) => [
+            styles.switchButton,
+            role === "vendedor" && styles.activeButton,
+            pressed && { opacity: 0.8 },
+          ]}
           onPress={() => setRole("vendedor")}
         >
-          <Text style={[styles.switchText, role === "vendedor" && styles.activeText]}>
+          <Text
+            style={[
+              styles.switchText,
+              role === "vendedor" && styles.activeText,
+            ]}
+          >
             Vendedor
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
-      <TextInput
-        style={styles.input}
-        placeholder={`Email ${role}`}
-      />
+      {/* Inputs */}
+      <TextInput style={styles.input} placeholder={`Email ${role}`} />
       <TextInput
         style={styles.input}
         placeholder="Password"
         secureTextEntry
       />
 
-      <TouchableOpacity
-        style={styles.loginButton}
+      {/* Botón de login */}
+      <Pressable
+        style={({ pressed }) => [
+          styles.loginButton,
+          pressed && { opacity: 0.8 },
+        ]}
         onPress={() => router.push("/screens/Seleccion_Sucursal")}
       >
         <Text style={styles.loginText}>
-          {role === "cliente" ? "Entrar como Cliente" : "Entrar como Vendedor"}
+          {role === "cliente"
+            ? "Entrar como Cliente"
+            : "Entrar como Vendedor"}
         </Text>
-      </TouchableOpacity>
+      </Pressable>
 
-
-      <TouchableOpacity
+      {/* Link de registro */}
+      <Pressable
         onPress={() =>
-          router.push(role === "cliente" ? "/screens/Registro_Cliente" : "/screens/Registro_Vendedor")
+          router.push(
+            role === "cliente"
+              ? "/screens/Registro_Cliente"
+              : "/screens/Registro_Vendedor"
+          )
         }
       >
-        <Text style={styles.linkText}>
-          {role === "cliente"
-            ? "No sos cliente? Registrate"
-            : "No sos vendedor? Registrate"}
-        </Text>
-      </TouchableOpacity>
+        {({ pressed }) => (
+          <Text
+            style={[
+              styles.linkText,
+              pressed && { textDecorationLine: "underline" },
+            ]}
+          >
+            {role === "cliente"
+              ? "No sos cliente? Registrate"
+              : "No sos vendedor? Registrate"}
+          </Text>
+        )}
+      </Pressable>
     </View>
   );
 }
 
-
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 20, backgroundColor: "#f9f9f9" },
-  title: { fontSize: 26, fontWeight: "bold", textAlign: "center", marginBottom: 30 },
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    padding: 20,
+    backgroundColor: "#f9f9f9",
+  },
+  title: {
+    fontSize: 26,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 30,
+  },
 
   switchContainer: {
     flexDirection: "row",
@@ -110,7 +155,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 20,
   },
-backButton: {
+  backButton: {
     paddingVertical: 10,
     paddingHorizontal: 10,
     borderRadius: 20,
@@ -118,7 +163,7 @@ backButton: {
     justifyContent: "center",
     backgroundColor: "#d3d3d3ff",
     marginBottom: 20,
-},
+  },
   backText: { color: "#000000ff", fontSize: 16, fontWeight: "bold" },
   loginText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
   linkText: { textAlign: "center", color: "#007AFF", marginTop: 10 },

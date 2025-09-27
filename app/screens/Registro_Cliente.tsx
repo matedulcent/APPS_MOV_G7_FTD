@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 export default function RegistroCliente() {
   const router = useRouter(); 
@@ -14,21 +14,25 @@ export default function RegistroCliente() {
       alert("Las contraseñas no coinciden");
       return;
     }
-    
     router.push("/screens/Log_In");
   };
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity
-            style={[styles.backButton]}
-            onPress={() => router.push("/")}
-            >
-            <Text style={styles.backText}>⬅️ Volver al inicio</Text>
-      </TouchableOpacity>
+      {/* Botón volver */}
+      <Pressable
+        style={({ pressed }) => [
+          styles.backButton,
+          pressed && { opacity: 0.7 },
+        ]}
+        onPress={() => router.push("/")}
+      >
+        <Text style={styles.backText}>⬅️ Volver al inicio</Text>
+      </Pressable>
 
       <Text style={styles.title}>Registro de Cliente</Text>
 
+      {/* Inputs */}
       <TextInput
         style={styles.input}
         placeholder="Nombre Completo"
@@ -57,13 +61,30 @@ export default function RegistroCliente() {
         secureTextEntry
       />
 
-      <TouchableOpacity style={styles.registerButton} onPress={handleRegister}>
+      {/* Botón de registro */}
+      <Pressable
+        style={({ pressed }) => [
+          styles.registerButton,
+          pressed && { opacity: 0.8 },
+        ]}
+        onPress={handleRegister}
+      >
         <Text style={styles.registerText}>Registrarse</Text>
-      </TouchableOpacity>
+      </Pressable>
 
-      <TouchableOpacity onPress={() => router.push("/screens/Log_In")}>
-        <Text style={styles.linkText}>¿Ya tienes cuenta? Inicia sesión</Text>
-      </TouchableOpacity>
+      {/* Link de login */}
+      <Pressable onPress={() => router.push("/screens/Log_In")}>
+        {({ pressed }) => (
+          <Text
+            style={[
+              styles.linkText,
+              pressed && { textDecorationLine: "underline" },
+            ]}
+          >
+            ¿Ya tienes cuenta? Inicia sesión
+          </Text>
+        )}
+      </Pressable>
     </View>
   );
 }
@@ -88,7 +109,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 20,
   },
-backButton: {
+  backButton: {
     paddingVertical: 10,
     paddingHorizontal: 10,
     borderRadius: 20,
@@ -96,8 +117,7 @@ backButton: {
     justifyContent: "center",
     backgroundColor: "#d3d3d3ff",
     marginBottom: 20,
-},
-    
+  },
   backText: { color: "#000000ff", fontSize: 16, fontWeight: "bold" },
   registerText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
   linkText: { textAlign: "center", color: "#007AFF", marginTop: 10 },
