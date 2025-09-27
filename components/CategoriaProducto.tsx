@@ -50,19 +50,32 @@ export default function CategoriaProducto({
 }
 
 const styles = StyleSheet.create({
-    container: { marginHorizontal: 16, marginBottom: 16 },
+    container: {
+        marginHorizontal: 16,
+        marginBottom: 16,
+        backgroundColor: "#fff",
+        padding: 12,
+        borderRadius: 12,
+        // Sombra iOS
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        // Elevation Android
+        elevation: 3,
+    },
     label: { fontSize: 18, fontWeight: "bold", marginBottom: 8 },
     productRow: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        paddingVertical: 4,
+        paddingVertical: 6,
         paddingHorizontal: 8,
-        backgroundColor: "#fff",
+        backgroundColor: "#f9f9f9",
         borderRadius: 8,
-        marginBottom: 4,
+        marginBottom: 6,
         borderWidth: 1,
-        borderColor: "#ccc",
+        borderColor: "#ddd",
     },
     productText: { fontSize: 16 },
     removeButton: {
@@ -89,3 +102,4 @@ const styles = StyleSheet.create({
     },
     addText: { fontWeight: "bold", color: "#000" },
 });
+
