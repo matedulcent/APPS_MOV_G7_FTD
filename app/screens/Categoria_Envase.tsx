@@ -105,7 +105,7 @@ export default function CategoriaVolumenScreen() {
                         options={cat.options}
                         selected={selecciones[cat.label].map((i) => i.opcion)}
                         onSelect={(item) => toggleSeleccion(cat.label, item)}
-                        icon={cat.icon} // ⚡ aquí se pasa
+                        icon={cat.icon} 
                     />
 
                     {selecciones[cat.label].map(({ opcion, cantidad }) => (
@@ -116,14 +116,14 @@ export default function CategoriaVolumenScreen() {
                                     style={styles.counterButton}
                                     onPress={() => updateCantidad(cat.label, opcion, -1)}
                                 >
-                                    <Text style={styles.counterText}>−</Text>
+                                    <Text style={styles.counterText}>-</Text>
                                 </Pressable>
                                 <Text style={styles.counterValue}>{cantidad}</Text>
                                 <Pressable
                                     style={styles.counterButton}
                                     onPress={() => updateCantidad(cat.label, opcion, 1)}
                                 >
-                                    <Text style={styles.counterText}>＋</Text>
+                                    <Text style={styles.counterText}>+</Text>
                                 </Pressable>
                             </View>
                         </View>
