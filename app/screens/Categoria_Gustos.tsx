@@ -64,7 +64,15 @@ export default function CategoriaGustosScreen() {
             setCurrentIndex(currentIndex + 1);
         } else {
             const pedidoString = encodeURIComponent(JSON.stringify(selecciones));
-            // Pasamos sucursalId y userId junto con el pedido
+            ////////////////////////////////////////////////////////////////////////////
+            ////////////////////////////////////////////////////////////////////////////
+            console.log("##########################################################################");
+            console.log("(SELECCION GUSTOS) SUCURSAL ID:", sucursalId);
+            console.log("(SELECCION GUSTOS) Usuario ID:", userId);
+            console.log("(SELECCION GUSTOS) Pedido jason:", pedido);
+            console.log("(SELECCION GUSTOS) Gustos:", selecciones);
+            ////////////////////////////////////////////////////////////////////////////
+            ////////////////////////////////////////////////////////////////////////////
             router.push({
                 pathname: "/screens/Detalle_Pedido",
                 params: { pedido: pedidoString, sucursalId, userId },

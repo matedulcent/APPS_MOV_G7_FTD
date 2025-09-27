@@ -16,7 +16,14 @@ export default function DetallePedidoScreen() {
         : {};
 
     const ticketHeight = Dimensions.get("window").height * 0.8;
-
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    console.log("##########################################################################");
+    console.log("(DETALLE) SUCURSAL ID:", sucursalId);
+    console.log("(DETALLE) Usuario ID:", userId);
+    console.log("(DETALLE) Pedido completo:", pedido);
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     return (
         <View style={styles.container}>
             <View style={[styles.ticket, { height: ticketHeight }]}>

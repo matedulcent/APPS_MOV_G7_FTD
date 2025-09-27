@@ -5,10 +5,16 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 export default function NumeroOrdenScreen() {
     const router = useRouter();
-    const { sucursalId, userId } = useLocalSearchParams<{
+    const { pedido, sucursalId, userId } = useLocalSearchParams<{
+        pedido?: string;
         sucursalId?: string;
         userId?: string;
     }>();
+    /*const { pedido, sucursalId, userId } = useLocalSearchParams<{
+        pedido: string;
+        sucursalId: string;
+        userId: string;
+    }>();*/
 
     const [numeroOrden, setNumeroOrden] = useState<number>(0);
 
@@ -18,9 +24,14 @@ export default function NumeroOrdenScreen() {
         setNumeroOrden(orden);
 
         // Imprime por consola los IDs y el número de orden
-        console.log("Número de Orden:", orden);
-        console.log("Sucursal ID:", sucursalId);
-        console.log("Usuario ID:", userId);
+        ////////////////////////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////////////////////////
+        console.log("##########################################################################");
+        console.log("(SELECCION GUSTOS) SUCURSAL ID:", sucursalId);
+        console.log("(SELECCION GUSTOS) Usuario ID:", userId);
+        console.log("(SELECCION GUSTOS) Pedido Completo:", pedido);
+        ////////////////////////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////////////////////////
     }, [sucursalId, userId]);
 
     return (

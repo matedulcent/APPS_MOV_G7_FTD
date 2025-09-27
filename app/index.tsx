@@ -7,12 +7,20 @@ export default function HomeScreen() {
 
   const handleElegirSucursal = () => {
     // Generar un ID de cliente aleatorio
-    const clientId = Math.floor(100000 + Math.random() * 900000).toString();
+    const userId = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Navegar a la pantalla de selección de sucursal pasando el clientId
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    console.log("##########################################################################");
+    console.log("##########################################################################");
+    console.log("(INDEX) Usuario ID:", userId);
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+
+    // Navegar a la pantalla de selección de sucursal pasando el userId
     router.push({
       pathname: "./screens/Seleccion_Sucursal",
-      params: { clientId },
+      params: { userId },
     });
   };
 

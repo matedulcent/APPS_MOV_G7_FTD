@@ -71,6 +71,14 @@ export default function CategoriaVolumenScreen() {
         });
 
         const pedidoString = encodeURIComponent(JSON.stringify(pedidoFinal));
+        ////////////////////////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////////////////////////
+        console.log("##########################################################################");
+        console.log("(SELECCION ENVASE) SUCURSAL ID:", sucursalId);
+        console.log("(SELECCION ENVASE) Usuario ID:", userId);
+        console.log("(SELECCION ENVASE) Pedido:", pedidoFinal);
+        ////////////////////////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////////////////////////
 
         // Incluimos sucursalId y userId en la siguiente pantalla
         router.push({

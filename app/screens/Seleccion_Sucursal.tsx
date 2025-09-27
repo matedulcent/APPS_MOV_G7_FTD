@@ -23,11 +23,18 @@ export default function SeleccionSucursalScreen() {
 
     const handleSeleccion = (sucursal: Sucursal) => {
         setSucursalSeleccionada(sucursal.id);
+        ////////////////////////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////////////////////////
+        console.log("##########################################################################");
+        console.log("(SELECCION SUCURSAL) SUCURSAL ID:", sucursal.id);
+        console.log("(SELECCION SUCURSAL) Usuario ID:", userId);
+        ////////////////////////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////////////////////////
 
         // Navegar a la pantalla de volumen pasando la sucursal y userId
         router.push({
             pathname: "/screens/Categoria_Envase",
-            params: { sucursal: sucursal.id, userId },
+            params: { sucursalId: sucursal.id, userId },
         });
     };
 
