@@ -1,7 +1,12 @@
-// app/screens/Categoria_Volumen.tsx
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+    ImageBackground,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+} from "react-native";
 import Dropdown from "../../components/Dropdown";
 import ScreenHeader from "../../components/ScreenHeader";
 
@@ -9,7 +14,6 @@ export default function CategoriaVolumenScreen() {
     const { sucursalId, userId } = useLocalSearchParams<{ sucursalId: string; userId: string }>();
     const router = useRouter();
 
-    // Selecciones con cantidades
     const [selecciones, setSelecciones] = useState<{ [key: string]: { opcion: string; cantidad: number }[] }>({
         Cucuruchos: [],
         Kilos: [],
@@ -21,8 +25,6 @@ export default function CategoriaVolumenScreen() {
         { label: "Kilos", options: ["1/4 Kg", "1/2 Kg", "1 Kg"], icon: "shopping-bag" as const },
         { label: "Vasos", options: ["1 bola", "2 bolas", "3 bolas", "4 bolas"], icon: "local-cafe" as const },
     ];
-
-
 
     const cantidadSabores: { [key: string]: number } = {
         Cucuruchos: 0,
@@ -73,73 +75,76 @@ export default function CategoriaVolumenScreen() {
         });
 
         const pedidoString = encodeURIComponent(JSON.stringify(pedidoFinal));
-        ////////////////////////////////////////////////////////////////////////////
-        ////////////////////////////////////////////////////////////////////////////
+
         console.log("##########################################################################");
         console.log("(SELECCION ENVASE) SUCURSAL ID:", sucursalId);
         console.log("(SELECCION ENVASE) Usuario ID:", userId);
         console.log("(SELECCION ENVASE) Pedido:", pedidoFinal);
-        ////////////////////////////////////////////////////////////////////////////
-        ////////////////////////////////////////////////////////////////////////////
 
-        // Incluimos sucursalId y userId en la siguiente pantalla
         router.push({
             pathname: "/screens/Categoria_Gustos",
-            params: {
-                pedido: pedidoString,
-                sucursalId,
-                userId,
-            },
+            params: { pedido: pedidoString, sucursalId, userId },
         });
     };
 
     return (
-        <View style={styles.container}>
-            {/* HEADER modular */}
-            <ScreenHeader title="Seleccionar Envase" />
+        <ImageBackground
+            source={require("../../assets/images/backgrounds/fondo1.jpg")} // 👈 poné acá tu ruta
+            style={styles.background}
+        >
+            <View style={styles.overlay}>
+                <ScreenHeader title="Seleccionar Envase" />
 
-            {categorias.map((cat) => (
-                <View key={cat.label} style={{ marginBottom: 20 }}>
-                    <Dropdown
-                        label={cat.label}
-                        options={cat.options}
-                        selected={selecciones[cat.label].map((i) => i.opcion)}
-                        onSelect={(item) => toggleSeleccion(cat.label, item)}
-                        icon={cat.icon} 
-                    />
+                {categorias.map((cat) => (
+                    <View key={cat.label} style={{ marginBottom: 20 }}>
+                        <Dropdown
+                            label={cat.label}
+                            options={cat.options}
+                            selected={selecciones[cat.label].map((i) => i.opcion)}
+                            onSelect={(item) => toggleSeleccion(cat.label, item)}
+                            icon={cat.icon}
+                        />
 
-                    {selecciones[cat.label].map(({ opcion, cantidad }) => (
-                        <View key={opcion} style={styles.itemRow}>
-                            <Text style={styles.itemText}>{opcion}</Text>
-                            <View style={styles.counter}>
-                                <Pressable
-                                    style={styles.counterButton}
-                                    onPress={() => updateCantidad(cat.label, opcion, -1)}
-                                >
-                                    <Text style={styles.counterText}>-</Text>
-                                </Pressable>
-                                <Text style={styles.counterValue}>{cantidad}</Text>
-                                <Pressable
-                                    style={styles.counterButton}
-                                    onPress={() => updateCantidad(cat.label, opcion, 1)}
-                                >
-                                    <Text style={styles.counterText}>+</Text>
-                                </Pressable>
+                        {selecciones[cat.label].map(({ opcion, cantidad }) => (
+                            <View key={opcion} style={styles.itemRow}>
+                                <Text style={styles.itemText}>{opcion}</Text>
+                                <View style={styles.counter}>
+                                    <Pressable
+                                        style={styles.counterButton}
+                                        onPress={() => updateCantidad(cat.label, opcion, -1)}
+                                    >
+                                        <Text style={styles.counterText}>-</Text>
+                                    </Pressable>
+                                    <Text style={styles.counterValue}>{cantidad}</Text>
+                                    <Pressable
+                                        style={styles.counterButton}
+                                        onPress={() => updateCantidad(cat.label, opcion, 1)}
+                                    >
+                                        <Text style={styles.counterText}>+</Text>
+                                    </Pressable>
+                                </View>
                             </View>
-                        </View>
-                    ))}
-                </View>
-            ))}
+                        ))}
+                    </View>
+                ))}
 
-            <Pressable style={styles.button} onPress={handleConfirm}>
-                <Text style={styles.buttonText}>Siguiente</Text>
-            </Pressable>
-        </View>
+                <Pressable style={styles.button} onPress={handleConfirm}>
+                    <Text style={styles.buttonText}>Siguiente</Text>
+                </Pressable>
+            </View>
+        </ImageBackground>
     );
 }
-
+//backgroundColor: "rgba(255,255,255,0.8)", 
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 20 },
+    background: {
+        flex: 1,
+        resizeMode: "cover",
+    },
+    overlay: {
+        flex: 1,
+        padding: 20,
+    },
     itemRow: {
         flexDirection: "row",
         justifyContent: "space-between",
@@ -149,6 +154,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: "#ddd",
         borderRadius: 6,
+        backgroundColor: "#fff",
     },
     itemText: { fontSize: 16 },
     counter: { flexDirection: "row", alignItems: "center" },
@@ -169,4 +175,5 @@ const styles = StyleSheet.create({
         marginTop: 20,
     },
     buttonText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
+    
 });

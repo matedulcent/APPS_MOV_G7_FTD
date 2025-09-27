@@ -1,7 +1,7 @@
 // app/screens/Categoria_Gustos.tsx
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { ImageBackground, StyleSheet, Text, View } from "react-native";
 import Dropdown from "../../components/Dropdown";
 import PedidoCardBottom from "../../components/PedidoCardBottom";
 import ScreenHeader from "../../components/ScreenHeader";
@@ -65,13 +65,11 @@ export default function CategoriaGustosScreen() {
         } else {
             const pedidoString = encodeURIComponent(JSON.stringify(selecciones));
             ////////////////////////////////////////////////////////////////////////////
-            ////////////////////////////////////////////////////////////////////////////
             console.log("##########################################################################");
             console.log("(SELECCION GUSTOS) SUCURSAL ID:", sucursalId);
             console.log("(SELECCION GUSTOS) Usuario ID:", userId);
             console.log("(SELECCION GUSTOS) Pedido jason:", pedido);
             console.log("(SELECCION GUSTOS) Gustos:", selecciones);
-            ////////////////////////////////////////////////////////////////////////////
             ////////////////////////////////////////////////////////////////////////////
             router.push({
                 pathname: "/screens/Detalle_Pedido",
@@ -84,56 +82,72 @@ export default function CategoriaGustosScreen() {
     const gustosSeleccionados = selecciones[cucuruchoActual] || [];
 
     return (
-        <View style={styles.container}>
-            {/* HEADER */}
-            <ScreenHeader
-                title="Categorías de Gustos"
-                showSearch={showSearch}
-                onToggleSearch={() => setShowSearch(!showSearch)}
-            />
+        <ImageBackground
+            source={require("../../assets/images/backgrounds/fondo2.jpg")} // 🔹 poné tu imagen aquí
+            style={styles.background}
+            resizeMode="cover"
+        >
 
-            {/* Banner */}
-            <Text style={styles.banner}>
-                Seleccione los gustos para {cucuruchoActual} ({gustosSeleccionados.length}/{cucuruchos[cucuruchoActual]})
-            </Text>
-
-            {/* Input de búsqueda */}
-            {showSearch && (
-                <SearchBar
-                    value={searchText}
-                    onChangeText={setSearchText}
-                    placeholder="Buscar gusto..."
+            <View style={styles.container}>
+                {/* HEADER */}
+                <ScreenHeader
+                    title="Categorías de Gustos"
+                    showSearch={showSearch}
+                    onToggleSearch={() => setShowSearch(!showSearch)}
                 />
-            )}
 
-            {/* Categorías */}
-            {categoriasFiltradas.map((cat) => (
-                <View key={cat.label} style={{ marginBottom: 20 }}>
-                    <Dropdown
-                        label={cat.label}
-                        options={cat.options}
-                        selected={gustosSeleccionados.filter((g) => cat.options.includes(g))}
-                        onSelect={(item) => toggleSeleccion(cat.label, item)}
+                {/* Banner */}
+                <Text style={styles.banner}>
+                    Seleccione los gustos para {cucuruchoActual} ({gustosSeleccionados.length}/{cucuruchos[cucuruchoActual]})
+                </Text>
+
+                {/* Input de búsqueda */}
+                {showSearch && (
+                    <SearchBar
+                        value={searchText}
+                        onChangeText={setSearchText}
+                        placeholder="Buscar gusto..."
                     />
-                </View>
-            ))}
+                )}
 
-            {/* Pedido abajo */}
-            <PedidoCardBottom
-                selecciones={selecciones}
-                visible={true}
-                onConfirm={handleConfirm}
-                currentIndex={currentIndex}
-                totalVolumenes={cucuruchoKeys.length}
-            />
-        </View>
+                {/* Categorías */}
+                {categoriasFiltradas.map((cat) => (
+                    <View key={cat.label} style={{ marginBottom: 20 }}>
+                        <Dropdown
+                            label={cat.label}
+                            options={cat.options}
+                            selected={gustosSeleccionados.filter((g) => cat.options.includes(g))}
+                            onSelect={(item) => toggleSeleccion(cat.label, item)}
+                        />
+                    </View>
+                ))}
+
+                {/* Pedido abajo */}
+                <PedidoCardBottom
+                    selecciones={selecciones}
+                    visible={true}
+                    onConfirm={handleConfirm}
+                    currentIndex={currentIndex}
+                    totalVolumenes={cucuruchoKeys.length}
+                />
+            </View>
+        </ImageBackground>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 20, backgroundColor: "#fff" },
-    header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 },
+    background: { flex: 1 },
+    container: {
+        flex: 1,
+        padding: 20,
+    },
+    header: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: 16,
+    },
     iconButton: { padding: 8 },
     title: { fontSize: 20, fontWeight: "bold", textAlign: "center", flex: 1 },
-    banner: { fontSize: 16, fontWeight: "600", marginBottom: 12 },
+    banner: { fontSize: 16, fontWeight: "600", marginBottom: 12, color: "#222" },
 });
