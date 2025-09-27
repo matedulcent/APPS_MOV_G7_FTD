@@ -1,12 +1,13 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
-import { FlatList, Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { FlatList, Image, ImageBackground, Pressable, StyleSheet, Text, View } from "react-native";
+import ScreenHeader from "../../components/ScreenHeader";
 
 type Sucursal = {
     id: string;
     nombre: string;
     direccion: string;
-    imagen: string; // nueva propiedad
+    imagen: string;
 };
 
 export default function SeleccionSucursalScreen() {
@@ -51,21 +52,37 @@ export default function SeleccionSucursalScreen() {
     };
 
     return (
-        <View style={styles.container}>
-            <Text style={styles.title}>Seleccione su sucursal</Text>
-            <FlatList
-                data={sucursales}
-                keyExtractor={(item) => item.id}
-                renderItem={renderSucursal}
-                contentContainerStyle={{ paddingBottom: 20 }}
-            />
-        </View>
+        <ImageBackground
+            source={require("../../assets/images/backgrounds/fondo3.jpg")}
+            style={styles.background}
+            resizeMode="cover"
+        >
+            {/* Overlay semitransparente para mejorar legibilidad */}
+            <View style={styles.overlay}>
+                {/* Header consistente con otras pantallas */}
+                <ScreenHeader title="Seleccione su sucursal" />
+
+                <FlatList
+                    data={sucursales}
+                    keyExtractor={(item) => item.id}
+                    renderItem={renderSucursal}
+                    contentContainerStyle={{ paddingBottom: 20, paddingTop: 10 }}
+                />
+            </View>
+        </ImageBackground>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 20, backgroundColor: "#fff" },
-    title: { fontSize: 22, fontWeight: "bold", marginBottom: 16, textAlign: "center" },
+    background: {
+        flex: 1,
+        width: "100%",
+        height: "100%",
+    },
+    overlay: {
+        flex: 1,
+        padding: 20,
+    },
     card: {
         flexDirection: "row",
         alignItems: "center",
