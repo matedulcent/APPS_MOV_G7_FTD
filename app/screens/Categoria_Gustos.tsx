@@ -86,13 +86,11 @@ export default function CategoriaGustosScreen() {
             setCurrentIndex(currentIndex + 1);
         } else {
             const pedidoString = encodeURIComponent(JSON.stringify(selecciones));
-            ////////////////////////////////////////////////////////////////////////////
             console.log("##########################################################################");
             console.log("(SELECCION GUSTOS) SUCURSAL ID:", sucursalId);
             console.log("(SELECCION GUSTOS) Usuario ID:", userId);
             console.log("(SELECCION GUSTOS) Pedido jason:", pedido);
             console.log("(SELECCION GUSTOS) Gustos:", selecciones);
-            ////////////////////////////////////////////////////////////////////////////
             router.push({
                 pathname: "/screens/Detalle_Pedido",
                 params: { pedido: pedidoString, sucursalId, userId },
@@ -117,11 +115,13 @@ export default function CategoriaGustosScreen() {
                     onToggleSearch={() => setShowSearch(!showSearch)}
                 />
 
-                {/* Banner */}
-                <Text style={styles.banner}>
-                    Seleccione los gustos para {cucuruchoActual} ({gustosSeleccionados.length}/
-                    {cucuruchos[cucuruchoActual]})
-                </Text>
+                <View style={styles.bannerContainer}>
+                    <Text style={styles.bannerText}>
+                        Seleccione gustos para:{"\n"}
+                        <Text style={styles.envaseText}>{cucuruchoActual}</Text>{" "}
+                        ({gustosSeleccionados.length}/{cucuruchos[cucuruchoActual]})
+                    </Text>
+                </View>
 
                 {/* Input de búsqueda */}
                 {showSearch && (
@@ -132,7 +132,7 @@ export default function CategoriaGustosScreen() {
                     />
                 )}
 
-                {/* 🔹 Scroll general */}
+                {/* Scroll principal */}
                 <ScrollView
                     style={{ flex: 1 }}
                     contentContainerStyle={{ paddingBottom: 120 }}
@@ -167,14 +167,33 @@ export default function CategoriaGustosScreen() {
 
 const styles = StyleSheet.create({
     background: { flex: 1 },
-    container: {
-        flex: 1,
-        padding: 20,
+    container: { flex: 1, padding: 20 },
+
+    bannerContainer: {
+        backgroundColor: "#ffd8d8", // color pastel
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+        borderRadius: 12,
+        marginBottom: 8,  // reducimos el espacio debajo
+        marginTop: -8,    // subimos un poco desde arriba del header
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
     },
-    banner: {
-        fontSize: 16,
-        fontWeight: "600",
-        marginBottom: 12,
-        color: "#222",
+
+    bannerText: {
+        fontSize: 15,
+        fontWeight: "700",
+        color: "#333",
+        textAlign: "center",
     },
+    envaseText: {
+        fontFamily: "Cochin", // tipografía distinta
+        fontSize: 20,
+        fontWeight: "900",
+        color: "#e91e63",
+    },
+
 });
