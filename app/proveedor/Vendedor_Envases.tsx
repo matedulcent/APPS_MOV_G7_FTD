@@ -1,8 +1,19 @@
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Alert, Dimensions, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+    Alert,
+    Dimensions,
+    ImageBackground,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+} from "react-native";
 import EnvaseCard from "../../components/EnvaseCard";
 import ScreenHeader from "../../components/ScreenHeader";
+
 
 const { height } = Dimensions.get("window");
 
@@ -29,7 +40,6 @@ export default function VendedorEnvasesScreen() {
     const [nuevoNombre, setNuevoNombre] = useState("");
     const [searchText, setSearchText] = useState("");
     const [searchVisible, setSearchVisible] = useState(false);
-
     const [subInputs, setSubInputs] = useState<{ [envaseId: string]: { nombre: string; max: string } }>({});
 
     const agregarEnvase = () => {
@@ -58,82 +68,86 @@ export default function VendedorEnvasesScreen() {
     );
 
     return (
-        <View style={styles.container}>
-            <View style={styles.headerWrapper}>
-                <ScreenHeader
-                    title="Panel de Envases"
-                    showSearch
-                    onToggleSearch={() => setSearchVisible((prev) => !prev)}
-                />
-                {searchVisible && (
-                    <TextInput
-                        placeholder="Buscar envase..."
-                        style={styles.searchInput}
-                        value={searchText}
-                        onChangeText={setSearchText}
+        <ImageBackground source={require("../../assets/images/backgrounds/fondo2.jpg")} style={styles.container}>
+            {/* Overlay semitransparente */}
+            <View style={styles.overlay}>
+                <View style={styles.headerWrapper}>
+                    <ScreenHeader
+                        title="Panel de Envases"
+                        showSearch
+                        onToggleSearch={() => setSearchVisible((prev) => !prev)}
                     />
-                )}
-            </View>
-
-            <ScrollView contentContainerStyle={{ paddingBottom: height * 0.2 }}>
-                {/* Formulario agregar envase */}
-                <View style={styles.form}>
-                    <TextInput
-                        placeholder="Nombre del envase"
-                        style={styles.input}
-                        value={nuevoNombre}
-                        onChangeText={setNuevoNombre}
-                    />
-                    <Pressable style={styles.addButton} onPress={agregarEnvase}>
-                        <Text style={styles.buttonText}>Agregar Envase</Text>
-                    </Pressable>
+                    {searchVisible && (
+                        <TextInput
+                            placeholder="Buscar envase..."
+                            style={styles.searchInput}
+                            value={searchText}
+                            onChangeText={setSearchText}
+                        />
+                    )}
                 </View>
 
-                {/* Lista de envases */}
-                {envasesFiltrados.map((env) => (
-                    <EnvaseCard
-                        key={env.id}
-                        id={env.id}
-                        nombre={env.nombre}
-                        subcategorias={env.subcategorias}
-                        subInput={subInputs[env.id] || { nombre: "", max: "" }}
-                        onChangeSubInput={(field, value) =>
-                            setSubInputs((prev) => ({
-                                ...prev,
-                                [env.id]: { ...prev[env.id], [field]: value },
-                            }))
-                        }
-                        onAgregarSub={() => {
-                            const input = subInputs[env.id];
-                            if (!input?.nombre || !input?.max) return Alert.alert("Error", "Completa nombre y máximo de sabores");
-                            agregarSubcategoria(env.id, input.nombre, parseInt(input.max));
-                            setSubInputs((prev) => ({ ...prev, [env.id]: { nombre: "", max: "" } }));
-                        }}
-                        onEliminarSub={(subId) =>
-                            setEnvases((prev) =>
-                                prev.map((envObj) =>
-                                    envObj.id === env.id
-                                        ? { ...envObj, subcategorias: envObj.subcategorias.filter((s) => s.id !== subId) }
-                                        : envObj
-                                )
-                            )
-                        }
-                        onEliminarEnvase={() => eliminarEnvase(env.id)}
-                    />
-                ))}
-            </ScrollView>
+                <ScrollView contentContainerStyle={{ paddingBottom: height * 0.2 }}>
+                    {/* Formulario agregar envase */}
+                    <View style={styles.form}>
+                        <TextInput
+                            placeholder="Nombre del envase"
+                            style={styles.input}
+                            value={nuevoNombre}
+                            onChangeText={setNuevoNombre}
+                        />
+                        <Pressable style={styles.addButton} onPress={agregarEnvase}>
+                            <Text style={styles.buttonText}>Agregar Envase</Text>
+                        </Pressable>
+                    </View>
 
-            <View style={styles.footer}>
-                <Pressable style={styles.gotoGustosButton} onPress={handleVendedorGustos}>
-                    <Text style={styles.gotoGustosText}>Ir a Panel de Gustos</Text>
-                </Pressable>
+                    {/* Lista de envases */}
+                    {envasesFiltrados.map((env) => (
+                        <EnvaseCard
+                            key={env.id}
+                            id={env.id}
+                            nombre={env.nombre}
+                            subcategorias={env.subcategorias}
+                            subInput={subInputs[env.id] || { nombre: "", max: "" }}
+                            onChangeSubInput={(field, value) =>
+                                setSubInputs((prev) => ({
+                                    ...prev,
+                                    [env.id]: { ...prev[env.id], [field]: value },
+                                }))
+                            }
+                            onAgregarSub={() => {
+                                const input = subInputs[env.id];
+                                if (!input?.nombre || !input?.max) return Alert.alert("Error", "Completa nombre y máximo de sabores");
+                                agregarSubcategoria(env.id, input.nombre, parseInt(input.max));
+                                setSubInputs((prev) => ({ ...prev, [env.id]: { nombre: "", max: "" } }));
+                            }}
+                            onEliminarSub={(subId) =>
+                                setEnvases((prev) =>
+                                    prev.map((envObj) =>
+                                        envObj.id === env.id
+                                            ? { ...envObj, subcategorias: envObj.subcategorias.filter((s) => s.id !== subId) }
+                                            : envObj
+                                    )
+                                )
+                            }
+                            onEliminarEnvase={() => eliminarEnvase(env.id)}
+                        />
+                    ))}
+                </ScrollView>
+
+                <View style={styles.footer}>
+                    <Pressable style={styles.gotoGustosButton} onPress={handleVendedorGustos}>
+                        <Text style={styles.gotoGustosText}>Ir a Panel de Gustos</Text>
+                    </Pressable>
+                </View>
             </View>
-        </View>
+        </ImageBackground>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: "#f7f7f7" },
+    container: { flex: 1, width: "100%", height: "100%" },
+    overlay: { flex: 1}, // overlay para mejorar lectura
     headerWrapper: { marginTop: 20, marginHorizontal: 20 },
     searchInput: {
         marginHorizontal: 0,

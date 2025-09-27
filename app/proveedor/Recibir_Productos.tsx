@@ -1,8 +1,17 @@
 import React, { useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+    Alert,
+    ImageBackground,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+} from "react-native";
 import ScreenHeader from "../../components/ScreenHeader";
 
-// Diccionario ejemplo: envase -> lista de sabores
+
 type PedidoCompleto = {
     [envase: string]: string[];
 };
@@ -11,13 +20,11 @@ export default function RecibirProductosScreen() {
     const [searchText, setSearchText] = useState("");
     const [searchVisible, setSearchVisible] = useState(false);
 
-    // Pedidos de ejemplo
     const [pedidos, setPedidos] = useState<PedidoCompleto>({
         "Cucuruchos 1 (1 bola)": ["Ron con pasas"],
         "Kilos 1 (1/4 Kg)": ["Choco blanco", "Chocolate con almendras"],
     });
 
-    // Filtrado de envases por buscador
     const pedidosFiltrados = Object.entries(pedidos).filter(([envase]) =>
         envase.toLowerCase().includes(searchText.toLowerCase())
     );
@@ -32,53 +39,56 @@ export default function RecibirProductosScreen() {
     };
 
     return (
-        <View style={styles.container}>
-            {/* Header */}
-            <View style={styles.headerWrapper}>
-                <ScreenHeader
-                    title="Recibir Pedidos"
-                    showSearch
-                    onToggleSearch={() => setSearchVisible((prev) => !prev)}
-                />
-                {searchVisible && (
-                    <TextInput
-                        placeholder="Buscar envase..."
-                        style={styles.searchInput}
-                        value={searchText}
-                        onChangeText={setSearchText}
+        <ImageBackground source={require("../../assets/images/backgrounds/fondo4.jpg")} style={styles.container}>
+            <View style={styles.overlay}>
+                {/* Header */}
+                <View style={styles.headerWrapper}>
+                    <ScreenHeader
+                        title="Recibir Pedidos"
+                        showSearch
+                        onToggleSearch={() => setSearchVisible((prev) => !prev)}
                     />
-                )}
+                    {searchVisible && (
+                        <TextInput
+                            placeholder="Buscar envase..."
+                            style={styles.searchInput}
+                            value={searchText}
+                            onChangeText={setSearchText}
+                        />
+                    )}
+                </View>
+
+                {/* Lista de pedidos */}
+                <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+                    {pedidosFiltrados.length === 0 && (
+                        <Text style={styles.emptyText}>No hay pedidos por recibir</Text>
+                    )}
+
+                    {pedidosFiltrados.map(([envase, sabores]) => (
+                        <View key={envase} style={styles.card}>
+                            <Text style={styles.envaseText}>{envase}</Text>
+                            {sabores.map((sabor, idx) => (
+                                <Text key={idx} style={styles.saborText}>
+                                    • {sabor}
+                                </Text>
+                            ))}
+                            <Pressable
+                                style={styles.recibirButton}
+                                onPress={() => recibirPedido(envase)}
+                            >
+                                <Text style={styles.recibirText}>Recibir</Text>
+                            </Pressable>
+                        </View>
+                    ))}
+                </ScrollView>
             </View>
-
-            {/* Lista de pedidos */}
-            <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
-                {pedidosFiltrados.length === 0 && (
-                    <Text style={styles.emptyText}>No hay pedidos por recibir</Text>
-                )}
-
-                {pedidosFiltrados.map(([envase, sabores]) => (
-                    <View key={envase} style={styles.card}>
-                        <Text style={styles.envaseText}>{envase}</Text>
-                        {sabores.map((sabor, idx) => (
-                            <Text key={idx} style={styles.saborText}>
-                                • {sabor}
-                            </Text>
-                        ))}
-                        <Pressable
-                            style={styles.recibirButton}
-                            onPress={() => recibirPedido(envase)}
-                        >
-                            <Text style={styles.recibirText}>Recibir</Text>
-                        </Pressable>
-                    </View>
-                ))}
-            </ScrollView>
-        </View>
+        </ImageBackground>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: "#f7f7f7" },
+    container: { flex: 1, width: "100%", height: "100%" },
+    overlay: { flex: 1 }, // overlay semitransparente
     headerWrapper: { marginTop: 20, marginHorizontal: 20 },
     searchInput: {
         marginVertical: 10,
@@ -103,7 +113,13 @@ const styles = StyleSheet.create({
     },
     envaseText: { fontSize: 16, fontWeight: "bold", marginBottom: 6 },
     saborText: { fontSize: 14, marginLeft: 12, marginBottom: 2 },
-    recibirButton: { backgroundColor: "#4cd7c7", paddingVertical: 10, borderRadius: 8, alignItems: "center", marginTop: 8 },
+    recibirButton: {
+        backgroundColor: "#4cd7c7",
+        paddingVertical: 10,
+        borderRadius: 8,
+        alignItems: "center",
+        marginTop: 8,
+    },
     recibirText: { color: "#000", fontWeight: "bold" },
     emptyText: { textAlign: "center", marginTop: 40, fontSize: 16, color: "#999" },
 });

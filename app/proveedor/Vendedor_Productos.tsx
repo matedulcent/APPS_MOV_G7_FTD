@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
     Dimensions,
+    ImageBackground,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -68,53 +69,56 @@ export default function VendedorProductosScreen() {
     }));
 
     return (
-        <View style={styles.container}>
-            <View style={styles.headerWrapper}>
-                <ScreenHeader
-                    title="Gestión de Productos"
-                    showSearch
-                    onToggleSearch={() => setSearchVisible((prev) => !prev)}
-                />
-                {searchVisible && (
-                    <TextInput
-                        placeholder="Buscar producto..."
-                        style={styles.searchInput}
-                        value={searchText}
-                        onChangeText={setSearchText}
+        <ImageBackground source={require("../../assets/images/backgrounds/fondo1.jpg")} style={styles.container}>
+            <View style={styles.overlay}>
+                <View style={styles.headerWrapper}>
+                    <ScreenHeader
+                        title="Gestión de Productos"
+                        showSearch
+                        onToggleSearch={() => setSearchVisible((prev) => !prev)}
                     />
-                )}
-            </View>
+                    {searchVisible && (
+                        <TextInput
+                            placeholder="Buscar producto..."
+                            style={styles.searchInput}
+                            value={searchText}
+                            onChangeText={setSearchText}
+                        />
+                    )}
+                </View>
 
-            <ScrollView contentContainerStyle={{ paddingBottom: height * 0.2 }}>
-                {categoriasFiltradas.map((cat, catIndex) => (
-                    <CategoriaProducto
-                        key={cat.label}
-                        label={cat.label}
-                        productos={cat.options}
-                        nuevoProducto={nuevoProductoInputs[cat.label] || ""}
-                        onChangeNuevoProducto={(text) =>
-                            setNuevoProductoInputs((prev) => ({ ...prev, [cat.label]: text }))
-                        }
-                        onAgregar={() => agregarProducto(catIndex)}
-                        onRemover={(producto) => removerProducto(catIndex, producto)}
-                    />
-                ))}
-            </ScrollView>
+                <ScrollView contentContainerStyle={{ paddingBottom: height * 0.2 }}>
+                    {categoriasFiltradas.map((cat, catIndex) => (
+                        <CategoriaProducto
+                            key={cat.label}
+                            label={cat.label}
+                            productos={cat.options}
+                            nuevoProducto={nuevoProductoInputs[cat.label] || ""}
+                            onChangeNuevoProducto={(text) =>
+                                setNuevoProductoInputs((prev) => ({ ...prev, [cat.label]: text }))
+                            }
+                            onAgregar={() => agregarProducto(catIndex)}
+                            onRemover={(producto) => removerProducto(catIndex, producto)}
+                        />
+                    ))}
+                </ScrollView>
 
-            <View style={styles.footer}>
-                <Pressable
-                    style={styles.irOrdenesButton}
-                    onPress={handleIrRecibirOrdenes}
-                >
-                    <Text style={styles.irOrdenesText}>Ir a recibir órdenes</Text>
-                </Pressable>
+                <View style={styles.footer}>
+                    <Pressable
+                        style={styles.irOrdenesButton}
+                        onPress={handleIrRecibirOrdenes}
+                    >
+                        <Text style={styles.irOrdenesText}>Ir a recibir órdenes</Text>
+                    </Pressable>
+                </View>
             </View>
-        </View>
+        </ImageBackground>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: "#f7f7f7" },
+    container: { flex: 1, width: "100%", height: "100%" },
+    overlay: { flex: 1 },
     headerWrapper: { marginTop: 20, marginHorizontal: 20 },
     searchInput: {
         marginVertical: 10,
