@@ -10,8 +10,8 @@ import {
     TextInput,
     View,
 } from "react-native";
-import CategoriaProducto from "../../components/CategoriaProducto";
-import ScreenHeader from "../../components/ScreenHeader";
+import CategoriaProducto from "../../../components/CategoriaProducto";
+import ScreenHeader from "../../../components/ScreenHeader";
 
 const { height } = Dimensions.get("window");
 
@@ -58,7 +58,7 @@ export default function VendedorProductosScreen() {
     };
 
     const handleIrRecibirOrdenes = () => {
-        router.push("/proveedor/Recibir_Productos");
+        router.push("/screens/proveedor/Recibir_Productos");
     };
 
     const categoriasFiltradas = categorias.map((cat) => ({
@@ -69,7 +69,7 @@ export default function VendedorProductosScreen() {
     }));
 
     return (
-        <ImageBackground source={require("../../assets/images/backgrounds/fondo1.jpg")} style={styles.container}>
+        <ImageBackground source={require("../../../assets/images/backgrounds/fondo1.jpg")} style={styles.container}>
             <View style={styles.overlay}>
                 <View style={styles.headerWrapper}>
                     <ScreenHeader

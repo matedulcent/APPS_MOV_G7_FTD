@@ -8,7 +8,7 @@ import {
     TextInput,
     View
 } from "react-native";
-import ScreenHeader from "../../components/ScreenHeader";
+import ScreenHeader from "../../../components/ScreenHeader";
 
 type Pedido = {
     numero: number;
@@ -49,7 +49,7 @@ export default function RecibirProductosScreen() {
 
     return (
         <ImageBackground
-            source={require("../../assets/images/backgrounds/fondo4.jpg")}
+            source={require("../../../assets/images/backgrounds/fondo4.jpg")}
             style={styles.container}
         >
             <View style={styles.overlay}>

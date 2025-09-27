@@ -11,8 +11,8 @@ import {
     TextInput,
     View,
 } from "react-native";
-import EnvaseCard from "../../components/EnvaseCard";
-import ScreenHeader from "../../components/ScreenHeader";
+import EnvaseCard from "../../../components/EnvaseCard";
+import ScreenHeader from "../../../components/ScreenHeader";
 
 
 const { height } = Dimensions.get("window");
@@ -61,14 +61,14 @@ export default function VendedorEnvasesScreen() {
         );
     };
 
-    const handleVendedorGustos = () => router.push("/proveedor/Vendedor_Productos");
+    const handleVendedorGustos = () => router.push("/screens/proveedor/Vendedor_Productos");
 
     const envasesFiltrados = envases.filter((env) =>
         env.nombre.toLowerCase().includes(searchText.toLowerCase())
     );
 
     return (
-        <ImageBackground source={require("../../assets/images/backgrounds/fondo2.jpg")} style={styles.container}>
+        <ImageBackground source={require("../../../assets/images/backgrounds/fondo2.jpg")} style={styles.container}>
             {/* Overlay semitransparente */}
             <View style={styles.overlay}>
                 <View style={styles.headerWrapper}>
