@@ -19,7 +19,7 @@ export default function HomeScreen() {
   };
 
   const handleVendedorProductos = () => {
-    router.push("./proveedor/Vendedor_Productos");
+    router.push("./proveedor/Vendedor_Envases");
   };
 
   return (
