@@ -1,6 +1,18 @@
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Animated, ImageBackground, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  Animated,
+  Dimensions,
+  ImageBackground,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View
+} from "react-native";
+
+const { width, height } = Dimensions.get("window");
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -18,16 +30,14 @@ export default function LoginScreen() {
     }).start(() => setRole(selectedRole));
   };
 
-  // Aquí definimos el destino de login según el rol
   const handleLogin = () => {
     if (role === "cliente") {
-      router.push("/screens/Seleccion_Sucursal"); // destino cliente
+      router.push("/screens/Seleccion_Sucursal");
     } else {
-      router.push("/screens/proveedor/Vendedor_Envases"); // destino vendedor
+      router.push("/screens/proveedor/Vendedor_Envases");
     }
   };
 
-  // Registro según rol
   const handleRegister = () => {
     if (role === "cliente") {
       router.push("/screens/Registro_Cliente");
@@ -90,11 +100,7 @@ export default function LoginScreen() {
           placeholder={`Email ${role}`}
           keyboardType="email-address"
         />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          secureTextEntry
-        />
+        <TextInput style={styles.input} placeholder="Password" secureTextEntry />
 
         <Pressable
           style={({ pressed }) => [styles.loginButton, pressed && { opacity: 0.8 }]}
@@ -119,29 +125,37 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const isSmallScreen = width < 360;
+
+const isWeb = Platform.OS === "web";
+
+export const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: "center",
-    padding: 20,
+    padding: isWeb ? 40 : width * 0.05,
     backgroundColor: "rgba(224,224,224,0.7)",
-    borderRadius: 10,
+    borderRadius: isWeb ? 0 : 10, // sin bordes en web, sí en mobile
+    width: "100%", // que ocupe todo el ancho
+    alignSelf: "stretch", // fuerza a expandirse
   },
   title: {
-    fontSize: 26,
+    fontSize: isWeb ? 32 : isSmallScreen ? 20 : width * 0.07,
     fontWeight: "bold",
     textAlign: "center",
-    marginBottom: 30,
+    marginBottom: height * 0.04,
   },
   backgroundImage: {
     flex: 1,
-    resizeMode: "cover",
+    width: width,
+    height: height,
+    resizeMode: isSmallScreen ? "stretch" : "cover",
   },
   switchContainer: {
     flexDirection: "row",
     backgroundColor: "#e0e0e0",
     borderRadius: 25,
-    marginBottom: 20,
+    marginBottom: height * 0.025,
     overflow: "hidden",
     position: "relative",
   },
@@ -156,12 +170,12 @@ const styles = StyleSheet.create({
   },
   switchButton: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: isWeb ? 10 : height * 0.018,
     alignItems: "center",
     zIndex: 1,
   },
   switchText: {
-    fontSize: 16,
+    fontSize: isWeb ? 16 : width * 0.04,
     color: "#555",
   },
   activeText: {
@@ -171,30 +185,44 @@ const styles = StyleSheet.create({
   input: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
+    padding: isWeb ? 14 : width * 0.04,
     borderRadius: 10,
     backgroundColor: "#f5f5f5",
-    marginBottom: 12,
+    marginBottom: height * 0.015,
     borderWidth: 1,
     borderColor: "#ddd",
+    fontSize: isWeb ? 14 : width * 0.04,
   },
   loginButton: {
     backgroundColor: "#03a9f4",
-    paddingVertical: 14,
+    paddingVertical: isWeb ? 12 : height * 0.02,
     borderRadius: 12,
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: height * 0.025,
   },
   backButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 10,
+    paddingVertical: isWeb ? 10 : height * 0.015,
+    paddingHorizontal: isWeb ? 20 : width * 0.04,
     borderRadius: 20,
     alignSelf: "center",
     justifyContent: "center",
     backgroundColor: "#d3d3d3ff",
-    marginBottom: 20,
+    marginBottom: height * 0.025,
   },
-  backText: { color: "#000000ff", fontSize: 16, fontWeight: "bold" },
-  loginText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
-  linkText: { textAlign: "center", color: "#007AFF", marginTop: 10 },
+  backText: {
+    color: "#000000ff",
+    fontSize: isWeb ? 14 : width * 0.04,
+    fontWeight: "bold",
+  },
+  loginText: {
+    color: "#fff",
+    fontSize: isWeb ? 18 : width * 0.05,
+    fontWeight: "bold",
+  },
+  linkText: {
+    textAlign: "center",
+    color: "#007AFF",
+    marginTop: height * 0.015,
+    fontSize: isWeb ? 14 : width * 0.04,
+  },
 });

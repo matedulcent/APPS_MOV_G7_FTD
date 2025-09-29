@@ -1,4 +1,4 @@
-// app/screens/Numero_Orden.tsx
+
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { ImageBackground, Pressable, StyleSheet, Text, View } from "react-native";
@@ -23,7 +23,7 @@ export default function NumeroOrdenScreen() {
         console.log("(SELECCION GUSTOS) Usuario ID:", userId);
         console.log("(SELECCION GUSTOS) Pedido Completo:", pedido);
         console.log("##########################################################################");
-    }, [sucursalId, userId]);
+    }, [sucursalId, userId, pedido]);
 
     return (
         <ImageBackground
@@ -54,9 +54,44 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
         padding: 20,
+        backgroundColor: "rgba(255,255,255,0.85)", // fondo semi-transparente
+        borderRadius: 16,
+        margin: 20,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.2,
+        shadowRadius: 5,
+        elevation: 5,
     },
-    title: { fontSize: 24, fontWeight: "bold", marginBottom: 20, textAlign: "center" },
-    numero: { fontSize: 32, fontWeight: "bold", marginBottom: 40, color: "#ff5722" },
-    button: { backgroundColor: "#6200ee", paddingVertical: 14, paddingHorizontal: 24, borderRadius: 10 },
-    buttonText: { color: "#fff", fontWeight: "bold", fontSize: 18 },
+    title: { 
+        fontSize: 26, 
+        fontWeight: "bold", 
+        marginBottom: 20, 
+        textAlign: "center",
+        color: "#333",
+    },
+    numero: { 
+        fontSize: 36, 
+        fontWeight: "bold", 
+        marginBottom: 40, 
+        color: "#ff5722",
+        fontFamily: "Trebuchet MS", 
+    },
+    button: { 
+        backgroundColor: "#f4679fff", 
+        paddingVertical: 14, 
+        paddingHorizontal: 32, 
+        borderRadius: 12,
+        alignItems: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    buttonText: { 
+        color: "#fff", 
+        fontWeight: "bold", 
+        fontSize: 18,
+    },
 });

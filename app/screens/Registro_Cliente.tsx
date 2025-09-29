@@ -1,6 +1,10 @@
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { ImageBackground, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Dimensions, ImageBackground, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+
+const { width, height } = Dimensions.get("window");
+const isSmallScreen = width < 360;
+const isWeb = Platform.OS === "web";
 
 export default function RegistroCliente() {
   const router = useRouter(); 
@@ -24,10 +28,7 @@ export default function RegistroCliente() {
     >
       <View style={styles.container}>
         <Pressable
-          style={({ pressed }) => [
-            styles.backButton,
-            pressed && { opacity: 0.7 },
-          ]}
+          style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.7 }]}
           onPress={() => router.push("/")}
         >
           <Text style={styles.backText}>⬅️ Volver al inicio</Text>
@@ -64,10 +65,7 @@ export default function RegistroCliente() {
         />
 
         <Pressable
-          style={({ pressed }) => [
-            styles.registerButton,
-            pressed && { opacity: 0.8 },
-          ]}
+          style={({ pressed }) => [styles.registerButton, pressed && { opacity: 0.8 }]}
           onPress={handleRegister}
         >
           <Text style={styles.registerText}>Registrarse</Text>
@@ -75,12 +73,7 @@ export default function RegistroCliente() {
 
         <Pressable onPress={() => router.push("/screens/Log_In")}>
           {({ pressed }) => (
-            <Text
-              style={[
-                styles.linkText,
-                pressed && { textDecorationLine: "underline" },
-              ]}
-            >
+            <Text style={[styles.linkText, pressed && { textDecorationLine: "underline" }]}>
               ¿Ya tienes cuenta? Inicia sesión
             </Text>
           )}
@@ -94,47 +87,65 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: "center",
-    padding: 20,
-    backgroundColor: "rgba(255,255,255,0.8)", // Fondo semi-transparente para mejor legibilidad
-    borderRadius: 10,
+    padding: isWeb ? 40 : width * 0.05,
+    backgroundColor: "rgba(255,255,255,0.8)",
+    borderRadius: isWeb ? 0 : 10,
+    width: "100%",
+    alignSelf: "stretch",
   },
-  title: { 
-    fontSize: 26, 
-    fontWeight: "bold", 
-    textAlign: "center", 
-    marginBottom: 30 
+  title: {
+    fontSize: isWeb ? 32 : isSmallScreen ? 20 : width * 0.07,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: height * 0.04,
   },
   backgroundImage: {
     flex: 1,
-    resizeMode: "cover",
+    width,
+    height,
+    resizeMode: isSmallScreen ? "stretch" : "cover",
   },
   input: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
+    padding: isWeb ? 14 : width * 0.04,
     borderRadius: 10,
     backgroundColor: "#f5f5f5",
-    marginBottom: 12,
+    marginBottom: height * 0.015,
     borderWidth: 1,
     borderColor: "#ddd",
+    fontSize: isWeb ? 14 : width * 0.04,
   },
   registerButton: {
     backgroundColor: "#4caf50",
-    paddingVertical: 14,
+    paddingVertical: isWeb ? 12 : height * 0.02,
     borderRadius: 12,
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: height * 0.025,
   },
   backButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 10,
+    paddingVertical: isWeb ? 10 : height * 0.015,
+    paddingHorizontal: isWeb ? 20 : width * 0.04,
     borderRadius: 20,
     alignSelf: "center",
     justifyContent: "center",
     backgroundColor: "#d3d3d3ff",
-    marginBottom: 20,
+    marginBottom: height * 0.025,
   },
-  backText: { color: "#000000ff", fontSize: 16, fontWeight: "bold" },
-  registerText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
-  linkText: { textAlign: "center", color: "#007AFF", marginTop: 10 },
+  backText: {
+    color: "#000000ff",
+    fontSize: isWeb ? 14 : width * 0.04,
+    fontWeight: "bold",
+  },
+  registerText: {
+    color: "#fff",
+    fontSize: isWeb ? 18 : width * 0.05,
+    fontWeight: "bold",
+  },
+  linkText: {
+    textAlign: "center",
+    color: "#007AFF",
+    marginTop: height * 0.015,
+    fontSize: isWeb ? 14 : width * 0.04,
+  },
 });

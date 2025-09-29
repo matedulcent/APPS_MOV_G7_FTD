@@ -1,7 +1,11 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
-import { FlatList, Image, ImageBackground, Pressable, StyleSheet, Text, View } from "react-native";
+import { Dimensions, FlatList, Image, ImageBackground, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import ScreenHeader from "../../components/ScreenHeader";
+
+const { width, height } = Dimensions.get("window");
+const isSmallScreen = width < 360;
+const isWeb = Platform.OS === "web";
 
 type Sucursal = {
     id: string;
@@ -55,18 +59,16 @@ export default function SeleccionSucursalScreen() {
         <ImageBackground
             source={require("../../assets/images/backgrounds/fondo3.jpg")}
             style={styles.background}
-            resizeMode="cover"
+            resizeMode={isSmallScreen ? "stretch" : "cover"}
         >
-            {/* Overlay semitransparente para mejorar legibilidad */}
             <View style={styles.overlay}>
-                {/* Header consistente con otras pantallas */}
                 <ScreenHeader title="Seleccione su sucursal" />
 
                 <FlatList
                     data={sucursales}
                     keyExtractor={(item) => item.id}
                     renderItem={renderSucursal}
-                    contentContainerStyle={{ paddingBottom: 20, paddingTop: 10 }}
+                    contentContainerStyle={{ paddingBottom: height * 0.02, paddingTop: height * 0.01 }}
                 />
             </View>
         </ImageBackground>
@@ -76,20 +78,21 @@ export default function SeleccionSucursalScreen() {
 const styles = StyleSheet.create({
     background: {
         flex: 1,
-        width: "100%",
-        height: "100%",
+        width,
+        height,
     },
     overlay: {
         flex: 1,
-        padding: 20,
+        padding: isWeb ? 40 : width * 0.05,
+        backgroundColor: "rgba(255,255,255,0.6)",
     },
     card: {
         flexDirection: "row",
         alignItems: "center",
-        padding: 16,
+        padding: isWeb ? 16 : width * 0.04,
         borderRadius: 10,
         backgroundColor: "#f5f5f5",
-        marginBottom: 12,
+        marginBottom: height * 0.015,
         borderWidth: 1,
         borderColor: "#ddd",
     },
@@ -98,14 +101,21 @@ const styles = StyleSheet.create({
         backgroundColor: "#e0d7ff",
     },
     imagen: {
-        width: 80,
-        height: 80,
+        width: isWeb ? 80 : width * 0.18,
+        height: isWeb ? 80 : width * 0.18,
         borderRadius: 10,
-        marginRight: 16,
+        marginRight: isWeb ? 16 : width * 0.04,
     },
     textContainer: {
         flex: 1,
     },
-    nombre: { fontSize: 18, fontWeight: "bold" },
-    direccion: { fontSize: 14, color: "#555", marginTop: 4 },
+    nombre: {
+        fontSize: isWeb ? 18 : width * 0.045,
+        fontWeight: "bold",
+    },
+    direccion: {
+        fontSize: isWeb ? 14 : width * 0.035,
+        color: "#555",
+        marginTop: height * 0.005,
+    },
 });
