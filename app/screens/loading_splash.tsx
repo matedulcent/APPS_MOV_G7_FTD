@@ -1,13 +1,16 @@
-// app/screens/Loading_Splash.tsx
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import { Animated, Image, StyleSheet, View } from "react-native";
 
-// Tiempo total antes de redirigir
+//NO BORRAR ESTOS COMENTARIOS SON PARA COMPREDER TIEMPOS DE LA ANIMACION
+
+// Tiempo para hacer la redireccion, arranca a correr desde un inicio
 const LOADING_MS = 12000;
-// Duración de un ciclo de zoom (choco→fruti→cereza)
+// Cuanto dura el ciclo de zoom de todos los dos helados y cerezas
 const CYCLE_MS = 900;
-// Tamaño base del círculo
+// Cuanto timepo tarda en aparecer el cono con todos los otros objetos
+const DROP_MS = 2000;
+
 const CIRCLE = 600;
 
 export default function Loading_Splash() {
@@ -17,31 +20,35 @@ export default function Loading_Splash() {
   const shouldRedirect = !isPreview;
 
   const [wink, setWink] = useState(false);
-  const [ready, setReady] = useState(false); // ⬅️ bandera para arrancar zoom+shimmer
+  const [ready, setReady] = useState(false); 
 
-  // --------- VALORES ANIMADOS ----------
-  // Entradas verticales
-  const coneY   = useRef(new Animated.Value(100000)).current;  // aparece desde abajo
-  const chocoY  = useRef(new Animated.Value(-100000)).current;  // caen desde arriba
+  // Desde donde caen los objetos
+  const coneY   = useRef(new Animated.Value(100000)).current;  
+  const chocoY  = useRef(new Animated.Value(-100000)).current;  
   const frutiY  = useRef(new Animated.Value(-100000)).current;
   const cerezaY = useRef(new Animated.Value(-100000)).current;
 
-  // Escalas (zoom, SOLO para bochas y cereza)
+  // Escalas (en que escala arranca para despues hacer el zomm)
+  // 1 es escala normal
   const sChocolate = useRef(new Animated.Value(1)).current;
   const sFrutilla  = useRef(new Animated.Value(1)).current;
   const sCereza    = useRef(new Animated.Value(1)).current;
 
-  // Tornasol del texto
+  // Tornasol del texto apagado en un inicio
   const shimmer = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Animación de entrada: cono + caídas
+    // Animación de entrada: cono y helados
     const coneIn = Animated.timing(coneY, {
       toValue: 0,
-      duration: 2000,
+      duration: DROP_MS,
       useNativeDriver: true,
     });
 
+    //Elementos de animacion de animated.spring
+    // toValue: lugar final al que debe de llegar (si quiero que frene en otro lugar antes puedo hacerlo desde aca)
+    // friccion: cuanto rebota antes de frenar 
+    // tension que tan rapido hace el efecto de aplastarse
     const dropChoco = Animated.spring(chocoY, {toValue: 0, friction: 12, tension: 70, useNativeDriver: true,});
     const dropFruti = Animated.spring(frutiY, {toValue: 0, friction: 12, tension: 70, useNativeDriver: true,});
     const dropCereza = Animated.spring(cerezaY, {toValue: 0, friction: 12, tension: 70, useNativeDriver: true,});
@@ -49,10 +56,11 @@ export default function Loading_Splash() {
     const fallSequence = Animated.sequence([dropChoco, dropFruti, dropCereza]);
 
     Animated.sequence([coneIn, fallSequence]).start(() => {
-      setReady(true); // cuando terminan → arrancar zoom/shimmer
+      setReady(true); // Esto es fundamental para que el zoom arrranque solamente
+      //cuando todo esta en su posicion 
     });
 
-    // Al cumplirse LOADING_MS → guiño + redirección
+    // Redireccion cuando vence el timmer
     const to = setTimeout(() => {
       setWink(true);
       const afterWink = setTimeout(() => {
@@ -64,9 +72,9 @@ export default function Loading_Splash() {
     return () => clearTimeout(to);
   }, [router, shouldRedirect]);
 
-  // Cuando ready=true → arrancan los loops
+
   useEffect(() => {
-    if (!ready) return;
+    if (!ready) return; //La barrera que espera a que lo elementos este en su posicion
 
     const jump = (val: Animated.Value, ms: number) =>
       Animated.sequence([
@@ -97,7 +105,7 @@ export default function Loading_Splash() {
     };
   }, [ready]);
 
-  // Color tornasolado
+  // Color del destaque
   const brandColor = shimmer.interpolate({
     inputRange: [0, 0.5, 1],
     outputRange: ["#B8860B", "#FFD700", "#C99700"],
@@ -105,60 +113,34 @@ export default function Loading_Splash() {
 
   return (
     <View style={styles.container}>
-      {/* Fondo (opcional, si tenés waffle_bg.png) */}
       <Image
         source={require("../../assets/images/backgrounds/fondo5.png")}
         style={styles.bg}
         resizeMode="cover"
       />
-
-      {/* Logo compuesto */}
       <View style={styles.logoArea}>
         <View style={styles.badge} />
-
-        {/* CONO */}
         <Animated.Image
           source={require("../../assets/images/helados/cono_helado.png")}
           resizeMode="contain"
           style={[styles.cono, { transform: [{ translateY: coneY }] }]}
         />
-
-        {/* CHOCOLATE */}
         <Animated.Image
-          source={
-            wink
-              ? require("../../assets/images/helados/helado_chocolate_guinea.png")
-              : require("../../assets/images/helados/helado_chocolate.png")
-          }
+          source={wink ? require("../../assets/images/helados/helado_chocolate_guinea.png"): require("../../assets/images/helados/helado_chocolate.png")}
           resizeMode="contain"
-          style={[
-            styles.choco,
-            { transform: [{ translateY: chocoY }, { scale: sChocolate }] },
-          ]}
+          style={[styles.choco,{ transform: [{ translateY: chocoY }, { scale: sChocolate }] },]}
         />
-
-        {/* FRUTILLA */}
         <Animated.Image
           source={require("../../assets/images/helados/helado_frutilla.png")}
           resizeMode="contain"
-          style={[
-            styles.fruti,
-            { transform: [{ translateY: frutiY }, { scale: sFrutilla }] },
-          ]}
+          style={[styles.fruti,{ transform: [{ translateY: frutiY }, { scale: sFrutilla }] },]}
         />
-
-        {/* CEREZA */}
         <Animated.Image
           source={require("../../assets/images/helados/cereza.png")}
           resizeMode="contain"
-          style={[
-            styles.cereza,
-            { transform: [{ translateY: cerezaY }, { scale: sCereza }] },
-          ]}
+          style={[styles.cereza,{ transform: [{ translateY: cerezaY }, { scale: sCereza }] },]}
         />
       </View>
-
-      {/* TEXTO */}
       <Animated.Text style={[styles.brand, { color: brandColor }]}>
         HELADOS HERMANOS
       </Animated.Text>
@@ -195,7 +177,6 @@ const styles = StyleSheet.create({
     right:-45,
     zIndex: 1,
   },
-// Chocolate centrado abajo
   choco: {
     position: "absolute",
     width: 250,
@@ -204,7 +185,6 @@ const styles = StyleSheet.create({
     left: 170,
     zIndex: 1,
   },
-  // Frutilla arriba del chocolate
   fruti: {
     position: "absolute",
     width: 220,
@@ -213,7 +193,6 @@ const styles = StyleSheet.create({
     left: 185,
     zIndex: 2,
   },
-  // Cereza arriba de la frutilla
   cereza: {
     position: "absolute",
     width: 100,
