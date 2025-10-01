@@ -102,8 +102,8 @@ const styles = StyleSheet.create({
   },
   backgroundImage: {
     flex: 1,
-    width,
-    height,
+    width: "100%",
+    height: "100%",
     resizeMode: isSmallScreen ? "stretch" : "cover",
   },
   input: {
