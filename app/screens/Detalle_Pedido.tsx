@@ -36,7 +36,7 @@ export default function DetallePedidoScreen() {
     return (
         <ImageBackground
             source={require("../../assets/images/backgrounds/fondo3.jpg")}
-            style={styles.background}
+            style={styles.backgroundImage}
             resizeMode={isSmallScreen ? "stretch" : "cover"}
         >
             <View style={styles.overlay}>
@@ -90,10 +90,11 @@ export default function DetallePedidoScreen() {
 }
 
 const styles = StyleSheet.create({
-    background: {
+    backgroundImage: {
         flex: 1,
-        width,
-        height,
+        width: "100%",
+        height: "100%",
+        resizeMode: "cover",
     },
     overlay: {
         flex: 1,

@@ -125,8 +125,7 @@ export default function LoginScreen() {
   );
 }
 
-const isSmallScreen = width < 360;
-
+const isSmallScreen = width < 400 || height < 700; 
 const isWeb = Platform.OS === "web";
 
 export const styles = StyleSheet.create({
@@ -135,9 +134,9 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
     padding: isWeb ? 40 : width * 0.05,
     backgroundColor: "rgba(224,224,224,0.7)",
-    borderRadius: isWeb ? 0 : 10, // sin bordes en web, sí en mobile
-    width: "100%", // que ocupe todo el ancho
-    alignSelf: "stretch", // fuerza a expandirse
+    borderRadius: isWeb ? 0 : 10, 
+    width: "100%", 
+    alignSelf: "stretch", 
   },
   title: {
     fontSize: isWeb ? 32 : isSmallScreen ? 20 : width * 0.07,
@@ -147,8 +146,8 @@ export const styles = StyleSheet.create({
   },
   backgroundImage: {
     flex: 1,
-    width: width,
-    height: height,
+    width: "100%",
+    height: "100%",
     resizeMode: isSmallScreen ? "stretch" : "cover",
   },
   switchContainer: {
@@ -206,7 +205,7 @@ export const styles = StyleSheet.create({
     borderRadius: 20,
     alignSelf: "center",
     justifyContent: "center",
-    backgroundColor: "#d3d3d3ff",
+    backgroundColor: "rgba(255, 255, 255, 0.85)",
     marginBottom: height * 0.025,
   },
   backText: {

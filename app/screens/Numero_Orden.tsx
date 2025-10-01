@@ -14,7 +14,7 @@ export default function NumeroOrdenScreen() {
     const [numeroOrden, setNumeroOrden] = useState<number>(0);
 
     useEffect(() => {
-        // Genera un número de orden aleatorio entre 1000 y 9999
+        
         const orden = Math.floor(1000 + Math.random() * 9000);
         setNumeroOrden(orden);
 
@@ -28,7 +28,7 @@ export default function NumeroOrdenScreen() {
     return (
         <ImageBackground
             source={require("../../assets/images/backgrounds/fondo4.jpg")}
-            style={styles.background}
+            style={styles.backgroundImage}
             resizeMode="cover"
         >
             <View style={styles.overlay}>
@@ -44,7 +44,7 @@ export default function NumeroOrdenScreen() {
 }
 
 const styles = StyleSheet.create({
-    background: {
+    backgroundImage: {
         flex: 1,
         width: "100%",
         height: "100%",

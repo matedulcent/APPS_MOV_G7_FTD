@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { Dimensions, ImageBackground, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 const { width, height } = Dimensions.get("window");
-const isSmallScreen = width < 360;
+const isSmallScreen = width < 400 || height < 700; 
 const isWeb = Platform.OS === "web";
 
 export default function RegistroCliente() {
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignSelf: "center",
     justifyContent: "center",
-    backgroundColor: "#d3d3d3ff",
+    backgroundColor: "rgba(255, 255, 255, 0.85)",
     marginBottom: height * 0.025,
   },
   backText: {

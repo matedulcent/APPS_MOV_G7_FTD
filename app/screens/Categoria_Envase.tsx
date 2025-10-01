@@ -81,7 +81,7 @@ export default function CategoriaVolumenScreen() {
     return (
         <ImageBackground
             source={require("../../assets/images/backgrounds/fondo1.jpg")}
-            style={styles.background}
+            style={styles.backgroundImage}
             resizeMode={isSmallScreen ? "stretch" : "cover"}
         >
             <View style={styles.overlay}>
@@ -138,7 +138,12 @@ export default function CategoriaVolumenScreen() {
 }
 
 const styles = StyleSheet.create({
-    background: { flex: 1, width, height },
+    backgroundImage: {
+        flex: 1,
+        width: "100%",
+        height: "100%",
+        resizeMode: "cover",
+    },
     overlay: { flex: 1, padding: isWeb ? 40 : width * 0.05, backgroundColor: "rgba(255,255,255,0.6)" },
 
     itemRow: {
