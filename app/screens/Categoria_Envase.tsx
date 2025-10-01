@@ -4,6 +4,7 @@ import {
     Dimensions,
     FlatList,
     ImageBackground,
+    Platform,
     Pressable,
     StyleSheet,
     Text,
@@ -12,7 +13,9 @@ import {
 import Dropdown from "../../components/Dropdown";
 import ScreenHeader from "../../components/ScreenHeader";
 
-const { height } = Dimensions.get("window"); // Para mover el botón proporcionalmente
+const { width, height } = Dimensions.get("window");
+const isSmallScreen = width < 360;
+const isWeb = Platform.OS === "web";
 
 export default function CategoriaVolumenScreen() {
     const { sucursalId, userId } = useLocalSearchParams<{ sucursalId: string; userId: string }>();
@@ -30,30 +33,22 @@ export default function CategoriaVolumenScreen() {
         { label: "Vasos", options: ["1 bola", "2 bolas", "3 bolas", "4 bolas"], icon: "local-drink" as const },
     ];
 
-    const cantidadSabores: { [key: string]: number } = {
-        Cucuruchos: 0,
-        Kilos: 4,
-        Vasos: 0,
-    };
+    const cantidadSabores: { [key: string]: number } = { Cucuruchos: 0, Kilos: 4, Vasos: 0 };
 
     const toggleSeleccion = (categoria: string, opcion: string) => {
-        setSelecciones((prev) => {
+        setSelecciones(prev => {
             const prevItems = prev[categoria] || [];
-            const existe = prevItems.find((i) => i.opcion === opcion);
-
-            let nuevasOpciones;
-            if (existe) {
-                nuevasOpciones = prevItems.filter((i) => i.opcion !== opcion);
-            } else {
-                nuevasOpciones = [...prevItems, { opcion, cantidad: 1 }];
-            }
+            const existe = prevItems.find(i => i.opcion === opcion);
+            let nuevasOpciones = existe
+                ? prevItems.filter(i => i.opcion !== opcion)
+                : [...prevItems, { opcion, cantidad: 1 }];
             return { ...prev, [categoria]: nuevasOpciones };
         });
     };
 
     const updateCantidad = (categoria: string, opcion: string, delta: number) => {
-        setSelecciones((prev) => {
-            const nuevasOpciones = prev[categoria].map((item) =>
+        setSelecciones(prev => {
+            const nuevasOpciones = prev[categoria].map(item =>
                 item.opcion === opcion
                     ? { ...item, cantidad: Math.max(1, item.cantidad + delta) }
                     : item
@@ -64,22 +59,15 @@ export default function CategoriaVolumenScreen() {
 
     const handleConfirm = () => {
         const pedidoFinal: { [key: string]: number } = {};
-
         Object.entries(selecciones).forEach(([categoria, items]) => {
             items.forEach(({ opcion, cantidad }) => {
                 let sabores = cantidadSabores[categoria] || 1;
-                if (categoria === "Cucuruchos" || categoria === "Vasos") {
-                    sabores = parseInt(opcion[0]);
-                }
-
-                for (let i = 1; i <= cantidad; i++) {
-                    pedidoFinal[`${categoria} ${i} (${opcion})`] = sabores;
-                }
+                if (categoria === "Cucuruchos" || categoria === "Vasos") sabores = parseInt(opcion[0]);
+                for (let i = 1; i <= cantidad; i++) pedidoFinal[`${categoria} ${i} (${opcion})`] = sabores;
             });
         });
 
         const pedidoString = encodeURIComponent(JSON.stringify(pedidoFinal));
-
         console.log("(SELECCION ENVASE) SUCURSAL ID:", sucursalId);
         console.log("(SELECCION ENVASE) Usuario ID:", userId);
         console.log("(SELECCION ENVASE) Pedido:", pedidoFinal);
@@ -93,26 +81,25 @@ export default function CategoriaVolumenScreen() {
     return (
         <ImageBackground
             source={require("../../assets/images/backgrounds/fondo1.jpg")}
-            style={styles.background}
+            style={styles.backgroundImage}
+            resizeMode={isSmallScreen ? "stretch" : "cover"}
         >
             <View style={styles.overlay}>
                 <ScreenHeader title="Seleccionar Envase" />
 
-                {/* Lista de categorías */}
                 <FlatList
                     data={categorias}
-                    keyExtractor={(item) => item.label}
-                    contentContainerStyle={{ paddingBottom: height * 0.15 }} // espaciado para el botón
+                    keyExtractor={item => item.label}
+                    contentContainerStyle={{ paddingBottom: height * 0.15 }}
                     renderItem={({ item: cat }) => (
-                        <View style={{ marginBottom: 20 }}>
+                        <View style={{ marginBottom: height * 0.03 }}>
                             <Dropdown
                                 label={cat.label}
                                 options={cat.options}
-                                selected={selecciones[cat.label].map((i) => i.opcion)}
-                                onSelect={(item) => toggleSeleccion(cat.label, item)}
+                                selected={selecciones[cat.label].map(i => i.opcion)}
+                                onSelect={item => toggleSeleccion(cat.label, item)}
                                 icon={cat.icon}
                             />
-
                             {selecciones[cat.label].map(({ opcion, cantidad }) => (
                                 <View key={opcion} style={styles.itemRow}>
                                     <Text style={styles.itemText}>{opcion}</Text>
@@ -137,13 +124,12 @@ export default function CategoriaVolumenScreen() {
                     )}
                 />
 
-                {/* Botón fijo */}
                 <View style={[styles.footer, { bottom: height * 0.13 }]}>
                     <Pressable
                         style={[styles.button, { backgroundColor: "#f4679fff" }]}
                         onPress={handleConfirm}
                     >
-                        <Text style={styles.buttonText}>Siguiente</Text>
+                        <Text style={[styles.buttonText, { fontSize: isWeb ? 16 : width * 0.045 }]}>Siguiente</Text>
                     </Pressable>
                 </View>
             </View>
@@ -152,42 +138,38 @@ export default function CategoriaVolumenScreen() {
 }
 
 const styles = StyleSheet.create({
-    background: { flex: 1, resizeMode: "cover" },
-    overlay: { flex: 1, padding: 20 },
+    backgroundImage: {
+        flex: 1,
+        width: "100%",
+        height: "100%",
+        resizeMode: "cover",
+    },
+    overlay: { flex: 1, padding: isWeb ? 40 : width * 0.05, backgroundColor: "rgba(255,255,255,0.6)" },
 
     itemRow: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        marginTop: 8,
-        padding: 8,
+        marginTop: height * 0.008,
+        padding: isWeb ? 10 : width * 0.03,
         borderWidth: 1,
         borderColor: "#ddd",
-        borderRadius: 6,
+        borderRadius: 8,
         backgroundColor: "#fff",
     },
-    itemText: { fontSize: 16 },
+    itemText: { fontSize: isWeb ? 16 : width * 0.045 },
     counter: { flexDirection: "row", alignItems: "center" },
     counterButton: {
         backgroundColor: "#eee",
-        paddingHorizontal: 8,
-        paddingVertical: 4,
+        paddingHorizontal: isWeb ? 8 : width * 0.03,
+        paddingVertical: isWeb ? 4 : height * 0.008,
         borderRadius: 4,
-        marginHorizontal: 4,
+        marginHorizontal: width * 0.015,
     },
-    counterText: { fontSize: 18, fontWeight: "bold" },
-    counterValue: { fontSize: 16, fontWeight: "bold", minWidth: 20, textAlign: "center" },
+    counterText: { fontSize: isWeb ? 18 : width * 0.05, fontWeight: "bold" },
+    counterValue: { fontSize: isWeb ? 16 : width * 0.045, fontWeight: "bold", minWidth: width * 0.06, textAlign: "center" },
 
-    footer: {
-        position: "absolute",
-        left: 20,
-        right: 20,
-    },
-    button: {
-        backgroundColor: "#6200ee",
-        padding: 14,
-        borderRadius: 8,
-        alignItems: "center",
-    },
-    buttonText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
+    footer: { position: "absolute", left: isWeb ? 40 : width * 0.05, right: isWeb ? 40 : width * 0.05 },
+    button: { backgroundColor: "#6200ee", paddingVertical: isWeb ? 14 : height * 0.022, borderRadius: 8, alignItems: "center" },
+    buttonText: { color: "#fff", fontWeight: "bold" },
 });
