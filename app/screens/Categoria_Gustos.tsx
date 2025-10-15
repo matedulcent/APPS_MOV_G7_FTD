@@ -37,7 +37,7 @@ export default function CategoriaGustosScreen() {
     const [showSearch, setShowSearch] = useState(false);
     const [searchText, setSearchText] = useState("");
 
-    // ✨ Nuevo estado para popup visual
+    // ✨ Estado para popup
     const [showPopup, setShowPopup] = useState(true);
     const fadeAnim = useState(new Animated.Value(0))[0];
 
@@ -86,7 +86,7 @@ export default function CategoriaGustosScreen() {
     const handleConfirm = () => {
         if (currentIndex < cucuruchoKeys.length - 1) {
             setCurrentIndex(currentIndex + 1);
-            setShowPopup(true); // Mostrar popup para el siguiente envase
+            setShowPopup(true);
         } else {
             const pedidoString = encodeURIComponent(JSON.stringify(selecciones));
             console.log("##########################################################################");
@@ -133,10 +133,7 @@ export default function CategoriaGustosScreen() {
                     />
                 )}
 
-                <ScrollView
-                    style={{ flex: 1 }}
-                    showsVerticalScrollIndicator={false}
-                >
+                <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
                     {categoriasFiltradas.map(cat => (
                         <View key={cat.label} style={styles.dropdownContainer}>
                             <Dropdown
@@ -157,7 +154,7 @@ export default function CategoriaGustosScreen() {
                     totalVolumenes={cucuruchoKeys.length}
                 />
 
-                {/* 🌈 POPUP MODAL con animación */}
+                {/* 🌈 POPUP MODAL */}
                 <Modal
                     transparent
                     visible={showPopup}
@@ -198,7 +195,6 @@ const styles = StyleSheet.create({
         flex: 1,
         width: "100%",
         height: "100%",
-        resizeMode: "cover",
     },
     overlay: {
         flex: 1,
@@ -232,9 +228,12 @@ const styles = StyleSheet.create({
     dropdownContainer: {
         marginBottom: height * 0.01,
     },
-    // 🎨 Modal styles
     modalOverlay: {
-        flex: 1,
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
         backgroundColor: "rgba(0,0,0,0.5)",
         justifyContent: "center",
         alignItems: "center",

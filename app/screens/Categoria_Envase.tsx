@@ -1,6 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
+    Alert,
     Dimensions,
     FlatList,
     ImageBackground,
@@ -58,6 +59,19 @@ export default function CategoriaVolumenScreen() {
     };
 
     const handleConfirm = () => {
+        // 🧩 Verificar si no hay ningún envase seleccionado
+        const haySelecciones = Object.values(selecciones).some(cat => cat.length > 0);
+
+        if (!haySelecciones) {
+            Alert.alert(
+                "Atención",
+                "Debes seleccionar al menos un envase antes de continuar.",
+                [{ text: "Aceptar", style: "default" }]
+            );
+            return; // 👈 Detiene el flujo
+        }
+
+        // ✅ Si hay envases seleccionados, seguimos
         const pedidoFinal: { [key: string]: number } = {};
         Object.entries(selecciones).forEach(([categoria, items]) => {
             items.forEach(({ opcion, cantidad }) => {
@@ -129,7 +143,9 @@ export default function CategoriaVolumenScreen() {
                         style={[styles.button, { backgroundColor: "#f4679fff" }]}
                         onPress={handleConfirm}
                     >
-                        <Text style={[styles.buttonText, { fontSize: isWeb ? 16 : width * 0.045 }]}>Siguiente</Text>
+                        <Text style={[styles.buttonText, { fontSize: isWeb ? 16 : width * 0.045 }]}>
+                            Siguiente
+                        </Text>
                     </Pressable>
                 </View>
             </View>
