@@ -1,11 +1,14 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
+    Animated,
     Dimensions,
     ImageBackground,
+    Modal,
     ScrollView,
     StyleSheet,
     Text,
+    TouchableOpacity,
     View,
 } from "react-native";
 import Dropdown from "../../components/Dropdown";
@@ -31,9 +34,20 @@ export default function CategoriaGustosScreen() {
     const cucuruchoKeys = Object.keys(cucuruchos);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [selecciones, setSelecciones] = useState<{ [key: string]: string[] }>({});
-
     const [showSearch, setShowSearch] = useState(false);
     const [searchText, setSearchText] = useState("");
+
+    // ✨ Estado para popup
+    const [showPopup, setShowPopup] = useState(true);
+    const fadeAnim = useState(new Animated.Value(0))[0];
+
+    useEffect(() => {
+        Animated.timing(fadeAnim, {
+            toValue: showPopup ? 1 : 0,
+            duration: 300,
+            useNativeDriver: true,
+        }).start();
+    }, [showPopup]);
 
     const categorias = [
         { label: "Frutales", options: ["Frutilla", "Banana", "Frambuesa", "Durazno", "Cereza", "Arándano", "Mango", "Kiwi", "Maracuyá"] },
@@ -72,6 +86,7 @@ export default function CategoriaGustosScreen() {
     const handleConfirm = () => {
         if (currentIndex < cucuruchoKeys.length - 1) {
             setCurrentIndex(currentIndex + 1);
+            setShowPopup(true);
         } else {
             const pedidoString = encodeURIComponent(JSON.stringify(selecciones));
             console.log("##########################################################################");
@@ -118,11 +133,7 @@ export default function CategoriaGustosScreen() {
                     />
                 )}
 
-                <ScrollView
-                    style={{ flex: 1 }}
-                    
-                    showsVerticalScrollIndicator={false}
-                >
+                <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
                     {categoriasFiltradas.map(cat => (
                         <View key={cat.label} style={styles.dropdownContainer}>
                             <Dropdown
@@ -142,6 +153,38 @@ export default function CategoriaGustosScreen() {
                     currentIndex={currentIndex}
                     totalVolumenes={cucuruchoKeys.length}
                 />
+
+                {/* 🌈 POPUP MODAL */}
+                <Modal
+                    transparent
+                    visible={showPopup}
+                    animationType="fade"
+                    onRequestClose={() => setShowPopup(false)}
+                >
+                    <View style={styles.modalOverlay}>
+                        <Animated.View style={[styles.modalContainer, { opacity: fadeAnim }]}>
+                            <Text style={styles.modalTitle}>¡Nuevo envase!</Text>
+                            <Text style={styles.modalText}>
+                                Elegí los{" "}
+                                <Text style={{ fontWeight: "bold", color: "#e91e63" }}>
+                                    {cucuruchos[cucuruchoActual]}
+                                </Text>{" "}
+                                sabores para el{" "}
+                                <Text style={{ fontWeight: "bold", color: "#e91e63" }}>
+                                    {cucuruchoActual}
+                                </Text>
+                                .
+                            </Text>
+
+                            <TouchableOpacity
+                                style={styles.modalButton}
+                                onPress={() => setShowPopup(false)}
+                            >
+                                <Text style={styles.modalButtonText}>Aceptar</Text>
+                            </TouchableOpacity>
+                        </Animated.View>
+                    </View>
+                </Modal>
             </View>
         </ImageBackground>
     );
@@ -149,13 +192,15 @@ export default function CategoriaGustosScreen() {
 
 const styles = StyleSheet.create({
     backgroundImage: {
-    flex: 1,
-    width: "100%",
-    height: "100%",
-    resizeMode: "cover",
+        flex: 1,
+        width: "100%",
+        height: "100%",
     },
-    overlay: { flex: 1, padding: isSmallScreen ? 12 : 20, backgroundColor: "rgba(255,255,255,0.6)" },
-
+    overlay: {
+        flex: 1,
+        padding: isSmallScreen ? 12 : 20,
+        backgroundColor: "rgba(255,255,255,0.6)",
+    },
     bannerContainer: {
         backgroundColor: "#ffd8d8",
         paddingVertical: height * 0.018,
@@ -180,8 +225,51 @@ const styles = StyleSheet.create({
         fontWeight: "900",
         color: "#e91e63",
     },
-
     dropdownContainer: {
         marginBottom: height * 0.01,
+    },
+    modalOverlay: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: "rgba(0,0,0,0.5)",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    modalContainer: {
+        width: "80%",
+        backgroundColor: "#fff",
+        borderRadius: 20,
+        padding: 25,
+        alignItems: "center",
+        shadowColor: "#000",
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        elevation: 6,
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: "800",
+        color: "#e91e63",
+        marginBottom: 10,
+    },
+    modalText: {
+        fontSize: 16,
+        textAlign: "center",
+        color: "#333",
+        marginBottom: 20,
+    },
+    modalButton: {
+        backgroundColor: "#e91e63",
+        paddingVertical: 10,
+        paddingHorizontal: 25,
+        borderRadius: 12,
+    },
+    modalButtonText: {
+        color: "#fff",
+        fontSize: 16,
+        fontWeight: "700",
     },
 });
