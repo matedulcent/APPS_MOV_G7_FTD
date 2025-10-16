@@ -11,6 +11,8 @@ export default function RegistroVendedor() {
   const router = useRouter(); 
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
+  const [direccion, setDireccion] = useState("");
+  const [imagenLocal, setImagenLocal] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
@@ -49,6 +51,20 @@ export default function RegistroVendedor() {
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Dirección del local"
+          value={direccion}
+          onChangeText={setDireccion}
+          secureTextEntry
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="URL de imagen del local"
+          value={imagenLocal}
+          onChangeText={setImagenLocal}
+          secureTextEntry
         />
         <TextInput
           style={styles.input}

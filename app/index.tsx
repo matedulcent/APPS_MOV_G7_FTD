@@ -35,7 +35,7 @@ export default function HomeScreen() {
       <View style={styles.container}>
         <Text style={styles.title}>🏠 Esta es la pantalla Home</Text>
 
-        <Pressable
+        {/* <Pressable
           style={[styles.actionButton, { backgroundColor: "#6200ee" }]}
           onPress={handleElegirSucursal}
         >
@@ -49,7 +49,7 @@ export default function HomeScreen() {
           <Text style={[styles.buttonText, { color: "#000" }]}>
             Ir a Panel de Vendedor
           </Text>
-        </Pressable>
+        </Pressable> */}
 
         <Text style={styles.infoText}>¿Querés ingresar a tu cuenta?</Text>
         <Pressable
