@@ -1,5 +1,4 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
     Alert,
     Dimensions,
@@ -13,34 +12,67 @@ import {
 } from "react-native";
 import Dropdown from "../../components/Dropdown";
 import ScreenHeader from "../../components/ScreenHeader";
+import { BACKEND_URL } from "../config";
 
 const { width, height } = Dimensions.get("window");
 const isSmallScreen = width < 360;
 const isWeb = Platform.OS === "web";
 
-export default function CategoriaVolumenScreen() {
-    const { sucursalId, userId } = useLocalSearchParams<{ sucursalId: string; userId: string }>();
-    const router = useRouter();
+interface Categoria {
+    label: string;
+    options: string[];
+    icon: "icecream" | "whatshot" | "local-drink";
+}
 
-    const [selecciones, setSelecciones] = useState<{ [key: string]: { opcion: string; cantidad: number }[] }>({
+interface Seleccion {
+    opcion: string;
+    cantidad: number;
+}
+
+export default function CategoriaVolumenScreen({ route, navigation }: any) {
+    // ✅ Recuperamos userId desde los parámetros de la ruta, con fallback a "1"
+    const { userId: routeUserId } = route.params || {};
+    const [userId, setUserId] = useState<string>(routeUserId || "1");
+    const [userData, setUserData] = useState<any>(null);
+
+    const [selecciones, setSelecciones] = useState<{
+        [key: string]: Seleccion[];
+    }>({
         Cucuruchos: [],
         Kilos: [],
         Vasos: [],
     });
 
-    const categorias = [
-        { label: "Cucuruchos", options: ["1 bola", "2 bolas", "3 bolas", "4 bolas"], icon: "icecream" as const },
-        { label: "Kilos", options: ["1/4 Kg", "1/2 Kg", "1 Kg"], icon: "whatshot" as const },
-        { label: "Vasos", options: ["1 bola", "2 bolas", "3 bolas", "4 bolas"], icon: "local-drink" as const },
+    const categorias: Categoria[] = [
+        { label: "Cucuruchos", options: ["1 bola", "2 bolas", "3 bolas", "4 bolas"], icon: "icecream" },
+        { label: "Kilos", options: ["1/4 Kg", "1/2 Kg", "1 Kg"], icon: "whatshot" },
+        { label: "Vasos", options: ["1 bola", "2 bolas", "3 bolas", "4 bolas"], icon: "local-drink" },
     ];
 
     const cantidadSabores: { [key: string]: number } = { Cucuruchos: 0, Kilos: 4, Vasos: 0 };
+
+    // ✅ Trae los datos del usuario desde el backend
+    useEffect(() => {
+        if (!userId) return;
+        const fetchUser = async () => {
+            try {
+                const res = await fetch(`${BACKEND_URL}/usuarios/${userId}`);
+                if (!res.ok) throw new Error("No se pudo obtener el usuario");
+                const data = await res.json();
+                setUserData(data);
+                console.log("✅ Usuario cargado:", data);
+            } catch (err) {
+                console.error("Error al obtener usuario:", err);
+            }
+        };
+        fetchUser();
+    }, [userId]);
 
     const toggleSeleccion = (categoria: string, opcion: string) => {
         setSelecciones(prev => {
             const prevItems = prev[categoria] || [];
             const existe = prevItems.find(i => i.opcion === opcion);
-            let nuevasOpciones = existe
+            const nuevasOpciones = existe
                 ? prevItems.filter(i => i.opcion !== opcion)
                 : [...prevItems, { opcion, cantidad: 1 }];
             return { ...prev, [categoria]: nuevasOpciones };
@@ -59,19 +91,12 @@ export default function CategoriaVolumenScreen() {
     };
 
     const handleConfirm = () => {
-        // 🧩 Verificar si no hay ningún envase seleccionado
         const haySelecciones = Object.values(selecciones).some(cat => cat.length > 0);
-
         if (!haySelecciones) {
-            Alert.alert(
-                "Atención",
-                "Debes seleccionar al menos un envase antes de continuar.",
-                [{ text: "Aceptar", style: "default" }]
-            );
-            return; // 👈 Detiene el flujo
+            Alert.alert("Atención", "Debes seleccionar al menos un envase antes de continuar.", [{ text: "Aceptar" }]);
+            return;
         }
 
-        // ✅ Si hay envases seleccionados, seguimos
         const pedidoFinal: { [key: string]: number } = {};
         Object.entries(selecciones).forEach(([categoria, items]) => {
             items.forEach(({ opcion, cantidad }) => {
@@ -82,14 +107,8 @@ export default function CategoriaVolumenScreen() {
         });
 
         const pedidoString = encodeURIComponent(JSON.stringify(pedidoFinal));
-        console.log("(SELECCION ENVASE) SUCURSAL ID:", sucursalId);
-        console.log("(SELECCION ENVASE) Usuario ID:", userId);
-        console.log("(SELECCION ENVASE) Pedido:", pedidoFinal);
 
-        router.push({
-            pathname: "/screens/Categoria_Gustos",
-            params: { pedido: pedidoString, sucursalId, userId },
-        });
+        navigation.push("Categoria_Gustos", { pedido: pedidoString, userId });
     };
 
     return (
@@ -99,7 +118,7 @@ export default function CategoriaVolumenScreen() {
             resizeMode={isSmallScreen ? "stretch" : "cover"}
         >
             <View style={styles.overlay}>
-                <ScreenHeader title="Seleccionar Envase" />
+                <ScreenHeader title={`Seleccionar Envase${userData ? ` - ${userData.nombre}` : ""}`} />
 
                 <FlatList
                     data={categorias}
@@ -154,14 +173,8 @@ export default function CategoriaVolumenScreen() {
 }
 
 const styles = StyleSheet.create({
-    backgroundImage: {
-        flex: 1,
-        width: "100%",
-        height: "100%",
-        resizeMode: "cover",
-    },
+    backgroundImage: { flex: 1, width: "100%", height: "100%", resizeMode: "cover" },
     overlay: { flex: 1, padding: isWeb ? 40 : width * 0.05, backgroundColor: "rgba(255,255,255,0.6)" },
-
     itemRow: {
         flexDirection: "row",
         justifyContent: "space-between",
@@ -184,7 +197,6 @@ const styles = StyleSheet.create({
     },
     counterText: { fontSize: isWeb ? 18 : width * 0.05, fontWeight: "bold" },
     counterValue: { fontSize: isWeb ? 16 : width * 0.045, fontWeight: "bold", minWidth: width * 0.06, textAlign: "center" },
-
     footer: { position: "absolute", left: isWeb ? 40 : width * 0.05, right: isWeb ? 40 : width * 0.05 },
     button: { backgroundColor: "#6200ee", paddingVertical: isWeb ? 14 : height * 0.022, borderRadius: 8, alignItems: "center" },
     buttonText: { color: "#fff", fontWeight: "bold" },
