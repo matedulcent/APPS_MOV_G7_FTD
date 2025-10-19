@@ -1,3 +1,4 @@
+// CategoriaVolumenScreen.tsx
 import React, { useEffect, useState } from "react";
 import {
     Alert,
@@ -18,40 +19,28 @@ const { width, height } = Dimensions.get("window");
 const isSmallScreen = width < 360;
 const isWeb = Platform.OS === "web";
 
-interface Categoria {
-    label: string;
-    options: string[];
-    icon: "icecream" | "whatshot" | "local-drink";
-}
-
 interface Seleccion {
     opcion: string;
     cantidad: number;
 }
 
+interface EnvaseDB {
+    id: string;
+    tipoEnvase: string;
+    maxCantSabores: number;
+    icon?: "icecream" | "whatshot" | "local-drink";
+}
+
 export default function CategoriaVolumenScreen({ route, navigation }: any) {
-    // ✅ Recuperamos userId desde los parámetros de la ruta, con fallback a "1"
+    // Recuperamos userId desde la ruta, fallback a "1"
     const { userId: routeUserId } = route.params || {};
     const [userId, setUserId] = useState<string>(routeUserId || "1");
     const [userData, setUserData] = useState<any>(null);
 
-    const [selecciones, setSelecciones] = useState<{
-        [key: string]: Seleccion[];
-    }>({
-        Cucuruchos: [],
-        Kilos: [],
-        Vasos: [],
-    });
+    const [envases, setEnvases] = useState<EnvaseDB[]>([]);
+    const [selecciones, setSelecciones] = useState<{ [key: string]: Seleccion[] }>({});
 
-    const categorias: Categoria[] = [
-        { label: "Cucuruchos", options: ["1 bola", "2 bolas", "3 bolas", "4 bolas"], icon: "icecream" },
-        { label: "Kilos", options: ["1/4 Kg", "1/2 Kg", "1 Kg"], icon: "whatshot" },
-        { label: "Vasos", options: ["1 bola", "2 bolas", "3 bolas", "4 bolas"], icon: "local-drink" },
-    ];
-
-    const cantidadSabores: { [key: string]: number } = { Cucuruchos: 0, Kilos: 4, Vasos: 0 };
-
-    // ✅ Trae los datos del usuario desde el backend
+    // ✅ Traer usuario
     useEffect(() => {
         if (!userId) return;
         const fetchUser = async () => {
@@ -68,6 +57,28 @@ export default function CategoriaVolumenScreen({ route, navigation }: any) {
         fetchUser();
     }, [userId]);
 
+    // ✅ Traer envases desde backend
+    useEffect(() => {
+        const fetchEnvases = async () => {
+            try {
+                const res = await fetch(`${BACKEND_URL}/envases`);
+                if (!res.ok) throw new Error("No se pudieron obtener los envases");
+                const data: EnvaseDB[] = await res.json();
+                setEnvases(data);
+
+                // Inicializamos selecciones
+                const initSelecciones: { [key: string]: Seleccion[] } = {};
+                data.forEach(e => {
+                    initSelecciones[e.tipoEnvase] = [];
+                });
+                setSelecciones(initSelecciones);
+            } catch (err) {
+                console.error("Error al cargar envases:", err);
+            }
+        };
+        fetchEnvases();
+    }, []);
+
     const toggleSeleccion = (categoria: string, opcion: string) => {
         setSelecciones(prev => {
             const prevItems = prev[categoria] || [];
@@ -80,14 +91,12 @@ export default function CategoriaVolumenScreen({ route, navigation }: any) {
     };
 
     const updateCantidad = (categoria: string, opcion: string, delta: number) => {
-        setSelecciones(prev => {
-            const nuevasOpciones = prev[categoria].map(item =>
-                item.opcion === opcion
-                    ? { ...item, cantidad: Math.max(1, item.cantidad + delta) }
-                    : item
-            );
-            return { ...prev, [categoria]: nuevasOpciones };
-        });
+        setSelecciones(prev => ({
+            ...prev,
+            [categoria]: prev[categoria].map(i =>
+                i.opcion === opcion ? { ...i, cantidad: Math.max(1, i.cantidad + delta) } : i
+            ),
+        }));
     };
 
     const handleConfirm = () => {
@@ -99,15 +108,16 @@ export default function CategoriaVolumenScreen({ route, navigation }: any) {
 
         const pedidoFinal: { [key: string]: number } = {};
         Object.entries(selecciones).forEach(([categoria, items]) => {
+            const envase = envases.find(e => e.tipoEnvase === categoria);
+            const maxSabores = envase?.maxCantSabores || 1;
             items.forEach(({ opcion, cantidad }) => {
-                let sabores = cantidadSabores[categoria] || 1;
-                if (categoria === "Cucuruchos" || categoria === "Vasos") sabores = parseInt(opcion[0]);
-                for (let i = 1; i <= cantidad; i++) pedidoFinal[`${categoria} ${i} (${opcion})`] = sabores;
+                for (let i = 1; i <= cantidad; i++) {
+                    pedidoFinal[`${categoria} ${i} (${opcion})`] = maxSabores;
+                }
             });
         });
 
         const pedidoString = encodeURIComponent(JSON.stringify(pedidoFinal));
-
         navigation.push("Categoria_Gustos", { pedido: pedidoString, userId });
     };
 
@@ -121,32 +131,32 @@ export default function CategoriaVolumenScreen({ route, navigation }: any) {
                 <ScreenHeader title={`Seleccionar Envase${userData ? ` - ${userData.nombre}` : ""}`} />
 
                 <FlatList
-                    data={categorias}
-                    keyExtractor={item => item.label}
+                    data={envases}
+                    keyExtractor={item => item.tipoEnvase}
                     contentContainerStyle={{ paddingBottom: height * 0.15 }}
-                    renderItem={({ item: cat }) => (
+                    renderItem={({ item }) => (
                         <View style={{ marginBottom: height * 0.03 }}>
                             <Dropdown
-                                label={cat.label}
-                                options={cat.options}
-                                selected={selecciones[cat.label].map(i => i.opcion)}
-                                onSelect={item => toggleSeleccion(cat.label, item)}
-                                icon={cat.icon}
+                                label={item.tipoEnvase}
+                                options={["1 bola", "2 bolas", "3 bolas", "4 bolas"].slice(0, item.maxCantSabores)}
+                                selected={selecciones[item.tipoEnvase].map(i => i.opcion)}
+                                onSelect={op => toggleSeleccion(item.tipoEnvase, op)}
+                                icon={item.icon}
                             />
-                            {selecciones[cat.label].map(({ opcion, cantidad }) => (
+                            {selecciones[item.tipoEnvase].map(({ opcion, cantidad }) => (
                                 <View key={opcion} style={styles.itemRow}>
                                     <Text style={styles.itemText}>{opcion}</Text>
                                     <View style={styles.counter}>
                                         <Pressable
                                             style={styles.counterButton}
-                                            onPress={() => updateCantidad(cat.label, opcion, -1)}
+                                            onPress={() => updateCantidad(item.tipoEnvase, opcion, -1)}
                                         >
                                             <Text style={styles.counterText}>-</Text>
                                         </Pressable>
                                         <Text style={styles.counterValue}>{cantidad}</Text>
                                         <Pressable
                                             style={styles.counterButton}
-                                            onPress={() => updateCantidad(cat.label, opcion, 1)}
+                                            onPress={() => updateCantidad(item.tipoEnvase, opcion, 1)}
                                         >
                                             <Text style={styles.counterText}>+</Text>
                                         </Pressable>
@@ -158,13 +168,8 @@ export default function CategoriaVolumenScreen({ route, navigation }: any) {
                 />
 
                 <View style={[styles.footer, { bottom: height * 0.13 }]}>
-                    <Pressable
-                        style={[styles.button, { backgroundColor: "#f4679fff" }]}
-                        onPress={handleConfirm}
-                    >
-                        <Text style={[styles.buttonText, { fontSize: isWeb ? 16 : width * 0.045 }]}>
-                            Siguiente
-                        </Text>
+                    <Pressable style={[styles.button, { backgroundColor: "#f4679fff" }]} onPress={handleConfirm}>
+                        <Text style={[styles.buttonText, { fontSize: isWeb ? 16 : width * 0.045 }]}>Siguiente</Text>
                     </Pressable>
                 </View>
             </View>
