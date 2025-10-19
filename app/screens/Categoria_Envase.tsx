@@ -1,16 +1,6 @@
 // CategoriaVolumenScreen.tsx
 import React, { useEffect, useState } from "react";
-import {
-    Alert,
-    Dimensions,
-    FlatList,
-    ImageBackground,
-    Platform,
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
-} from "react-native";
+import { Alert, Dimensions, FlatList, ImageBackground, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import Dropdown from "../../components/Dropdown";
 import ScreenHeader from "../../components/ScreenHeader";
 import { BACKEND_URL } from "../config";
@@ -32,15 +22,13 @@ interface EnvaseDB {
 }
 
 export default function CategoriaVolumenScreen({ route, navigation }: any) {
-    // Recuperamos userId desde la ruta, fallback a "1"
-    const { userId: routeUserId } = route.params || {};
-    const [userId, setUserId] = useState<string>(routeUserId || "1");
+    const routeParams = route?.params || {};
+    const [userId, setUserId] = useState<string>(routeParams.userId || "1");
     const [userData, setUserData] = useState<any>(null);
 
     const [envases, setEnvases] = useState<EnvaseDB[]>([]);
     const [selecciones, setSelecciones] = useState<{ [key: string]: Seleccion[] }>({});
 
-    // ✅ Traer usuario
     useEffect(() => {
         if (!userId) return;
         const fetchUser = async () => {
@@ -49,7 +37,6 @@ export default function CategoriaVolumenScreen({ route, navigation }: any) {
                 if (!res.ok) throw new Error("No se pudo obtener el usuario");
                 const data = await res.json();
                 setUserData(data);
-                console.log("✅ Usuario cargado:", data);
             } catch (err) {
                 console.error("Error al obtener usuario:", err);
             }
@@ -57,7 +44,6 @@ export default function CategoriaVolumenScreen({ route, navigation }: any) {
         fetchUser();
     }, [userId]);
 
-    // ✅ Traer envases desde backend
     useEffect(() => {
         const fetchEnvases = async () => {
             try {
@@ -66,11 +52,8 @@ export default function CategoriaVolumenScreen({ route, navigation }: any) {
                 const data: EnvaseDB[] = await res.json();
                 setEnvases(data);
 
-                // Inicializamos selecciones
                 const initSelecciones: { [key: string]: Seleccion[] } = {};
-                data.forEach(e => {
-                    initSelecciones[e.tipoEnvase] = [];
-                });
+                data.forEach(e => (initSelecciones[e.tipoEnvase] = []));
                 setSelecciones(initSelecciones);
             } catch (err) {
                 console.error("Error al cargar envases:", err);
@@ -122,14 +105,9 @@ export default function CategoriaVolumenScreen({ route, navigation }: any) {
     };
 
     return (
-        <ImageBackground
-            source={require("../../assets/images/backgrounds/fondo1.jpg")}
-            style={styles.backgroundImage}
-            resizeMode={isSmallScreen ? "stretch" : "cover"}
-        >
+        <ImageBackground source={require("../../assets/images/backgrounds/fondo1.jpg")} style={styles.backgroundImage}>
             <View style={styles.overlay}>
                 <ScreenHeader title={`Seleccionar Envase${userData ? ` - ${userData.nombre}` : ""}`} />
-
                 <FlatList
                     data={envases}
                     keyExtractor={item => item.tipoEnvase}
@@ -147,17 +125,11 @@ export default function CategoriaVolumenScreen({ route, navigation }: any) {
                                 <View key={opcion} style={styles.itemRow}>
                                     <Text style={styles.itemText}>{opcion}</Text>
                                     <View style={styles.counter}>
-                                        <Pressable
-                                            style={styles.counterButton}
-                                            onPress={() => updateCantidad(item.tipoEnvase, opcion, -1)}
-                                        >
+                                        <Pressable style={styles.counterButton} onPress={() => updateCantidad(item.tipoEnvase, opcion, -1)}>
                                             <Text style={styles.counterText}>-</Text>
                                         </Pressable>
                                         <Text style={styles.counterValue}>{cantidad}</Text>
-                                        <Pressable
-                                            style={styles.counterButton}
-                                            onPress={() => updateCantidad(item.tipoEnvase, opcion, 1)}
-                                        >
+                                        <Pressable style={styles.counterButton} onPress={() => updateCantidad(item.tipoEnvase, opcion, 1)}>
                                             <Text style={styles.counterText}>+</Text>
                                         </Pressable>
                                     </View>
@@ -166,7 +138,6 @@ export default function CategoriaVolumenScreen({ route, navigation }: any) {
                         </View>
                     )}
                 />
-
                 <View style={[styles.footer, { bottom: height * 0.13 }]}>
                     <Pressable style={[styles.button, { backgroundColor: "#f4679fff" }]} onPress={handleConfirm}>
                         <Text style={[styles.buttonText, { fontSize: isWeb ? 16 : width * 0.045 }]}>Siguiente</Text>
@@ -177,29 +148,14 @@ export default function CategoriaVolumenScreen({ route, navigation }: any) {
     );
 }
 
+// styles: igual que el tuyo
 const styles = StyleSheet.create({
-    backgroundImage: { flex: 1, width: "100%", height: "100%", resizeMode: "cover" },
+    backgroundImage: { flex: 1, width: "100%", height: "100%" },
     overlay: { flex: 1, padding: isWeb ? 40 : width * 0.05, backgroundColor: "rgba(255,255,255,0.6)" },
-    itemRow: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginTop: height * 0.008,
-        padding: isWeb ? 10 : width * 0.03,
-        borderWidth: 1,
-        borderColor: "#ddd",
-        borderRadius: 8,
-        backgroundColor: "#fff",
-    },
+    itemRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: height * 0.008, padding: isWeb ? 10 : width * 0.03, borderWidth: 1, borderColor: "#ddd", borderRadius: 8, backgroundColor: "#fff" },
     itemText: { fontSize: isWeb ? 16 : width * 0.045 },
     counter: { flexDirection: "row", alignItems: "center" },
-    counterButton: {
-        backgroundColor: "#eee",
-        paddingHorizontal: isWeb ? 8 : width * 0.03,
-        paddingVertical: isWeb ? 4 : height * 0.008,
-        borderRadius: 4,
-        marginHorizontal: width * 0.015,
-    },
+    counterButton: { backgroundColor: "#eee", paddingHorizontal: isWeb ? 8 : width * 0.03, paddingVertical: isWeb ? 4 : height * 0.008, borderRadius: 4, marginHorizontal: width * 0.015 },
     counterText: { fontSize: isWeb ? 18 : width * 0.05, fontWeight: "bold" },
     counterValue: { fontSize: isWeb ? 16 : width * 0.045, fontWeight: "bold", minWidth: width * 0.06, textAlign: "center" },
     footer: { position: "absolute", left: isWeb ? 40 : width * 0.05, right: isWeb ? 40 : width * 0.05 },
