@@ -30,13 +30,26 @@ export default function LoginScreen() {
     }).start(() => setRole(selectedRole));
   };
 
+  /**    falta UN ID CLINETE
   const handleLogin = () => {
     if (role === "cliente") {
       router.push("/screens/Seleccion_Sucursal");
     } else {
       router.push("/screens/proveedor/Vendedor_Envases");
     }
+  };*/
+
+  const handleLogin = () => {
+    if (role === "cliente") {
+      router.push({
+        pathname: "/screens/Seleccion_Sucursal",
+        params: { userId: "U7845" }, // 👈 id real de la DB
+      });
+    } else {
+      router.push("/screens/proveedor/Vendedor_Envases");
+    }
   };
+
 
   const handleRegister = () => {
     if (role === "cliente") {
