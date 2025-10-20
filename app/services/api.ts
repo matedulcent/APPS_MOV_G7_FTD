@@ -1,7 +1,7 @@
 import { Platform } from "react-native";
 
 const IS_ANDROID = Platform.OS === "android";
-const BASE = IS_ANDROID ? "http://10.0.2.2:3000" : "http://localhost:3000"; // o IP de tu PC si es dispositivo físico
+const BASE = IS_ANDROID ? "http://10.0.2.2:3001" : "http://localhost:3001"; // o IP de tu PC si es dispositivo físico
 const API = `${BASE}/api`;
 
 export type PedidoItem = { envaseId: string; saborId: string };
