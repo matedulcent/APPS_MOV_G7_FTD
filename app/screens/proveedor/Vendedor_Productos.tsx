@@ -1,13 +1,14 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Platform,
-    Pressable,
-    Text,
-    View,
+  ActivityIndicator,
+  Alert,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 type Envase = { id: string; tipoEnvase: string; maxCantSabores: number };
@@ -42,6 +43,34 @@ async function putOferta(
   return data;
 }
 
+/* ===== helpers de clasificación ===== */
+type Grupo = "Cremas" | "Frutales" | "Dulce de leche" | "Chocolates" | "Especiales";
+
+const ordenGrupos: Grupo[] = ["Cremas", "Frutales", "Dulce de leche", "Chocolates", "Especiales"];
+
+function normalize(s: string) {
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+function grupoDeSabor(nombre: string): Grupo {
+  const n = normalize(nombre);
+
+  if (/(chocolate|choco|cacao|amargo|blanco|almendra|almendras|menta)/.test(n)) {
+    return "Chocolates";
+  }
+  if (/(dulce de leche|ddl)/.test(n)) {
+    return "Dulce de leche";
+  }
+  if (/(crema|americana|vainilla|tramontana|sambayon|flan|yogur|yogurt|ricota|panna|nata)/.test(n)) {
+    return "Cremas";
+  }
+  if (/(frutilla|fresa|limon|naranja|frambuesa|mora|maracuya|anan|piña|mango|durazno|melocoton|kiwi|uva|manzana|pera|cereza|sandia|melon|banana|platano)/.test(n)) {
+    return "Frutales";
+  }
+  return "Especiales";
+}
+/* ==================================== */
+
 export default function Vendedor_Productos() {
   const { sucursalId: qp } = useLocalSearchParams<{ sucursalId?: string }>();
   const router = useRouter();
@@ -52,6 +81,15 @@ export default function Vendedor_Productos() {
   const [seleccionSabores, setSeleccionSabores] = useState<Set<string>>(new Set());
   const [seleccionEnvases, setSeleccionEnvases] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+
+  // estado de despliegue por grupo
+  const [abierto, setAbierto] = useState<Record<Grupo, boolean>>({
+    Cremas: true,
+    Frutales: true,
+    "Dulce de leche": true,
+    Chocolates: true,
+    Especiales: true,
+  });
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -96,6 +134,24 @@ export default function Vendedor_Productos() {
   const irAPedidos = () =>
     router.push({ pathname: "/screens/proveedor/Pedidos_Sucursal", params: { sucursalId } });
 
+  // 👇 useMemo ANTES del return condicional
+  const grupos = useMemo(() => {
+    const map: Record<Grupo, Sabor[]> = {
+      Cremas: [],
+      Frutales: [],
+      "Dulce de leche": [],
+      Chocolates: [],
+      Especiales: [],
+    };
+    for (const s of catalogoSabores) {
+      map[grupoDeSabor(s.tipoSabor)].push(s);
+    }
+    (Object.keys(map) as Grupo[]).forEach((g) =>
+      map[g].sort((a, b) => a.tipoSabor.localeCompare(b.tipoSabor))
+    );
+    return map;
+  }, [catalogoSabores]);
+
   if (loading) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
@@ -105,38 +161,73 @@ export default function Vendedor_Productos() {
     );
   }
 
+  const gruposConContenido = ordenGrupos.filter((g) => (grupos[g] ?? []).length > 0);
+
   return (
     <View style={{ flex: 1, padding: 16, gap: 12 }}>
       <Text style={{ fontSize: 18, fontWeight: "700" }}>
         Sabores ofrecidos — Sucursal {sucursalId}
       </Text>
 
-      <FlatList
-        data={catalogoSabores}
-        keyExtractor={(s) => s.id}
-        renderItem={({ item }) => {
-          const checked = seleccionSabores.has(item.id);
-          return (
-            <Pressable
-              onPress={() => toggleSabor(item.id)}
+      {/* Contenedor scrolleable con 5 listas */}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 12 }}
+      >
+        {gruposConContenido.map((g) => (
+          <View
+            key={g}
+            style={{
+              borderRadius: 12,
+              overflow: "hidden",
+              borderWidth: 1,
+              borderColor: "#e6e6e6",
+              marginBottom: 12,
+            }}
+          >
+            {/* Header del grupo */}
+            <TouchableOpacity
+              onPress={() => setAbierto((prev) => ({ ...prev, [g]: !prev[g] }))}
               style={{
                 padding: 12,
-                marginBottom: 8,
-                borderRadius: 12,
-                borderWidth: 1.5,
-                borderColor: checked ? "#1e90ff" : "#ddd",
-                backgroundColor: checked ? "#eaf3ff" : "#fff",
+                backgroundColor: "#f5f5f5",
+                flexDirection: "row",
+                justifyContent: "space-between",
               }}
             >
-              <Text style={{ fontWeight: "700" }}>{item.tipoSabor}</Text>
-              <Text style={{ marginTop: 6, fontSize: 12, opacity: 0.6 }}>
-                Tocar para {checked ? "quitar" : "agregar"} este sabor a la oferta
-              </Text>
-            </Pressable>
-          );
-        }}
-      />
+              <Text style={{ fontWeight: "800" }}>{g}</Text>
+              <Text style={{ opacity: 0.7 }}>{abierto[g] ? "▲" : "▼"}</Text>
+            </TouchableOpacity>
 
+            {/* Lista del grupo */}
+            {abierto[g] &&
+              (grupos[g] ?? []).map((item) => {
+                const checked = seleccionSabores.has(item.id);
+                return (
+                  <Pressable
+                    key={item.id}
+                    onPress={() => toggleSabor(item.id)}
+                    style={{
+                      padding: 12,
+                      margin: 8,
+                      borderRadius: 12,
+                      borderWidth: 1.5,
+                      borderColor: checked ? "#1e90ff" : "#ddd",
+                      backgroundColor: checked ? "#eaf3ff" : "#fff",
+                    }}
+                  >
+                    <Text style={{ fontWeight: "700" }}>{item.tipoSabor}</Text>
+                    <Text style={{ marginTop: 6, fontSize: 12, opacity: 0.6 }}>
+                      Tocar para {checked ? "quitar" : "agregar"} este sabor a la oferta
+                    </Text>
+                  </Pressable>
+                );
+              })}
+          </View>
+        ))}
+      </ScrollView>
+
+      {/* Botones al pie (sin cambios) */}
       <View style={{ gap: 10, marginTop: 4 }}>
         <Pressable
           onPress={irAEditarEnvases}

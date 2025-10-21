@@ -1,13 +1,14 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Platform,
-    Pressable,
-    Text,
-    View,
+  ActivityIndicator,
+  Alert,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View
 } from "react-native";
 
 type Envase = { id: string; tipoEnvase: string; maxCantSabores: number };
@@ -42,6 +43,32 @@ async function putOferta(
   return data;
 }
 
+// ===== helpers de UI (para agrupar y rotular) =====
+type Grupo = "Conos" | "Kilo" | "Vasos" | "Otros";
+
+function grupoDe(tipoEnvase: string): Grupo {
+  const k = (tipoEnvase.split("_")[0] || "").toLowerCase();
+  if (k === "cucurucho") return "Conos";
+  if (k === "kilo") return "Kilo";
+  if (k === "vaso") return "Vasos";
+  return "Otros";
+}
+function labelFor(tipoEnvase: string) {
+  const [kindRaw, restRaw] = tipoEnvase.split("_");
+  const kind = (kindRaw ?? "").toLowerCase();
+  const rest = restRaw ?? "";
+  if (kind === "kilo") {
+    if (rest === "1") return "1 kg";
+    if (rest === "0.5") return "1/2 kg";
+    if (rest === "0.25") return "1/4 kg";
+    return `${rest} kg`;
+  }
+  if (kind === "cucurucho") return `Cono ${rest}`;
+  if (kind === "vaso") return `Vaso ${rest}`;
+  return tipoEnvase.replace("_", " ");
+}
+// ===================================================
+
 export default function Vendedor_Envases() {
   const { sucursalId: qp } = useLocalSearchParams<{ sucursalId?: string }>();
   const router = useRouter();
@@ -52,6 +79,14 @@ export default function Vendedor_Envases() {
   const [seleccionEnvases, setSeleccionEnvases] = useState<Set<string>>(new Set());
   const [seleccionSabores, setSeleccionSabores] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+
+  // estado de despliegue por grupo
+  const [abierto, setAbierto] = useState<Record<Grupo, boolean>>({
+    Conos: true,
+    Kilo: true,
+    Vasos: true,
+    Otros: false,
+  });
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -90,13 +125,23 @@ export default function Vendedor_Envases() {
     }
   };
 
-  // 🔁 Navegación TIPADA con objeto { pathname, params }
   const irAEditarGustos = () =>
     router.push({ pathname: "/screens/proveedor/Vendedor_Productos", params: { sucursalId } });
 
-  // 👉 Tu pantalla de pedidos es Recibir_Productos.tsx
   const irAPedidos = () =>
     router.push({ pathname: "/screens/proveedor/Pedidos_Sucursal", params: { sucursalId } });
+
+  // agrupación (derivada del catálogo)
+  const grupos = useMemo(() => {
+    const map: Record<Grupo, Envase[]> = { Conos: [], Kilo: [], Vasos: [], Otros: [] };
+    for (const e of catalogoEnvases) {
+      map[grupoDe(e.tipoEnvase)].push(e);
+    }
+    (Object.keys(map) as Grupo[]).forEach((g) =>
+      map[g].sort((a, b) => labelFor(a.tipoEnvase).localeCompare(labelFor(b.tipoEnvase)))
+    );
+    return map;
+  }, [catalogoEnvases]);
 
   if (loading) {
     return (
@@ -107,41 +152,77 @@ export default function Vendedor_Envases() {
     );
   }
 
+  const orden: Grupo[] = ["Conos", "Kilo", "Vasos"];
+  const gruposConContenido = orden.filter((g) => (grupos[g] ?? []).length > 0);
+
   return (
-    <View style={{ flex: 1, padding: 16, gap: 12 }}>
-      <Text style={{ fontSize: 18, fontWeight: "700" }}>
-        Envases ofrecidos — Sucursal {sucursalId}
-      </Text>
+    <View style={{ flex: 1 }}>
+      {/* Header */}
+      <View style={{ padding: 16, paddingBottom: 8 }}>
+        <Text style={{ fontSize: 18, fontWeight: "700" }}>
+          Envases ofrecidos — Sucursal {sucursalId}
+        </Text>
+      </View>
 
-      <FlatList
-        data={catalogoEnvases}
-        keyExtractor={(e) => e.id}
-        renderItem={({ item }) => {
-          const checked = seleccionEnvases.has(item.id);
-          return (
-            <Pressable
-              onPress={() => toggleEnvase(item.id)}
-              style={{
-                padding: 12,
-                marginBottom: 8,
-                borderRadius: 12,
-                borderWidth: 1.5,
-                borderColor: checked ? "#1e90ff" : "#ddd",
-                backgroundColor: checked ? "#eaf3ff" : "#fff",
-              }}
+      {/* CONTENIDO SCROLLEABLE (3 listas) */}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 140 }} // espacio para el footer fijo
+      >
+        {gruposConContenido.map((g) => (
+          <View
+            key={g}
+            style={{ borderRadius: 12, overflow: "hidden", borderWidth: 1, borderColor: "#e6e6e6", marginBottom: 12 }}
+          >
+            {/* header de grupo */}
+            <TouchableOpacity
+              onPress={() => setAbierto((prev) => ({ ...prev, [g]: !prev[g] }))}
+              style={{ padding: 12, backgroundColor: "#f5f5f5", flexDirection: "row", justifyContent: "space-between" }}
             >
-              <Text style={{ fontWeight: "700" }}>{item.tipoEnvase.replace("_", " ")}</Text>
-              <Text style={{ opacity: 0.7 }}>Máx. sabores: {item.maxCantSabores}</Text>
-              <Text style={{ marginTop: 6, fontSize: 12, opacity: 0.6 }}>
-                Tocar para {checked ? "quitar" : "agregar"} este envase a la oferta
-              </Text>
-            </Pressable>
-          );
-        }}
-      />
+              <Text style={{ fontWeight: "800" }}>{g}</Text>
+              <Text style={{ opacity: 0.7 }}>{abierto[g] ? "▲" : "▼"}</Text>
+            </TouchableOpacity>
 
-      {/* Botones al pie */}
-      <View style={{ gap: 10, marginTop: 4 }}>
+            {/* lista del grupo */}
+            {abierto[g] &&
+              (grupos[g] ?? []).map((item) => {
+                const checked = seleccionEnvases.has(item.id);
+                return (
+                  <Pressable
+                    key={item.id}
+                    onPress={() => toggleEnvase(item.id)}
+                    style={{
+                      padding: 12,
+                      margin: 8,
+                      borderRadius: 12,
+                      borderWidth: 1.5,
+                      borderColor: checked ? "#1e90ff" : "#ddd",
+                      backgroundColor: checked ? "#eaf3ff" : "#fff",
+                    }}
+                  >
+                    <Text style={{ fontWeight: "700" }}>{labelFor(item.tipoEnvase)}</Text>
+                    <Text style={{ opacity: 0.7 }}>Máx. sabores: {item.maxCantSabores}</Text>
+                    <Text style={{ marginTop: 6, fontSize: 12, opacity: 0.6 }}>
+                      Tocar para {checked ? "quitar" : "agregar"} este envase a la oferta
+                    </Text>
+                  </Pressable>
+                );
+              })}
+          </View>
+        ))}
+      </ScrollView>
+
+      {/* FOOTER FIJO */}
+      <View
+        style={{
+          position: "absolute",
+          left: 16,
+          right: 16,
+          bottom: 16,
+          gap: 10,
+        }}
+        pointerEvents="box-none"
+      >
         <Pressable
           onPress={irAEditarGustos}
           style={{ padding: 14, borderRadius: 14, alignItems: "center", backgroundColor: "#1e90ff" }}
