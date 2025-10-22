@@ -1,15 +1,15 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
-    Animated,
-    Dimensions,
-    ImageBackground,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  FlatList,
+  ImageBackground,
+  Platform,
+  StyleSheet,
+  Text,
+  View
 } from "react-native";
 import Dropdown from "../../components/Dropdown";
 import PedidoCardBottom from "../../components/PedidoCardBottom";
@@ -19,257 +19,218 @@ import SearchBar from "../../components/SearchBar";
 const { width, height } = Dimensions.get("window");
 const isSmallScreen = width < 360;
 
-export default function CategoriaGustosScreen() {
-    const { pedido, sucursalId, userId } = useLocalSearchParams<{
-        pedido: string;
-        sucursalId: string;
-        userId: string;
-    }>();
-    const router = useRouter();
+type Sabor = { id: string; tipoSabor: string };
 
-    const cucuruchos: { [key: string]: number } = pedido
-        ? JSON.parse(decodeURIComponent(pedido))
-        : {};
+const BASE_URL =
+  Platform.OS === "android" ? "http://10.0.2.2:3001" : "http://localhost:3001";
 
-    const cucuruchoKeys = Object.keys(cucuruchos);
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const [selecciones, setSelecciones] = useState<{ [key: string]: string[] }>({});
-    const [showSearch, setShowSearch] = useState(false);
-    const [searchText, setSearchText] = useState("");
+/* ===== helpers de clasificación ===== */
 
-    // ✨ Estado para popup
-    const [showPopup, setShowPopup] = useState(true);
-    const fadeAnim = useState(new Animated.Value(0))[0];
+function normalize(s: string) {
+  return s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
 
-    useEffect(() => {
-        Animated.timing(fadeAnim, {
-            toValue: showPopup ? 1 : 0,
-            duration: 300,
-            useNativeDriver: true,
-        }).start();
-    }, [showPopup]);
+type Grupo = "Frutales" | "Cremas" | "Chocolates" | "Dulce de leche" | "Otros";
 
-    const categorias = [
-        { label: "Frutales", options: ["Frutilla", "Banana", "Frambuesa", "Durazno", "Cereza", "Arándano", "Mango", "Kiwi", "Maracuyá"] },
-        { label: "Chocolates", options: ["Chocolate", "Choco blanco", "Chocolate amargo", "Chocolate con almendras", "DDL", "Choco menta"] },
-        { label: "Cremas y Dulces", options: ["Crema americana", "Dulce de leche", "Caramelo", "Cheesecake", "Tiramisu", "Vainilla"] },
-        { label: "Frutos Secos", options: ["Maní", "Almendra", "Avellana", "Pistacho", "Nuez"] },
-        { label: "Exóticos", options: ["Menta granizada", "Café", "Matcha", "Yogur", "Limoncello", "Ron con pasas"] },
-    ];
+/** decide el grupo para un nombre de sabor */
+function grupoDeSabor(nombre: string): Grupo {
+  const n = normalize(nombre);
 
-    const categoriasFiltradas = categorias
-        .map(cat => ({
-            ...cat,
-            options: cat.options.filter(op =>
-                op.toLowerCase().includes(searchText.toLowerCase())
-            ),
-        }))
-        .filter(cat => cat.options.length > 0);
+  // Chocolates
+  if (/(chocolate|choco|cacao|amargo|blanco)/.test(n)) return "Chocolates";
 
-    const toggleSeleccion = (categoria: string, opcion: string) => {
-        const cucurucho = cucuruchoKeys[currentIndex];
-        setSelecciones(prev => {
-            const prevItems = prev[cucurucho] || [];
-            const yaSeleccionado = prevItems.includes(opcion);
-            let nuevasOpciones = yaSeleccionado
-                ? prevItems.filter(o => o !== opcion)
-                : [...prevItems, opcion];
+  // Dulce de leche
+  if (/(dulce de leche|ddl)/.test(n)) return "Dulce de leche";
 
-            const maxGustos = cucuruchos[cucurucho];
-            if (nuevasOpciones.length > maxGustos)
-                nuevasOpciones = nuevasOpciones.slice(0, maxGustos);
+  // Frutales
+  if (
+    /(frutilla|fresa|limon|naranja|frambuesa|mora|maracuya|maracuy|anan|piña|mango|durazno|melocoton|kiwi|uva|manzana|pera|cereza|sandia|melon|banana|platano)/.test(
+      n
+    )
+  ) {
+    return "Frutales";
+  }
 
-            return { ...prev, [cucurucho]: nuevasOpciones };
-        });
+  // Cremas
+  if (/(crema|americana|vainilla|tramontana|sambayon|flan|yogur|yogurt|ricota|panna)/.test(n)) {
+    return "Cremas";
+  }
+
+  return "Otros";
+}
+
+/** etiqueta visible (tal cual) */
+const labelOf = (s: Sabor) => s.tipoSabor;
+
+/* ==================================== */
+
+export default function Categoria_Gustos() {
+  const { pedido, sucursalId, userId } = useLocalSearchParams<{
+    pedido: string;
+    sucursalId: string;
+    userId: string;
+  }>();
+  const router = useRouter();
+
+  // viene de la pantalla de envases: { "Kilo 1 (#1)": 4, ... }
+  const envasesYMax: Record<string, number> = pedido
+    ? JSON.parse(decodeURIComponent(pedido))
+    : {};
+
+  const [sabores, setSabores] = useState<Sabor[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selecciones, setSelecciones] = useState<Record<string, string[]>>({});
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [searchText, setSearchText] = useState("");
+
+  // cargar oferta de la sucursal y quedarnos solo con sabores
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch(`${BASE_URL}/api/sucursales/${sucursalId}/oferta`);
+        const data = await r.json();
+        if (!r.ok) throw new Error(data?.error || "Error al cargar oferta");
+        setSabores((data?.sabores ?? []) as Sabor[]);
+      } catch (e: any) {
+        Alert.alert("Error", e.message ?? "No se pudo cargar los gustos ofrecidos");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [sucursalId]);
+
+  // agrupamos por categoría y aplicamos búsqueda
+  const grupos = useMemo(() => {
+    const res: Record<Grupo, (Sabor & { label: string })[]> = {
+      "Frutales": [],
+      "Cremas": [],
+      "Chocolates": [],
+      "Dulce de leche": [],
+      "Otros": [],
     };
-
-    const handleConfirm = () => {
-        if (currentIndex < cucuruchoKeys.length - 1) {
-            setCurrentIndex(currentIndex + 1);
-            setShowPopup(true);
-        } else {
-            const pedidoString = encodeURIComponent(JSON.stringify(selecciones));
-            console.log("##########################################################################");
-            console.log("(SELECCION GUSTOS) SUCURSAL ID:", sucursalId);
-            console.log("(SELECCION GUSTOS) Usuario ID:", userId);
-            console.log("(SELECCION GUSTOS) Pedido jason:", pedido);
-            console.log("(SELECCION GUSTOS) Gustos:", selecciones);
-            router.push({
-                pathname: "/screens/Detalle_Pedido",
-                params: { pedido: pedidoString, sucursalId, userId },
-            });
-        }
-    };
-
-    const cucuruchoActual = cucuruchoKeys[currentIndex];
-    const gustosSeleccionados = selecciones[cucuruchoActual] || [];
-
-    return (
-        <ImageBackground
-            source={require("../../assets/images/backgrounds/fondo2.jpg")}
-            style={styles.backgroundImage}
-            resizeMode="cover"
-        >
-            <View style={styles.overlay}>
-                <ScreenHeader
-                    title="Categorías de Gustos"
-                    showSearch={showSearch}
-                    onToggleSearch={() => setShowSearch(!showSearch)}
-                />
-
-                <View style={styles.bannerContainer}>
-                    <Text style={styles.bannerText}>
-                        Seleccione gustos para:{"\n"}
-                        <Text style={styles.envaseText}>{cucuruchoActual}</Text>{" "}
-                        ({gustosSeleccionados.length}/{cucuruchos[cucuruchoActual]})
-                    </Text>
-                </View>
-
-                {showSearch && (
-                    <SearchBar
-                        value={searchText}
-                        onChangeText={setSearchText}
-                        placeholder="Buscar gusto..."
-                    />
-                )}
-
-                <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-                    {categoriasFiltradas.map(cat => (
-                        <View key={cat.label} style={styles.dropdownContainer}>
-                            <Dropdown
-                                label={cat.label}
-                                options={cat.options}
-                                selected={gustosSeleccionados.filter(g => cat.options.includes(g))}
-                                onSelect={item => toggleSeleccion(cat.label, item)}
-                            />
-                        </View>
-                    ))}
-                </ScrollView>
-
-                <PedidoCardBottom
-                    selecciones={selecciones}
-                    visible={true}
-                    onConfirm={handleConfirm}
-                    currentIndex={currentIndex}
-                    totalVolumenes={cucuruchoKeys.length}
-                />
-
-                {/* 🌈 POPUP MODAL */}
-                <Modal
-                    transparent
-                    visible={showPopup}
-                    animationType="fade"
-                    onRequestClose={() => setShowPopup(false)}
-                >
-                    <View style={styles.modalOverlay}>
-                        <Animated.View style={[styles.modalContainer, { opacity: fadeAnim }]}>
-                            <Text style={styles.modalTitle}>¡Nuevo envase!</Text>
-                            <Text style={styles.modalText}>
-                                Elegí los{" "}
-                                <Text style={{ fontWeight: "bold", color: "#e91e63" }}>
-                                    {cucuruchos[cucuruchoActual]}
-                                </Text>{" "}
-                                sabores para el{" "}
-                                <Text style={{ fontWeight: "bold", color: "#e91e63" }}>
-                                    {cucuruchoActual}
-                                </Text>
-                                .
-                            </Text>
-
-                            <TouchableOpacity
-                                style={styles.modalButton}
-                                onPress={() => setShowPopup(false)}
-                            >
-                                <Text style={styles.modalButtonText}>Aceptar</Text>
-                            </TouchableOpacity>
-                        </Animated.View>
-                    </View>
-                </Modal>
-            </View>
-        </ImageBackground>
+    const q = normalize(searchText);
+    for (const s of sabores) {
+      const label = labelOf(s);
+      if (q && !normalize(label).includes(q)) continue;
+      res[grupoDeSabor(label)].push({ ...s, label });
+    }
+    // ordenar alfabéticamente dentro de cada grupo
+    (Object.keys(res) as Grupo[]).forEach((g) =>
+      res[g].sort((a, b) => a.label.localeCompare(b.label))
     );
+    return res;
+  }, [sabores, searchText]);
+
+  const envaseActual = Object.keys(envasesYMax)[currentIndex] ?? "";
+  const maxSabores = envasesYMax[envaseActual] ?? 0;
+  const seleccionadosActual = selecciones[envaseActual] ?? [];
+
+  const toggleSeleccion = (nombreGusto: string) => {
+    setSelecciones((prev) => {
+      const list = prev[envaseActual] ?? [];
+      const existe = list.includes(nombreGusto);
+      let nueva = existe ? list.filter((x) => x !== nombreGusto) : [...list, nombreGusto];
+      if (nueva.length > maxSabores) nueva = nueva.slice(0, maxSabores); // tope por envase
+      return { ...prev, [envaseActual]: nueva };
+    });
+  };
+
+  const handleConfirm = () => {
+    const keys = Object.keys(envasesYMax);
+    if (currentIndex < keys.length - 1) {
+      setCurrentIndex((i) => i + 1);
+      return;
+    }
+    // fin → vamos al detalle
+    const pedidoString = encodeURIComponent(JSON.stringify(selecciones));
+    router.push({
+      pathname: "/screens/Detalle_Pedido",
+      params: { pedido: pedidoString, sucursalId: String(sucursalId), userId: String(userId) },
+    });
+  };
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color="#e91e63" />
+        <Text style={{ marginTop: 10 }}>Cargando gustos...</Text>
+      </View>
+    );
+  }
+
+  const ordenGrupos: Grupo[] = [
+    "Frutales",
+    "Cremas",
+    "Chocolates",
+    "Dulce de leche",
+    "Otros",
+  ];
+  const dataGrupos = ordenGrupos.filter((g) => grupos[g].length > 0);
+
+  return (
+    <ImageBackground
+      source={require("../../assets/images/backgrounds/fondo2.jpg")}
+      style={styles.backgroundImage}
+      resizeMode="cover"
+    >
+      <View style={styles.overlay}>
+        <ScreenHeader title="Gustos disponibles" />
+        <SearchBar
+          value={searchText}
+          onChangeText={setSearchText}
+          placeholder="Buscar gusto..."
+        />
+
+        <FlatList
+          data={dataGrupos}
+          keyExtractor={(g) => g}
+          contentContainerStyle={{ paddingBottom: height * 0.15 }}
+          renderItem={({ item: grupo }) => {
+            const items = grupos[grupo];
+            const opciones = items.map((x) => x.label);
+            const selectedEnGrupo = seleccionadosActual.filter((s) =>
+              opciones.includes(s)
+            );
+
+            return (
+              <View style={{ marginBottom: 12 }}>
+                <Dropdown
+                  label={grupo}
+                  options={opciones}
+                  selected={selectedEnGrupo}
+                  onSelect={(label: string) => toggleSeleccion(label)}
+                  icon={
+                    grupo === "Frutales"
+                      ? "local-florist"
+                      : grupo === "Chocolates"
+                      ? "cookie"
+                      : grupo === "Dulce de leche"
+                      ? "favorite"
+                      : "icecream"
+                  }
+                />
+              </View>
+            );
+          }}
+        />
+
+        <PedidoCardBottom
+          selecciones={selecciones}
+          visible={true}
+          onConfirm={handleConfirm}
+          currentIndex={currentIndex}
+          totalVolumenes={Object.keys(envasesYMax).length}
+        />
+      </View>
+    </ImageBackground>
+  );
 }
 
 const styles = StyleSheet.create({
-    backgroundImage: {
-        flex: 1,
-        width: "100%",
-        height: "100%",
-    },
-    overlay: {
-        flex: 1,
-        padding: isSmallScreen ? 12 : 20,
-        backgroundColor: "rgba(255,255,255,0.6)",
-    },
-    bannerContainer: {
-        backgroundColor: "#ffd8d8",
-        paddingVertical: height * 0.018,
-        paddingHorizontal: width * 0.04,
-        borderRadius: 12,
-        marginBottom: height * 0.015,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
-    },
-    bannerText: {
-        fontSize: isSmallScreen ? 14 : 16,
-        fontWeight: "700",
-        color: "#333",
-        textAlign: "center",
-    },
-    envaseText: {
-        fontFamily: "Trebuchet MS",
-        fontSize: isSmallScreen ? 18 : 20,
-        fontWeight: "900",
-        color: "#e91e63",
-    },
-    dropdownContainer: {
-        marginBottom: height * 0.01,
-    },
-    modalOverlay: {
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: "rgba(0,0,0,0.5)",
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    modalContainer: {
-        width: "80%",
-        backgroundColor: "#fff",
-        borderRadius: 20,
-        padding: 25,
-        alignItems: "center",
-        shadowColor: "#000",
-        shadowOpacity: 0.3,
-        shadowRadius: 10,
-        elevation: 6,
-    },
-    modalTitle: {
-        fontSize: 20,
-        fontWeight: "800",
-        color: "#e91e63",
-        marginBottom: 10,
-    },
-    modalText: {
-        fontSize: 16,
-        textAlign: "center",
-        color: "#333",
-        marginBottom: 20,
-    },
-    modalButton: {
-        backgroundColor: "#e91e63",
-        paddingVertical: 10,
-        paddingHorizontal: 25,
-        borderRadius: 12,
-    },
-    modalButtonText: {
-        color: "#fff",
-        fontSize: 16,
-        fontWeight: "700",
-    },
+  backgroundImage: { flex: 1, width: "100%", height: "100%" },
+  overlay: { flex: 1, padding: 20, backgroundColor: "rgba(255,255,255,0.6)" },
 });
