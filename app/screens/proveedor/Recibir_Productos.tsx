@@ -9,7 +9,7 @@ import {
   Text,
   View
 } from "react-native";
-import { BASE_URL } from "../../services/apiConfig";
+import { BASE_URL } from "./../../services/apiConfig";
 
 type Envase = { id: string; tipoEnvase: string; maxCantSabores: number };
 type Sabor  = { id: string; tipoSabor: string };
