@@ -4,18 +4,16 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Platform,
   RefreshControl,
   ScrollView,
   Text,
-  View,
+  View
 } from "react-native";
+import { BASE_URL } from "../../services/apiConfig";
 
 type Envase = { id: string; tipoEnvase: string; maxCantSabores: number };
 type Sabor  = { id: string; tipoSabor: string };
 
-const BASE_URL =
-  Platform.OS === "android" ? "http://10.0.2.2:3001" : "http://localhost:3001";
 
 async function getOferta(sucursalId: string): Promise<{ envases: Envase[]; sabores: Sabor[] }> {
   const r = await fetch(`${BASE_URL}/api/sucursales/${sucursalId}/oferta`);

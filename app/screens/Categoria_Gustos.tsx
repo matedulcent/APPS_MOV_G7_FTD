@@ -6,7 +6,6 @@ import {
   Dimensions,
   FlatList,
   ImageBackground,
-  Platform,
   StyleSheet,
   Text,
   View
@@ -15,14 +14,13 @@ import Dropdown from "../../components/Dropdown";
 import PedidoCardBottom from "../../components/PedidoCardBottom";
 import ScreenHeader from "../../components/ScreenHeader";
 import SearchBar from "../../components/SearchBar";
+import { BASE_URL } from "../services/apiConfig";
 
 const { width, height } = Dimensions.get("window");
 const isSmallScreen = width < 360;
 
 type Sabor = { id: string; tipoSabor: string };
 
-const BASE_URL =
-  Platform.OS === "android" ? "http://10.0.2.2:3001" : "http://localhost:3001";
 
 /* ===== helpers de clasificación ===== */
 

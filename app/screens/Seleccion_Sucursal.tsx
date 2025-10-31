@@ -2,26 +2,23 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Dimensions,
-    FlatList,
-    Image,
-    ImageBackground,
-    Platform,
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Dimensions,
+  FlatList,
+  Image,
+  ImageBackground,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 import ScreenHeader from "../../components/ScreenHeader";
+import { BASE_URL } from "../services/apiConfig";
 
 const { width, height } = Dimensions.get("window");
 const isSmallScreen = width < 360;
 const isWeb = Platform.OS === "web";
-
-/** === Helper de URL del backend (respeta emulador Android) === */
-const BASE_URL =
-  Platform.OS === "android" ? "http://10.0.2.2:3001" : "http://localhost:3001";
 
 type UISucursal = {
   id: string;

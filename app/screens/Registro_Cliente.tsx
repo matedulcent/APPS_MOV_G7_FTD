@@ -10,14 +10,11 @@ import {
   TextInput,
   View
 } from "react-native";
+import { BASE_URL } from "../services/apiConfig";
 
 const { width, height } = Dimensions.get("window");
 const isSmallScreen = width < 400 || height < 700;
 const isWeb = Platform.OS === "web";
-
-// Backend en 3001
-const BASE_URL =
-  Platform.OS === "android" ? "http://10.0.2.2:3001" : "http://localhost:3001";
 
 type Errors = Partial<{
   nombre: string;

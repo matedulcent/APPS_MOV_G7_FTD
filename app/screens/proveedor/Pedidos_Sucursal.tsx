@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { BASE_URL } from "./../../services/apiConfig";
 
 type Envase = { id: string; tipoEnvase: string; maxCantSabores: number };
 type Sabor  = { id: string; tipoSabor: string };
@@ -23,9 +24,6 @@ type OrdenLite = {
   usuarioId: string;
 };
 type OrdenFull = OrdenLite & { contenidos: Contenido[] };
-
-const BASE_URL =
-  Platform.OS === "android" ? "http://10.0.2.2:3001" : "http://localhost:3001";
 
 /** Helper de confirm cross-platform */
 async function confirmAsync(title: string, message: string): Promise<boolean> {

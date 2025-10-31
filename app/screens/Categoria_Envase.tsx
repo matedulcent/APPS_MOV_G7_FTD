@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import Dropdown from "../../components/Dropdown";
 import ScreenHeader from "../../components/ScreenHeader";
+import { BASE_URL } from "../services/apiConfig";
 
 const { width, height } = Dimensions.get("window");
 const isSmallScreen = width < 360;
@@ -22,8 +23,6 @@ const isWeb = Platform.OS === "web";
 type Envase = { id: string; tipoEnvase: string; maxCantSabores: number };
 type Grupo = "Cucurucho" | "Kilo" | "Vaso" | "Otros";
 
-const BASE_URL =
-  Platform.OS === "android" ? "http://10.0.2.2:3001" : "http://localhost:3001";
 
 // util: formatea etiqueta visible
 function labelForEnvase(e: Envase): string {
