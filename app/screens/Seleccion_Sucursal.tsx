@@ -1,4 +1,3 @@
-// app/screens/Seleccion_Sucursal.tsx
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -28,11 +27,10 @@ type UISucursal = {
 };
 
 type BackendSucursal = {
-  id: string;          // ID_Sucursal mapeado por Prisma como "id"
+  id: string;
   nombre?: string | null;
   domicilio?: string | null;
   urlImagen?: string | null;
-  // ...otros campos que no usamos acá
 };
 
 const PLACEHOLDER_IMG = "https://placehold.co/160x160?text=Helados";
@@ -41,12 +39,10 @@ export default function SeleccionSucursalScreen() {
   const router = useRouter();
   const { userId } = useLocalSearchParams<{ userId: string }>();
   const [sucursalSeleccionada, setSucursalSeleccionada] = useState<string | null>(null);
-
   const [sucursales, setSucursales] = useState<UISucursal[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  /** === Carga de sucursales desde el backend === */
   useEffect(() => {
     let cancelado = false;
 
@@ -54,10 +50,8 @@ export default function SeleccionSucursalScreen() {
       setLoading(true);
       setError(null);
       try {
-        const resp = await fetch(`${BASE_URL}/api/sucursales`, { method: "GET" });
-        if (!resp.ok) {
-          throw new Error(`HTTP ${resp.status}`);
-        }
+        const resp = await fetch(`${BASE_URL}/api/sucursales`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const data: BackendSucursal[] = await resp.json();
 
         const ui: UISucursal[] = (data || []).map((s) => ({
@@ -69,7 +63,6 @@ export default function SeleccionSucursalScreen() {
 
         if (!cancelado) setSucursales(ui);
       } catch (e: any) {
-        console.log("[Seleccion_Sucursal] Error cargando sucursales:", e?.message || e);
         if (!cancelado) setError("No se pudieron cargar las sucursales. Intenta nuevamente.");
       } finally {
         if (!cancelado) setLoading(false);
@@ -84,9 +77,6 @@ export default function SeleccionSucursalScreen() {
 
   const handleSeleccion = (sucursal: UISucursal) => {
     setSucursalSeleccionada(sucursal.id);
-    console.log("##########################################################################");
-    console.log("(SELECCION SUCURSAL) SUCURSAL ID:", sucursal.id);
-    console.log("(SELECCION SUCURSAL) Usuario ID:", userId);
     router.push({
       pathname: "/screens/Categoria_Envase",
       params: { sucursalId: sucursal.id, userId },
@@ -116,33 +106,28 @@ export default function SeleccionSucursalScreen() {
       resizeMode={isSmallScreen ? "stretch" : "cover"}
     >
       <View style={styles.overlay}>
+        {/* 🔹 Header alineado igual que en Categoria_Gustos */}
         <ScreenHeader title="Seleccione su sucursal" />
 
-        {/* Loading */}
         {loading && (
-          <View style={{ paddingVertical: height * 0.02, alignItems: "center" }}>
-            <ActivityIndicator size="large" />
+          <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingTop: 20 }}>
+            <ActivityIndicator size="large" color="#f4679f" />
             <Text style={{ marginTop: 8 }}>Cargando sucursales...</Text>
           </View>
         )}
 
-        {/* Error */}
         {!loading && error && (
           <View style={{ paddingVertical: height * 0.02 }}>
             <Text style={{ color: "red", textAlign: "center" }}>{error}</Text>
           </View>
         )}
 
-        {/* Lista */}
         {!loading && !error && (
           <FlatList
             data={sucursales}
             keyExtractor={(item) => item.id}
             renderItem={renderSucursal}
-            contentContainerStyle={{
-              paddingBottom: height * 0.02,
-              paddingTop: height * 0.01,
-            }}
+            contentContainerStyle={{ paddingBottom: height * 0.15, paddingTop: 10 }}
           />
         )}
       </View>
@@ -151,46 +136,21 @@ export default function SeleccionSucursalScreen() {
 }
 
 const styles = StyleSheet.create({
-  backgroundImage: {
-    flex: 1,
-    width: "100%",
-    height: "100%",
-  },
-  overlay: {
-    flex: 1,
-    padding: isWeb ? 40 : width * 0.05,
-    backgroundColor: "rgba(255,255,255,0.6)",
-  },
+  backgroundImage: { flex: 1, width: "100%", height: "100%" },
+  overlay: { flex: 1, padding: 20, backgroundColor: "rgba(255,255,255,0.6)" }, // padding igual que Categoria_Gustos
   card: {
     flexDirection: "row",
     alignItems: "center",
-    padding: isWeb ? 16 : width * 0.04,
+    padding: 12,
     borderRadius: 10,
     backgroundColor: "#f5f5f5",
-    marginBottom: height * 0.015,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: "#ddd",
   },
-  cardSelected: {
-    borderColor: "#6200ee",
-    backgroundColor: "#e0d7ff",
-  },
-  imagen: {
-    width: isWeb ? 80 : width * 0.18,
-    height: isWeb ? 80 : width * 0.18,
-    borderRadius: 10,
-    marginRight: isWeb ? 16 : width * 0.04,
-  },
-  textContainer: {
-    flex: 1,
-  },
-  nombre: {
-    fontSize: isWeb ? 18 : width * 0.045,
-    fontWeight: "bold",
-  },
-  direccion: {
-    fontSize: isWeb ? 14 : width * 0.035,
-    color: "#555",
-    marginTop: height * 0.005,
-  },
+  cardSelected: { borderColor: "#6200ee", backgroundColor: "#e0d7ff" },
+  imagen: { width: 70, height: 70, borderRadius: 10, marginRight: 12 },
+  textContainer: { flex: 1 },
+  nombre: { fontSize: 16, fontWeight: "bold" },
+  direccion: { fontSize: 14, color: "#555", marginTop: 4 },
 });
