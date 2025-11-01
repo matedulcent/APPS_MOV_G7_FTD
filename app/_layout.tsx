@@ -2,12 +2,16 @@
 import { Stack } from "expo-router";
 import React from "react";
 import { Provider } from "react-redux";
-import store from "../redux/store"; // <- default import
+import store from "../redux/store";
 
 export default function Layout() {
   return (
     <Provider store={store}>
-      <Stack />
+      <Stack
+        screenOptions={{
+          headerShown: false, // <-- oculta el banner en todas las pantallas
+        }}
+      />
     </Provider>
   );
 }
