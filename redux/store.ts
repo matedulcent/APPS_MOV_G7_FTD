@@ -1,12 +1,14 @@
 import { configureStore } from "@reduxjs/toolkit";
-import rootReducer from "./reducers";
+import userReducer from "./reducers/userReducer";
+import pedidoReducer from "./slices/pedidoSlice";
 
-const store = configureStore({
-    reducer: rootReducer,
-    // No hace falta middleware adicional; thunk ya viene por defecto
+export const store = configureStore({
+    reducer: {
+        user: userReducer,
+        pedido: pedidoReducer,
+    },
+    middleware: (getDefaultMiddleware) => getDefaultMiddleware(), // incluye thunk por defecto
 });
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
-
-export default store;
