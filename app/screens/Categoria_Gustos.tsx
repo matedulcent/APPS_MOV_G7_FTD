@@ -1,3 +1,4 @@
+// app/screens/Categoria_Gustos.tsx
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
@@ -17,7 +18,7 @@ import Dropdown from "../../components/Dropdown";
 import PedidoCardBottom from "../../components/PedidoCardBottom";
 import ScreenHeader from "../../components/ScreenHeader";
 import { fetchSabores } from "../../redux/actions/saboresActions";
-import { setSeleccion } from "../../redux/slices/pedidoSlice";
+import { limpiarPedido, setSeleccion, toggleEnvase } from "../../redux/slices/pedidoSlice";
 import type { AppDispatch, RootState } from "../../redux/store";
 
 const { height } = Dimensions.get("window");
@@ -36,7 +37,8 @@ const grupoDeSabor = (nombre: string): Grupo => {
     /(frutilla|fresa|limon|naranja|frambuesa|mora|maracuya|anan|piña|mango|durazno|kiwi|uva|manzana|pera|cereza|sandia|melon|banana|platano)/.test(
       n
     )
-  ) return "Frutales";
+  )
+    return "Frutales";
   if (/(crema|americana|vainilla|tramontana|sambayon|flan|yogur|yogurt|ricota|panna)/.test(n))
     return "Cremas";
   return "Otros";
@@ -79,7 +81,6 @@ export default function Categoria_Gustos() {
   const loading = useSelector((state: RootState) => state.sabores.loading);
   const error = useSelector((state: RootState) => state.sabores.error);
   const sucursalId = useSelector((state: RootState) => state.user.sucursalId);
-  const envasesActivos = useSelector((state: RootState) => state.pedido.envases); // ✅ solo envases disponibles
   const seleccionesRedux = useSelector((state: RootState) => state.pedido.selecciones);
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -95,19 +96,30 @@ export default function Categoria_Gustos() {
     }
   }, [pedido]);
 
-  // Filtrar envases activos según estado global
+  // 🔹 Al montar, limpiar selecciones previas y inicializar envases
+  useEffect(() => {
+    dispatch(limpiarPedido());
+    Object.keys(pedidoParsed).forEach(envase => {
+      dispatch(setSeleccion({ envaseId: envase, gustos: [] }));
+      dispatch(toggleEnvase(envase));
+    });
+  }, [pedidoParsed, dispatch]);
+
+  // Filtrar envases activos
   const envases = useMemo(() => Object.keys(pedidoParsed), [pedidoParsed]);
 
   const envaseActual = envases[currentIndex] ?? "";
   const maxSabores = pedidoParsed[envaseActual] ?? 0;
   const seleccionadosActual = seleccionesRedux[envaseActual] ?? [];
 
+  // Inicializar selección del envase actual si no existe
   useEffect(() => {
     if (envaseActual && !seleccionesRedux[envaseActual]) {
       dispatch(setSeleccion({ envaseId: envaseActual, gustos: [] }));
     }
   }, [envaseActual]);
 
+  // Cargar sabores desde API
   useEffect(() => {
     if (sucursalId) dispatch(fetchSabores(sucursalId));
   }, [sucursalId]);
@@ -126,7 +138,9 @@ export default function Categoria_Gustos() {
       if (q && !normalize(label).includes(q)) continue;
       res[grupoDeSabor(label)].push({ ...s, label });
     }
-    (Object.keys(res) as Grupo[]).forEach(g => res[g].sort((a, b) => a.label.localeCompare(b.label)));
+    (Object.keys(res) as Grupo[]).forEach(g =>
+      res[g].sort((a, b) => a.label.localeCompare(b.label))
+    );
     return res;
   }, [sabores, searchText]);
 
@@ -184,13 +198,22 @@ export default function Categoria_Gustos() {
           onToggleSearch={() => setShowSearch(prev => !prev)}
         />
 
-        {showSearch && <SearchBarUX value={searchText} onChangeText={setSearchText} placeholder="Buscar gusto..." />}
+        {showSearch && (
+          <SearchBarUX
+            value={searchText}
+            onChangeText={setSearchText}
+            placeholder="Buscar gusto..."
+          />
+        )}
 
         <View style={styles.selectionContainer}>
           <Text style={styles.selectionLabel}>Gustos seleccionados</Text>
           <View style={styles.progressBarBackground}>
             <View
-              style={[styles.progressBarFill, { width: `${(seleccionadosActual.length / maxSabores) * 100}%` }]}
+              style={[
+                styles.progressBarFill,
+                { width: `${(seleccionadosActual.length / maxSabores) * 100}%` },
+              ]}
             />
           </View>
           <Text style={styles.selectionCount}>
@@ -247,9 +270,29 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   selectionContainer: { marginVertical: 12, alignItems: "center" },
   selectionLabel: { fontSize: 14, fontWeight: "600", marginBottom: 4, color: "#444" },
-  progressBarBackground: { width: "80%", height: 12, backgroundColor: "#e0e0e0", borderRadius: 6, overflow: "hidden" },
+  progressBarBackground: {
+    width: "80%",
+    height: 12,
+    backgroundColor: "#e0e0e0",
+    borderRadius: 6,
+    overflow: "hidden",
+  },
   progressBarFill: { height: "100%", backgroundColor: "#fd5f81ff", borderRadius: 6 },
   selectionCount: { marginTop: 4, fontSize: 12, color: "#555" },
-  searchContainer: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 25, borderWidth: 1, marginBottom: 12, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 2, elevation: 2 },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 25,
+    borderWidth: 1,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
   searchInput: { flex: 1, fontSize: 14, color: "#333" },
 });
