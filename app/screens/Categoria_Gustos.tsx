@@ -7,6 +7,7 @@ import PedidoCardBottom from "../../components/PedidoCardBottom";
 import ScreenHeader from "../../components/ScreenHeader";
 import SearchBar from "../../components/SearchBar";
 import { fetchSabores } from "../../redux/actions/saboresActions"; // thunk clásico
+import type { AppDispatch } from "../../redux/store";
 
 const { height } = Dimensions.get("window");
 
@@ -30,7 +31,7 @@ function grupoDeSabor(nombre: string): Grupo {
 const labelOf = (s: Sabor) => s.tipoSabor;
 
 export default function Categoria_Gustos() {
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
 
   // Redux clásico
@@ -43,7 +44,7 @@ export default function Categoria_Gustos() {
   const [selecciones, setSelecciones] = useState<Record<string, string[]>>({});
   const [currentIndex, setCurrentIndex] = useState(0);
   const [searchText, setSearchText] = useState("");
-
+  
   useEffect(() => {
     if (sucursalId) dispatch(fetchSabores(sucursalId)); // thunk clásico
   }, [sucursalId]);

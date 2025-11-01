@@ -1,7 +1,7 @@
 // store.ts
 import { configureStore } from "@reduxjs/toolkit";
 import pedidoReducer from "./reducers/pedidoReducer";
-import saboresReducer from "./reducers/saboresSlice"; // slice RTK
+import saboresReducer from "./reducers/saboresReducer";
 import userReducer from "./reducers/userReducer";
 
 export const store = configureStore({

@@ -11,16 +11,20 @@ const initialState: PedidoState = {
 
 type Action =
     | { type: typeof TOGGLE_ENVASE; payload: string }
-    | { type: typeof UPDATE_CANTIDAD; payload: { opcion: string; delta: number } };
+    | { type: typeof UPDATE_CANTIDAD; payload: { opcion: string; delta: number } }
+    | { type: string; payload?: any }; // <-- permite acciones desconocidas de Redux
 
-export default function pedidoReducer(state = initialState, action: Action): PedidoState {
+export default function pedidoReducer(
+    state = initialState,
+    action: Action
+): PedidoState {
     switch (action.type) {
         case TOGGLE_ENVASE: {
-            const index = state.envases.findIndex(e => e.opcion === action.payload);
+            const index = state.envases.findIndex((e) => e.opcion === action.payload);
             if (index >= 0) {
                 return {
                     ...state,
-                    envases: state.envases.filter(e => e.opcion !== action.payload),
+                    envases: state.envases.filter((e) => e.opcion !== action.payload),
                 };
             } else {
                 return {
@@ -33,12 +37,14 @@ export default function pedidoReducer(state = initialState, action: Action): Ped
             const { opcion, delta } = action.payload;
             return {
                 ...state,
-                envases: state.envases.map(e =>
-                    e.opcion === opcion ? { ...e, cantidad: Math.max(1, e.cantidad + delta) } : e
+                envases: state.envases.map((e) =>
+                    e.opcion === opcion
+                        ? { ...e, cantidad: Math.max(1, e.cantidad + delta) }
+                        : e
                 ),
             };
         }
         default:
-            return state;
+            return state; // aquí ignoramos acciones desconocidas
     }
 }
