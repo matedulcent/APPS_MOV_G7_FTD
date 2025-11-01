@@ -216,7 +216,7 @@ export default function Vendedor_Envases() {
             backgroundColor: "#222",
           }}
         >
-          <Text style={{ color: "#fff", fontWeight: "700" }}>Volver a pedidos</Text>
+          <Text style={{ color: "#fff", fontWeight: "700" }}>Volver a Pedidos</Text>
         </Pressable>
       </View>
     </View>
