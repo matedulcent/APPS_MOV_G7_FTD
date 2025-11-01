@@ -1,5 +1,5 @@
 import { useFocusEffect, useRouter } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -62,31 +62,36 @@ export default function Categoria_Envase() {
   const [loading, setLoading] = useState(true);
   const [envasesOfrecidos, setEnvasesOfrecidos] = useState<Envase[]>([]);
 
-  // 🔹 Cargar envases desde API
-  useEffect(() => {
-    if (!sucursalId) return;
-
-    setLoading(true);
-    (async () => {
-      try {
-        const r = await fetch(`${BASE_URL}/api/sucursales/${sucursalId}/oferta`);
-        const data = await r.json();
-        if (!r.ok) throw new Error(data?.error || "Error al cargar oferta");
-        setEnvasesOfrecidos(data?.envases ?? []);
-      } catch (e: any) {
-        Alert.alert("Error", e.message ?? "No se pudo cargar la oferta");
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [sucursalId]);
-
-  // 🔹 Sincronizar envases disponibles cada vez que la pantalla se enfoque
+  // 🔹 Cargar envases desde API cada vez que la pantalla se enfoque
   useFocusEffect(
     React.useCallback(() => {
-      const disponibles = envasesOfrecidos.map(e => e.tipoEnvase);
-      dispatch(syncEnvasesDisponibles(disponibles));
-    }, [envasesOfrecidos])
+      if (!sucursalId) return;
+      let isActive = true;
+      setLoading(true);
+
+      (async () => {
+        try {
+          const r = await fetch(`${BASE_URL}/api/sucursales/${sucursalId}/oferta`);
+          const data = await r.json();
+          if (!r.ok) throw new Error(data?.error || "Error al cargar oferta");
+
+          const envases = data?.envases ?? [];
+          if (isActive) {
+            setEnvasesOfrecidos(envases);
+            dispatch(syncEnvasesDisponibles(envases.map((e: Envase) => e.tipoEnvase)));
+          }
+        } catch (e: any) {
+          if (isActive)
+            Alert.alert("Error", e.message ?? "No se pudo cargar la oferta de envases.");
+        } finally {
+          if (isActive) setLoading(false);
+        }
+      })();
+
+      return () => {
+        isActive = false;
+      };
+    }, [sucursalId])
   );
 
   const grupos = useMemo(() => {
@@ -146,6 +151,13 @@ export default function Categoria_Envase() {
       <View style={styles.centered}>
         <ActivityIndicator size="large" color="#f4679f" />
         <Text style={{ marginTop: 10 }}>Cargando envases...</Text>
+      </View>
+    );
+
+  if (envasesOfrecidos.length === 0)
+    return (
+      <View style={styles.centered}>
+        <Text>No hay envases disponibles en esta sucursal.</Text>
       </View>
     );
 
