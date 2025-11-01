@@ -48,9 +48,11 @@ export default function LoginScreen() {
 
   useEffect(() => {
     if (user.loggedIn) {
+      // ir a selección de sucursal
       router.push("/screens/Seleccion_Sucursal");
     }
   }, [user.loggedIn]);
+
 
   const handleRegister = () => {
     router.push(role === "cliente" ? "/screens/Registro_Cliente" : "/screens/Registro_Vendedor");

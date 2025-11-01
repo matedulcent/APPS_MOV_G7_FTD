@@ -11,8 +11,9 @@ import {
   Text,
   View,
 } from "react-native";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import ScreenHeader from "../../components/ScreenHeader";
+import { setSucursal } from "../../redux/actions/userActions"; // <--- acción Redux
 import type { RootState } from "../../redux/store";
 import { BASE_URL } from "../services/apiConfig";
 
@@ -25,9 +26,10 @@ const PLACEHOLDER_IMG = "https://placehold.co/160x160?text=Helados";
 
 export default function SeleccionSucursalScreen() {
   const router = useRouter();
+  const dispatch = useDispatch();
   const user = useSelector((state: RootState) => state.user);
 
-  const [sucursalSeleccionada, setSucursalSeleccionada] = useState<string | null>(user.sucursalId ?? null);
+  const [sucursalSeleccionada, setSucursalSeleccionadaLocal] = useState<string | null>(user.sucursalId ?? null);
   const [sucursales, setSucursales] = useState<UISucursal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -63,13 +65,9 @@ export default function SeleccionSucursalScreen() {
   }, []);
 
   const handleSeleccion = (sucursal: UISucursal) => {
-    setSucursalSeleccionada(sucursal.id);
-
-    // Redirige pasando solo el ID de la sucursal, el resto ya viene del store
-    router.push({
-      pathname: "/screens/Categoria_Envase",
-      params: { sucursalId: sucursal.id },
-    });
+    setSucursalSeleccionadaLocal(sucursal.id); // estado local para UI
+    dispatch(setSucursal(sucursal.id));         // guardamos en Redux
+    router.push("/screens/Categoria_Envase");   // redirige sin params
   };
 
   const renderSucursal = ({ item }: { item: UISucursal }) => {
@@ -86,7 +84,11 @@ export default function SeleccionSucursalScreen() {
   };
 
   return (
-    <ImageBackground source={require("../../assets/images/backgrounds/fondo3.jpg")} style={styles.backgroundImage} resizeMode={isSmallScreen ? "stretch" : "cover"}>
+    <ImageBackground
+      source={require("../../assets/images/backgrounds/fondo3.jpg")}
+      style={styles.backgroundImage}
+      resizeMode={isSmallScreen ? "stretch" : "cover"}
+    >
       <View style={styles.overlay}>
         <ScreenHeader title="Seleccione su sucursal" />
 

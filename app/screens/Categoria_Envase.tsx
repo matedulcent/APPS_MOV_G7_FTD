@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -6,24 +6,24 @@ import {
   Dimensions,
   FlatList,
   ImageBackground,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { useSelector } from "react-redux";
 import Dropdown from "../../components/Dropdown";
 import ScreenHeader from "../../components/ScreenHeader";
+import type { RootState } from "../../redux/store";
 import { BASE_URL } from "../services/apiConfig";
 
 const { width, height } = Dimensions.get("window");
 const isSmallScreen = width < 360;
-const isWeb = Platform.OS === "web";
 
 type Envase = { id: string; tipoEnvase: string; maxCantSabores: number };
 type Grupo = "Cucurucho" | "Kilo" | "Vaso" | "Otros";
 
-// util: formatea etiqueta visible
+// --- utilidades ---
 function labelForEnvase(e: Envase): string {
   const [kindRaw, restRaw] = e.tipoEnvase.split("_");
   const kind = (kindRaw ?? "").toLowerCase();
@@ -40,7 +40,6 @@ function labelForEnvase(e: Envase): string {
   return e.tipoEnvase.replace("_", " ");
 }
 
-// util: mapea prefix a grupo
 function grupoDe(e: Envase): Grupo {
   const k = (e.tipoEnvase.split("_")[0] || "").toLowerCase();
   if (k === "cucurucho") return "Cucurucho";
@@ -49,23 +48,26 @@ function grupoDe(e: Envase): Grupo {
   return "Otros";
 }
 
+// --- componente ---
 export default function Categoria_Envase() {
-  const { sucursalId, userId } = useLocalSearchParams<{ sucursalId: string; userId: string }>();
   const router = useRouter();
+  const sucursalId = useSelector((state: RootState) => state.user.sucursalId);
 
   const [loading, setLoading] = useState(true);
   const [envasesOfrecidos, setEnvasesOfrecidos] = useState<Envase[]>([]);
   const [selecciones, setSelecciones] = useState<{ envases: { opcion: string; cantidad: number }[] }>({ envases: [] });
 
-  // cargar desde backend la oferta de la sucursal
+  // --- fetch de oferta ---
   useEffect(() => {
+    if (!sucursalId) return; // esperar a que exista sucursalId
+
+    setLoading(true);
     (async () => {
       try {
         const r = await fetch(`${BASE_URL}/api/sucursales/${sucursalId}/oferta`);
         const data = await r.json();
         if (!r.ok) throw new Error(data?.error || "Error al cargar oferta");
-        const lista: Envase[] = (data?.envases ?? []) as Envase[];
-        setEnvasesOfrecidos(lista);
+        setEnvasesOfrecidos(data?.envases ?? []);
       } catch (e: any) {
         Alert.alert("Error", e.message ?? "No se pudo cargar la oferta");
       } finally {
@@ -74,17 +76,10 @@ export default function Categoria_Envase() {
     })();
   }, [sucursalId]);
 
-  // agrupamos para render (Cucurucho, Kilo, Vaso, Otros)
   const grupos = useMemo(() => {
-    const g: Record<Grupo, (Envase & { display: string })[]> = {
-      Cucurucho: [],
-      Kilo: [],
-      Vaso: [],
-      Otros: [],
-    };
+    const g: Record<Grupo, (Envase & { display: string })[]> = { Cucurucho: [], Kilo: [], Vaso: [], Otros: [] };
     for (const e of envasesOfrecidos) {
-      const display = labelForEnvase(e);
-      g[grupoDe(e)].push({ ...e, display });
+      g[grupoDe(e)].push({ ...e, display: labelForEnvase(e) });
     }
     (Object.keys(g) as Grupo[]).forEach((k) => g[k].sort((a, b) => a.display.localeCompare(b.display)));
     return g;
@@ -94,9 +89,7 @@ export default function Categoria_Envase() {
     setSelecciones((prev) => {
       const lista = prev.envases ?? [];
       const existe = lista.find((i) => i.opcion === tipoEnvase);
-      const nuevas = existe
-        ? lista.filter((i) => i.opcion !== tipoEnvase)
-        : [...lista, { opcion: tipoEnvase, cantidad: 1 }];
+      const nuevas = existe ? lista.filter((i) => i.opcion !== tipoEnvase) : [...lista, { opcion: tipoEnvase, cantidad: 1 }];
       return { envases: nuevas };
     });
   };
@@ -128,9 +121,18 @@ export default function Categoria_Envase() {
     const pedidoString = encodeURIComponent(JSON.stringify(pedidoFinal));
     router.push({
       pathname: "/screens/Categoria_Gustos",
-      params: { pedido: pedidoString, sucursalId: String(sucursalId), userId: String(userId) },
+      params: { pedido: pedidoString },
     });
   };
+
+  if (!sucursalId) {
+    // mientras no hay sucursal seleccionada
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <Text>Selecciona una sucursal primero...</Text>
+      </View>
+    );
+  }
 
   if (loading) {
     return (
@@ -151,7 +153,6 @@ export default function Categoria_Envase() {
       resizeMode={isSmallScreen ? "stretch" : "cover"}
     >
       <View style={styles.overlay}>
-        {/* 🔹 Header con botón volver, alineado igual que en Categoria_Gustos */}
         <ScreenHeader title="Seleccionar Envase" />
 
         <FlatList
@@ -204,7 +205,7 @@ export default function Categoria_Envase() {
 
         <View style={[styles.footer, { bottom: height * 0.13 }]}>
           <Pressable style={[styles.button, { backgroundColor: "#f4679fff" }]} onPress={handleConfirm}>
-            <Text style={[styles.buttonText, { fontSize: isWeb ? 16 : width * 0.045 }]}>Siguiente</Text>
+            <Text style={[styles.buttonText, { fontSize: width * 0.045 }]}>Siguiente</Text>
           </Pressable>
         </View>
       </View>
@@ -212,29 +213,14 @@ export default function Categoria_Envase() {
   );
 }
 
+// --- estilos ---
 const styles = StyleSheet.create({
   backgroundImage: { flex: 1, width: "100%", height: "100%" },
-  overlay: { flex: 1, padding: 20, backgroundColor: "rgba(255,255,255,0.6)" }, // padding igual a Categoria_Gustos
-  itemRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 8,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    backgroundColor: "#fff",
-  },
-  itemText: { fontSize: isWeb ? 16 : width * 0.045 },
+  overlay: { flex: 1, padding: 20, backgroundColor: "rgba(255,255,255,0.6)" },
+  itemRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 8, padding: 10, borderWidth: 1, borderColor: "#ddd", borderRadius: 8, backgroundColor: "#fff" },
+  itemText: { fontSize: width * 0.045 },
   counter: { flexDirection: "row", alignItems: "center" },
-  counterButton: {
-    backgroundColor: "#eee",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 4,
-    marginHorizontal: 5,
-  },
+  counterButton: { backgroundColor: "#eee", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 4, marginHorizontal: 5 },
   counterText: { fontSize: 18, fontWeight: "bold" },
   counterValue: { fontSize: 16, fontWeight: "bold", minWidth: 30, textAlign: "center" },
   footer: { position: "absolute", left: 20, right: 20 },
