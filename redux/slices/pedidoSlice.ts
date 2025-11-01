@@ -32,13 +32,13 @@ const pedidoSlice = createSlice({
         },
 
         // 🔹 Aumentar o disminuir la cantidad de un envase
-        updateCantidad(state, action: PayloadAction<{ opcion: string; delta: number }>) {
+        updateCantidad: (state, action: PayloadAction<{ opcion: string; delta: number }>) => {
             const { opcion, delta } = action.payload;
-            const env = state.envases.find((e) => e.opcion === opcion);
-            if (env) {
-                env.cantidad = Math.max(0, env.cantidad + delta);
-                if (env.cantidad === 0) {
-                    state.envases = state.envases.filter((e) => e.opcion !== opcion);
+            const envase = state.envases.find(e => e.opcion === opcion);
+            if (envase) {
+                envase.cantidad += delta;
+                if (envase.cantidad <= 0) {
+                    state.envases = state.envases.filter(e => e.opcion !== opcion);
                 }
             }
         },
@@ -59,8 +59,21 @@ const pedidoSlice = createSlice({
             state.envases = [];
             state.selecciones = {};
         },
+
+        // 🔹 Eliminar un envase específico del pedido
+        removeEnvase(state, action: PayloadAction<string>) {
+            const opcion = action.payload;
+            state.envases = state.envases.filter((e) => e.opcion !== opcion);
+            delete state.selecciones[opcion];
+        },
+
+        // 🔹 Limpiar envases que ya no estén disponibles
+        syncEnvasesDisponibles: (state, action: PayloadAction<string[]>) => {
+            const disponibles = action.payload;
+            state.envases = state.envases.filter(e => disponibles.includes(e.opcion));
+        }
     },
 });
 
-export const { toggleEnvase, updateCantidad, setSeleccion, limpiarPedido } = pedidoSlice.actions;
+export const { toggleEnvase, updateCantidad, setSeleccion, limpiarPedido, removeEnvase, syncEnvasesDisponibles } = pedidoSlice.actions;
 export default pedidoSlice.reducer;

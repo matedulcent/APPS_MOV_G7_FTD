@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -14,7 +14,11 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import Dropdown from "../../components/Dropdown";
 import ScreenHeader from "../../components/ScreenHeader";
-import { toggleEnvase, updateCantidad } from "../../redux/slices/pedidoSlice";
+import {
+  syncEnvasesDisponibles,
+  toggleEnvase,
+  updateCantidad,
+} from "../../redux/slices/pedidoSlice";
 import type { AppDispatch, RootState } from "../../redux/store";
 import { BASE_URL } from "../services/apiConfig";
 
@@ -58,6 +62,7 @@ export default function Categoria_Envase() {
   const [loading, setLoading] = useState(true);
   const [envasesOfrecidos, setEnvasesOfrecidos] = useState<Envase[]>([]);
 
+  // 🔹 Cargar envases desde API
   useEffect(() => {
     if (!sucursalId) return;
 
@@ -76,6 +81,14 @@ export default function Categoria_Envase() {
     })();
   }, [sucursalId]);
 
+  // 🔹 Sincronizar envases disponibles cada vez que la pantalla se enfoque
+  useFocusEffect(
+    React.useCallback(() => {
+      const disponibles = envasesOfrecidos.map(e => e.tipoEnvase);
+      dispatch(syncEnvasesDisponibles(disponibles));
+    }, [envasesOfrecidos])
+  );
+
   const grupos = useMemo(() => {
     const g: Record<Grupo, (Envase & { display: string })[]> = {
       Cucurucho: [],
@@ -83,11 +96,8 @@ export default function Categoria_Envase() {
       Vaso: [],
       Otros: [],
     };
-    for (const e of envasesOfrecidos)
-      g[grupoDe(e)].push({ ...e, display: labelForEnvase(e) });
-    (Object.keys(g) as Grupo[]).forEach((k) =>
-      g[k].sort((a, b) => a.display.localeCompare(b.display))
-    );
+    for (const e of envasesOfrecidos) g[grupoDe(e)].push({ ...e, display: labelForEnvase(e) });
+    (Object.keys(g) as Grupo[]).forEach(k => g[k].sort((a, b) => a.display.localeCompare(b.display)));
     return g;
   }, [envasesOfrecidos]);
 
@@ -101,9 +111,8 @@ export default function Categoria_Envase() {
       return;
     }
 
-    // Filtra los envases válidos para evitar undefined
-    const envasesValidos = selecciones.filter((sel) =>
-      envasesOfrecidos.some((e) => e.tipoEnvase === sel.opcion)
+    const envasesValidos = selecciones.filter(sel =>
+      envasesOfrecidos.some(e => e.tipoEnvase === sel.opcion)
     );
 
     if (envasesValidos.length === 0) {
@@ -113,7 +122,7 @@ export default function Categoria_Envase() {
 
     const pedidoFinal: Record<string, number> = {};
     for (const { opcion, cantidad } of envasesValidos) {
-      const env = envasesOfrecidos.find((e) => e.tipoEnvase === opcion);
+      const env = envasesOfrecidos.find(e => e.tipoEnvase === opcion);
       const max = env?.maxCantSabores ?? 1;
       for (let i = 1; i <= cantidad; i++)
         pedidoFinal[`${labelForEnvase(env)} (#${i})`] = max;
@@ -141,7 +150,7 @@ export default function Categoria_Envase() {
     );
 
   const ordenGrupos: Grupo[] = ["Cucurucho", "Kilo", "Vaso", "Otros"];
-  const dataGrupos = ordenGrupos.filter((g) => grupos[g].length > 0);
+  const dataGrupos = ordenGrupos.filter(g => grupos[g].length > 0);
 
   return (
     <ImageBackground
@@ -154,16 +163,14 @@ export default function Categoria_Envase() {
 
         <FlatList
           data={dataGrupos}
-          keyExtractor={(g) => g}
+          keyExtractor={g => g}
           contentContainerStyle={{ paddingBottom: height * 0.15 }}
           renderItem={({ item: grupo }) => {
             const envs = grupos[grupo];
-            const opciones = envs.map((e) => e.display);
+            const opciones = envs.map(e => e.display);
             const seleccionadosDisplay = selecciones
-              .filter((s) => envs.some((e) => e.tipoEnvase === s.opcion))
-              .map(
-                (s) => envs.find((e) => e.tipoEnvase === s.opcion)?.display ?? ""
-              );
+              .filter(s => envs.some(e => e.tipoEnvase === s.opcion))
+              .map(s => envs.find(e => e.tipoEnvase === s.opcion)?.display ?? "");
 
             return (
               <View style={{ marginBottom: 12 }}>
@@ -171,8 +178,8 @@ export default function Categoria_Envase() {
                   label={grupo}
                   options={opciones}
                   selected={seleccionadosDisplay}
-                  onSelect={(displayValue) => {
-                    const env = envs.find((e) => e.display === displayValue);
+                  onSelect={displayValue => {
+                    const env = envs.find(e => e.display === displayValue);
                     if (env) handleToggle(env.tipoEnvase);
                   }}
                   icon={
@@ -185,10 +192,10 @@ export default function Categoria_Envase() {
                 />
 
                 {selecciones
-                  .filter((s) => envs.some((e) => e.tipoEnvase === s.opcion))
+                  .filter(s => envs.some(e => e.tipoEnvase === s.opcion))
                   .map(({ opcion, cantidad }) => {
-                    const env = envs.find((e) => e.tipoEnvase === opcion);
-                    if (!env) return null; // Evita crash si no existe
+                    const env = envs.find(e => e.tipoEnvase === opcion);
+                    if (!env) return null;
                     return (
                       <View key={opcion} style={styles.itemRow}>
                         <Text style={styles.itemText}>{env.display}</Text>
@@ -220,9 +227,7 @@ export default function Categoria_Envase() {
             style={[styles.button, { backgroundColor: "#f4679fff" }]}
             onPress={handleConfirm}
           >
-            <Text style={[styles.buttonText, { fontSize: width * 0.045 }]}>
-              Siguiente
-            </Text>
+            <Text style={[styles.buttonText, { fontSize: width * 0.045 }]}>Siguiente</Text>
           </Pressable>
         </View>
       </View>

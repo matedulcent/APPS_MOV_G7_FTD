@@ -1,4 +1,3 @@
-// app/screens/Categoria_Gustos.tsx
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
@@ -18,7 +17,7 @@ import Dropdown from "../../components/Dropdown";
 import PedidoCardBottom from "../../components/PedidoCardBottom";
 import ScreenHeader from "../../components/ScreenHeader";
 import { fetchSabores } from "../../redux/actions/saboresActions";
-import { setSeleccion, toggleEnvase } from "../../redux/slices/pedidoSlice";
+import { setSeleccion } from "../../redux/slices/pedidoSlice";
 import type { AppDispatch, RootState } from "../../redux/store";
 
 const { height } = Dimensions.get("window");
@@ -80,6 +79,7 @@ export default function Categoria_Gustos() {
   const loading = useSelector((state: RootState) => state.sabores.loading);
   const error = useSelector((state: RootState) => state.sabores.error);
   const sucursalId = useSelector((state: RootState) => state.user.sucursalId);
+  const envasesActivos = useSelector((state: RootState) => state.pedido.envases); // ✅ solo envases disponibles
   const seleccionesRedux = useSelector((state: RootState) => state.pedido.selecciones);
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -95,17 +95,19 @@ export default function Categoria_Gustos() {
     }
   }, [pedido]);
 
-  // Inicializar envases y selecciones
-  useEffect(() => {
-    Object.keys(pedidoParsed).forEach(envase => {
-      if (!seleccionesRedux[envase]) {
-        dispatch(setSeleccion({ envaseId: envase, gustos: [] }));
-        dispatch(toggleEnvase(envase));
-      }
-    });
-  }, [pedidoParsed]);
+  // Filtrar envases activos según estado global
+  const envases = useMemo(() => Object.keys(pedidoParsed), [pedidoParsed]);
 
-  // Cargar sabores desde API
+  const envaseActual = envases[currentIndex] ?? "";
+  const maxSabores = pedidoParsed[envaseActual] ?? 0;
+  const seleccionadosActual = seleccionesRedux[envaseActual] ?? [];
+
+  useEffect(() => {
+    if (envaseActual && !seleccionesRedux[envaseActual]) {
+      dispatch(setSeleccion({ envaseId: envaseActual, gustos: [] }));
+    }
+  }, [envaseActual]);
+
   useEffect(() => {
     if (sucursalId) dispatch(fetchSabores(sucursalId));
   }, [sucursalId]);
@@ -128,12 +130,9 @@ export default function Categoria_Gustos() {
     return res;
   }, [sabores, searchText]);
 
-  const envases = Object.keys(pedidoParsed);
-  const envaseActual = envases[currentIndex] ?? "";
-  const maxSabores = pedidoParsed[envaseActual] ?? 0;
-  const seleccionadosActual = seleccionesRedux[envaseActual] ?? [];
-
   const toggleSeleccion = (nombreGusto: string) => {
+    if (!envaseActual) return;
+
     let nueva: string[];
     if (seleccionadosActual.includes(nombreGusto)) {
       nueva = seleccionadosActual.filter(x => x !== nombreGusto);
@@ -144,9 +143,6 @@ export default function Categoria_Gustos() {
     if (nueva.length > maxSabores) nueva = nueva.slice(0, maxSabores);
 
     dispatch(setSeleccion({ envaseId: envaseActual, gustos: nueva }));
-
-    // Mantener envase en array si no estaba
-    if (!envases.includes(envaseActual)) dispatch(toggleEnvase(envaseActual));
   };
 
   const handleConfirm = () => {
