@@ -78,9 +78,9 @@ export default function Vendedor_Envases() {
   const [saving, setSaving] = useState(false);
 
   const [abierto, setAbierto] = useState<Record<Grupo, boolean>>({
-    Conos: true,
-    Kilo: true,
-    Vasos: true,
+    Conos: false,
+    Kilo: false,
+    Vasos: false,
     Otros: false,
   });
 
