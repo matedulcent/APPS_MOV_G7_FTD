@@ -92,7 +92,7 @@ const handleLogin = async () => {
       });
     } else if (data.role === "vendedor") {
       router.push({
-        pathname: "/screens/proveedor/Vendedor_Envases",
+        pathname: "/screens/proveedor/Pedidos_Sucursal", // base proveedor
         params: { sucursalId: data.sucursalId },
       });
     } else {

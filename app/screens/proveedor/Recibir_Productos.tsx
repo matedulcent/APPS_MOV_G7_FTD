@@ -14,6 +14,10 @@ import { BASE_URL } from "./../../services/apiConfig";
 type Envase = { id: string; tipoEnvase: string; maxCantSabores: number };
 type Sabor  = { id: string; tipoSabor: string };
 
+//////////////////////////////////////////////////////////////////
+//////////////////  RARO                //////////////////////////
+//////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////
 
 async function getOferta(sucursalId: string): Promise<{ envases: Envase[]; sabores: Sabor[] }> {
   const r = await fetch(`${BASE_URL}/api/sucursales/${sucursalId}/oferta`);
