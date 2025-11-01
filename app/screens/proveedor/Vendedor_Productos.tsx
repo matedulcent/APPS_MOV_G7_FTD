@@ -105,11 +105,11 @@ export default function Vendedor_Productos() {
   const [saving, setSaving] = useState(false);
 
   const [abierto, setAbierto] = useState<Record<Grupo, boolean>>({
-    Cremas: true,
-    Frutales: true,
-    "Dulce de leche": true,
-    Chocolates: true,
-    Especiales: true,
+    Cremas: false,
+    Frutales: false,
+    "Dulce de leche": false,
+    Chocolates: false,
+    Especiales: false,
   });
 
   const cargar = useCallback(async () => {
