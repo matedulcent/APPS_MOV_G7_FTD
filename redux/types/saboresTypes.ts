@@ -1,4 +1,4 @@
-// redux/types/saboresTypes.ts
+// Define el tipo Sabor
 export interface Sabor {
     id: string;
     tipoSabor: string;

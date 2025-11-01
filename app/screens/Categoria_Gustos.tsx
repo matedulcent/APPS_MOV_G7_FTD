@@ -1,26 +1,19 @@
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
-import {
-  ActivityIndicator,
-  Dimensions,
-  FlatList,
-  ImageBackground,
-  StyleSheet,
-  Text,
-  View
-} from "react-native";
+import { ActivityIndicator, Dimensions, FlatList, ImageBackground, StyleSheet, Text, View } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import Dropdown from "../../components/Dropdown";
 import PedidoCardBottom from "../../components/PedidoCardBottom";
 import ScreenHeader from "../../components/ScreenHeader";
 import SearchBar from "../../components/SearchBar";
+import { fetchSabores } from "../../redux/actions/saboresActions"; // thunk clásico
 
-const { width, height } = Dimensions.get("window");
+const { height } = Dimensions.get("window");
 
 type Sabor = { id: string; tipoSabor: string };
 type Grupo = "Frutales" | "Cremas" | "Chocolates" | "Dulce de leche" | "Otros";
 
-// ===== helpers =====
+// helpers
 function normalize(s: string) {
   return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 }
@@ -36,15 +29,14 @@ function grupoDeSabor(nombre: string): Grupo {
 
 const labelOf = (s: Sabor) => s.tipoSabor;
 
-// =====================================
-
 export default function Categoria_Gustos() {
   const dispatch = useDispatch();
   const router = useRouter();
 
-  // redux clásico
+  // Redux clásico
   const sabores = useSelector((state: any) => state.sabores.items) as Sabor[];
   const loading = useSelector((state: any) => state.sabores.loading);
+  const error = useSelector((state: any) => state.sabores.error);
   const sucursalId = useSelector((state: any) => state.user.user.sucursalId);
   const pedidoRedux = useSelector((state: any) => state.pedido.envasesYMax);
 
@@ -52,19 +44,14 @@ export default function Categoria_Gustos() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [searchText, setSearchText] = useState("");
 
-  // cargar sabores desde acción clásica
   useEffect(() => {
-    if (sucursalId) dispatch(fetchSaboresAction(sucursalId));
+    if (sucursalId) dispatch(fetchSabores(sucursalId)); // thunk clásico
   }, [sucursalId]);
 
   // agrupar sabores según búsqueda
   const grupos = useMemo(() => {
     const res: Record<Grupo, (Sabor & { label: string })[]> = {
-      Frutales: [],
-      Cremas: [],
-      Chocolates: [],
-      "Dulce de leche": [],
-      Otros: [],
+      Frutales: [], Cremas: [], Chocolates: [], "Dulce de leche": [], Otros: [],
     };
     const q = normalize(searchText);
     for (const s of sabores) {
@@ -72,7 +59,7 @@ export default function Categoria_Gustos() {
       if (q && !normalize(label).includes(q)) continue;
       res[grupoDeSabor(label)].push({ ...s, label });
     }
-    (Object.keys(res) as Grupo[]).forEach((g) =>
+    (Object.keys(res) as Grupo[]).forEach(g =>
       res[g].sort((a, b) => a.label.localeCompare(b.label))
     );
     return res;
@@ -83,10 +70,10 @@ export default function Categoria_Gustos() {
   const seleccionadosActual = selecciones[envaseActual] ?? [];
 
   const toggleSeleccion = (nombreGusto: string) => {
-    setSelecciones((prev) => {
+    setSelecciones(prev => {
       const list = prev[envaseActual] ?? [];
       const existe = list.includes(nombreGusto);
-      let nueva = existe ? list.filter((x) => x !== nombreGusto) : [...list, nombreGusto];
+      let nueva = existe ? list.filter(x => x !== nombreGusto) : [...list, nombreGusto];
       if (nueva.length > maxSabores) nueva = nueva.slice(0, maxSabores);
       return { ...prev, [envaseActual]: nueva };
     });
@@ -95,7 +82,7 @@ export default function Categoria_Gustos() {
   const handleConfirm = () => {
     const keys = Object.keys(pedidoRedux);
     if (currentIndex < keys.length - 1) {
-      setCurrentIndex((i) => i + 1);
+      setCurrentIndex(i => i + 1);
       return;
     }
     router.push({
@@ -113,29 +100,30 @@ export default function Categoria_Gustos() {
     );
   }
 
+  if (error) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <Text style={{ color: "red", fontSize: 16 }}>{error}</Text>
+      </View>
+    );
+  }
+
   const ordenGrupos: Grupo[] = ["Frutales", "Cremas", "Chocolates", "Dulce de leche", "Otros"];
-  const dataGrupos = ordenGrupos.filter((g) => grupos[g].length > 0);
+  const dataGrupos = ordenGrupos.filter(g => grupos[g].length > 0);
 
   return (
-    <ImageBackground
-      source={require("../../assets/images/backgrounds/fondo2.jpg")}
-      style={styles.backgroundImage}
-      resizeMode="cover"
-    >
+    <ImageBackground source={require("../../assets/images/backgrounds/fondo2.jpg")} style={styles.backgroundImage} resizeMode="cover">
       <View style={styles.overlay}>
         <ScreenHeader title="Gustos disponibles" />
-
         <SearchBar value={searchText} onChangeText={setSearchText} placeholder="Buscar gusto..." />
-
         <FlatList
           data={dataGrupos}
-          keyExtractor={(g) => g}
+          keyExtractor={g => g}
           contentContainerStyle={{ paddingBottom: height * 0.15 }}
           renderItem={({ item: grupo }) => {
             const items = grupos[grupo];
-            const opciones = items.map((x) => x.label);
-            const selectedEnGrupo = seleccionadosActual.filter((s) => opciones.includes(s));
-
+            const opciones = items.map(x => x.label);
+            const selectedEnGrupo = seleccionadosActual.filter(s => opciones.includes(s));
             return (
               <View style={{ marginBottom: 12 }}>
                 <Dropdown
@@ -144,12 +132,9 @@ export default function Categoria_Gustos() {
                   selected={selectedEnGrupo}
                   onSelect={toggleSeleccion}
                   icon={
-                    grupo === "Frutales"
-                      ? "local-florist"
-                      : grupo === "Chocolates"
-                        ? "cookie"
-                        : grupo === "Dulce de leche"
-                          ? "favorite"
+                    grupo === "Frutales" ? "local-florist"
+                      : grupo === "Chocolates" ? "cookie"
+                        : grupo === "Dulce de leche" ? "favorite"
                           : "icecream"
                   }
                 />
@@ -157,7 +142,6 @@ export default function Categoria_Gustos() {
             );
           }}
         />
-
         <PedidoCardBottom
           selecciones={selecciones}
           visible={true}

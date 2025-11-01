@@ -1,11 +1,8 @@
-import {
-    FETCH_SABORES_FAILURE,
-    FETCH_SABORES_PENDING,
-    FETCH_SABORES_SUCCESS
-} from "../actionTypes/saboresActionTypes";
+import { FETCH_SABORES_FAILURE, FETCH_SABORES_PENDING, FETCH_SABORES_SUCCESS } from "../actionTypes/saboresActionTypes";
+import { Sabor } from "../types/saboresTypes";
 
 interface SaboresState {
-    items: any[];
+    items: Sabor[];
     loading: boolean;
     error: string | null;
 }
