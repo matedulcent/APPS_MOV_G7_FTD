@@ -14,7 +14,7 @@ import {
 import { BASE_URL } from "./../../services/apiConfig";
 
 type Envase = { id: string; tipoEnvase: string; maxCantSabores: number };
-type Sabor  = { id: string; tipoSabor: string };
+type Sabor = { id: string; tipoSabor: string };
 type Contenido = { id: number; envase: Envase | null; sabor: Sabor | null };
 type OrdenLite = {
   id: string;
@@ -25,7 +25,6 @@ type OrdenLite = {
 };
 type OrdenFull = OrdenLite & { contenidos: Contenido[] };
 
-/** Helper de confirm cross-platform */
 async function confirmAsync(title: string, message: string): Promise<boolean> {
   if (Platform.OS === "web") {
     return Promise.resolve(window.confirm(`${title}\n\n${message}`));
@@ -41,35 +40,25 @@ async function confirmAsync(title: string, message: string): Promise<boolean> {
 /** === API helpers === */
 async function fetchOrdenes(take = 50): Promise<OrdenLite[]> {
   const url = `${BASE_URL}/api/ordenes?take=${take}`;
-  console.log("[fetchOrdenes] GET =>", url);
   const r = await fetch(url);
-  console.log("[fetchOrdenes] status:", r.status);
   if (!r.ok) throw new Error("No se pudo leer /api/ordenes");
-  const data = await r.json();
-  console.log("[fetchOrdenes] items:", Array.isArray(data) ? data.length : data);
-  return data;
+  return r.json();
 }
 
 async function fetchOrdenDetalle(id: string): Promise<OrdenFull> {
   const url = `${BASE_URL}/api/ordenes/${id}`;
-  console.log("[fetchOrdenDetalle] GET =>", url);
   const r = await fetch(url);
-  console.log("[fetchOrdenDetalle] status:", r.status);
   if (!r.ok) throw new Error(`No se pudo leer /api/ordenes/${id}`);
-  const data = await r.json();
-  return data;
+  return r.json();
 }
 
 async function terminarOrden(
   id: string
 ): Promise<{ ok: boolean; id: string; estadoTerminado: boolean }> {
   const url = `${BASE_URL}/api/ordenes/${id}/terminar`;
-  console.log("[terminarOrden] PATCH =>", url);
   const r = await fetch(url, { method: "PATCH" });
-  console.log("[terminarOrden] status:", r.status);
   const data = await r.json().catch(() => ({}));
-  console.log("[terminarOrden] body:", data);
-  if (!r.ok) throw new Error((data as any)?.error || `PATCH /api/ordenes/${id}/terminar falló (${r.status})`);
+  if (!r.ok) throw new Error((data as any)?.error || `PATCH /api/ordenes/${id}/terminar falló`);
   return data as any;
 }
 
@@ -82,6 +71,7 @@ export default function Pedidos_Sucursal() {
   const [refreshing, setRefreshing] = useState(false);
   const [pedidos, setPedidos] = useState<OrdenFull[]>([]);
   const [busy, setBusy] = useState<Record<string, boolean>>({});
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -99,7 +89,6 @@ export default function Pedidos_Sucursal() {
       setPedidos(list);
     } catch (e: any) {
       Alert.alert("Error", e.message ?? "No se pudieron cargar los pedidos");
-      console.log("[Pedidos] cargar error:", e);
     } finally {
       setLoading(false);
     }
@@ -118,15 +107,8 @@ export default function Pedidos_Sucursal() {
     }
   }, [cargar]);
 
-  const irAEditarEnvases = () =>
-    router.push({ pathname: "/screens/proveedor/Vendedor_Envases", params: { sucursalId } });
-
-  const irAEditarGustos = () =>
-    router.push({ pathname: "/screens/proveedor/Vendedor_Productos", params: { sucursalId } });
-
   const confirmarTerminar = async (pedido: OrdenFull) => {
     if (pedido.estadoTerminado || busy[pedido.id]) return;
-
     const ok = await confirmAsync(
       "Marcar como terminado",
       `¿Confirmás que el Pedido #${pedido.id} fue entregado?`
@@ -135,25 +117,24 @@ export default function Pedidos_Sucursal() {
 
     setBusy((b) => ({ ...b, [pedido.id]: true }));
 
-    // Update optimista
     setPedidos((prev) =>
       prev.map((p) => (p.id === pedido.id ? { ...p, estadoTerminado: true } : p))
     );
 
     try {
-      console.log("[UI] Disparando terminarOrden para", pedido.id);
       await terminarOrden(pedido.id);
-      // opcional: await cargar();
     } catch (e: any) {
-      console.log("[Pedidos] terminar error:", e?.message || e);
       Alert.alert("Error", e?.message ?? "No se pudo marcar como terminado");
-      // rollback
       setPedidos((prev) =>
         prev.map((p) => (p.id === pedido.id ? { ...p, estadoTerminado: false } : p))
       );
     } finally {
       setBusy((b) => ({ ...b, [pedido.id]: false }));
     }
+  };
+
+  const toggleExpand = (id: string) => {
+    setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
   if (loading) {
@@ -167,9 +148,10 @@ export default function Pedidos_Sucursal() {
 
   return (
     <View style={{ flex: 1, padding: 16 }}>
-      <Text style={{ fontSize: 18, fontWeight: "800", marginBottom: 8 }}>
-        Pedidos — Sucursal {sucursalId}
-      </Text>
+      {/* Título principal */}
+      <View style={{ alignItems: "center", marginBottom: 16 }}>
+        <Text style={{ fontSize: 22, fontWeight: "900" }}>Pedidos</Text>
+      </View>
 
       {pedidos.length === 0 ? (
         <View style={{ paddingVertical: 24, alignItems: "center" }}>
@@ -185,7 +167,9 @@ export default function Pedidos_Sucursal() {
             const isPendiente = !item.estadoTerminado;
 
             return (
-              <View
+              <TouchableOpacity
+                onPress={() => toggleExpand(item.id)}
+                activeOpacity={0.8}
                 style={{
                   padding: 12,
                   marginBottom: 10,
@@ -200,6 +184,7 @@ export default function Pedidos_Sucursal() {
                   style={{
                     flexDirection: "row",
                     justifyContent: "space-between",
+                    alignItems: "center",
                     marginBottom: 6,
                   }}
                 >
@@ -214,55 +199,59 @@ export default function Pedidos_Sucursal() {
                   </Text>
                 </View>
 
-                <Text style={{ opacity: 0.7, marginBottom: 8 }}>{fecha}</Text>
+                {expanded[item.id] && (
+                  <>
+                    <Text style={{ opacity: 0.7, marginBottom: 8 }}>{fecha}</Text>
 
-                {item.contenidos?.length ? (
-                  item.contenidos.map((c) => (
-                    <View
-                      key={c.id}
-                      style={{
-                        paddingVertical: 6,
-                        paddingHorizontal: 8,
-                        borderRadius: 10,
-                        borderWidth: 1,
-                        borderColor: "#e6e6e6",
-                        backgroundColor: "#f9fbff",
-                        marginBottom: 6,
-                      }}
-                    >
-                      <Text style={{ fontWeight: "700" }}>
-                        {c.envase?.tipoEnvase?.replaceAll("_", " ") ?? "Envase"}
-                      </Text>
-                      <Text style={{ opacity: 0.75, fontSize: 12 }}>
-                        Sabor: {c.sabor?.tipoSabor ?? "—"}
-                      </Text>
-                    </View>
-                  ))
-                ) : (
-                  <Text style={{ opacity: 0.6 }}>Sin contenidos.</Text>
-                )}
+                    {item.contenidos?.length ? (
+                      item.contenidos.map((c) => (
+                        <View
+                          key={c.id}
+                          style={{
+                            paddingVertical: 6,
+                            paddingHorizontal: 8,
+                            borderRadius: 10,
+                            borderWidth: 1,
+                            borderColor: "#e6e6e6",
+                            backgroundColor: "#f9fbff",
+                            marginBottom: 6,
+                          }}
+                        >
+                          <Text style={{ fontWeight: "700" }}>
+                            {c.envase?.tipoEnvase?.replaceAll("_", " ") ?? "Envase"}
+                          </Text>
+                          <Text style={{ opacity: 0.75, fontSize: 12 }}>
+                            Sabor: {c.sabor?.tipoSabor ?? "—"}
+                          </Text>
+                        </View>
+                      ))
+                    ) : (
+                      <Text style={{ opacity: 0.6 }}>Sin contenidos.</Text>
+                    )}
 
-                {isPendiente && (
-                  <TouchableOpacity
-                    onPress={() => confirmarTerminar(item)}
-                    disabled={!!busy[item.id]}
-                    style={{
-                      marginTop: 8,
-                      paddingVertical: 10,
-                      borderRadius: 10,
-                      alignItems: "center",
-                      backgroundColor: busy[item.id] ? "#9ec9ff" : "#1e90ff",
-                      ...(Platform.OS === "web"
-                        ? ({ cursor: busy[item.id] ? "default" : "pointer" } as any)
-                        : null),
-                    }}
-                  >
-                    <Text style={{ color: "#fff", fontWeight: "700" }}>
-                      {busy[item.id] ? "Terminando..." : "Marcar como terminado"}
-                    </Text>
-                  </TouchableOpacity>
+                    {isPendiente && (
+                      <TouchableOpacity
+                        onPress={() => confirmarTerminar(item)}
+                        disabled={!!busy[item.id]}
+                        style={{
+                          marginTop: 8,
+                          paddingVertical: 10,
+                          borderRadius: 10,
+                          alignItems: "center",
+                          backgroundColor: busy[item.id] ? "#9ec9ff" : "#1e90ff",
+                          ...(Platform.OS === "web"
+                            ? ({ cursor: busy[item.id] ? "default" : "pointer" } as any)
+                            : null),
+                        }}
+                      >
+                        <Text style={{ color: "#fff", fontWeight: "700" }}>
+                          {busy[item.id] ? "Terminando..." : "Marcar como terminado"}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </>
                 )}
-              </View>
+              </TouchableOpacity>
             );
           }}
         />
@@ -271,19 +260,21 @@ export default function Pedidos_Sucursal() {
       {/* Botonera inferior */}
       <View style={{ gap: 10, marginTop: 8 }}>
         <Pressable
-          onPress={irAEditarEnvases}
+          onPress={() =>
+            router.push({ pathname: "/screens/proveedor/Vendedor_Envases", params: { sucursalId } })
+          }
           style={{ padding: 14, borderRadius: 14, alignItems: "center", backgroundColor: "#1e90ff" }}
         >
           <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700" }}>Editar envases</Text>
         </Pressable>
 
         <Pressable
-          onPress={irAEditarGustos}
+          onPress={() =>
+            router.push({ pathname: "/screens/proveedor/Vendedor_Productos", params: { sucursalId } })
+          }
           style={{ padding: 14, borderRadius: 14, alignItems: "center", backgroundColor: "#222" }}
         >
-          <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700" }}>
-            Editar gustos
-          </Text>
+          <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700" }}>Editar gustos</Text>
         </Pressable>
       </View>
     </View>
