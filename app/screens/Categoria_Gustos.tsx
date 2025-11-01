@@ -46,6 +46,7 @@ const grupoDeSabor = (nombre: string): Grupo => {
 
 const labelOf = (s: Sabor) => s.tipoSabor;
 
+// 🔹 Componente para barra de búsqueda
 const SearchBarUX = ({
   value,
   onChangeText,
