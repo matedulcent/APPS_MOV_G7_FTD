@@ -6,25 +6,37 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  View
+  View,
 } from "react-native";
+import { useSelector } from "react-redux";
+import { RootState } from "../store/store";
 
 const { width, height } = Dimensions.get("window");
-const isSmallScreen = width < 400 || height < 700; 
+const isSmallScreen = width < 400 || height < 700;
 
 export default function HomeScreen() {
   const router = useRouter();
+  const user = useSelector((state: RootState) => state.user);
 
-  const handleElegirSucursal = () => {
-    const userId = Math.floor(100000 + Math.random() * 900000).toString();
-    router.push({
-      pathname: "./screens/Seleccion_Sucursal",
-      params: { userId },
-    });
+  const handleLoginPress = () => {
+    router.push("./screens/Log_In");
   };
 
-  const handleVendedorProductos = () => {
-    router.push("/screens/proveedor/Vendedor_Envases");
+  const handleRegistroCliente = () => {
+    router.push("./screens/Registro_Cliente");
+  };
+
+  const handleRegistroVendedor = () => {
+    router.push("./screens/Registro_Vendedor");
+  };
+
+  const handleElegirSucursal = () => {
+    if (user.loggedIn && user.role === "cliente" && user.userId) {
+      router.push({
+        pathname: "./screens/Seleccion_Sucursal",
+        params: { userId: user.userId },
+      });
+    }
   };
 
   return (
@@ -33,40 +45,32 @@ export default function HomeScreen() {
       style={styles.backgroundImage}
     >
       <View style={styles.container}>
-        <Text style={styles.title}>🏠 Esta es la pantalla Home</Text>
+        <Text style={styles.title}>🏠 Bienvenido a la App</Text>
 
-        {/* <Pressable
-          style={[styles.actionButton, { backgroundColor: "#6200ee" }]}
-          onPress={handleElegirSucursal}
-        >
-          <Text style={styles.buttonText}>Elegir Sucursal</Text>
-        </Pressable>
+        {!user.loggedIn && (
+          <Pressable
+            style={[styles.actionButton, { backgroundColor: "#03a9f4" }]}
+            onPress={handleLoginPress}
+          >
+            <Text style={styles.buttonText}>Log In</Text>
+          </Pressable>
+        )}
 
-        <Pressable
-          style={[styles.actionButton, { backgroundColor: "#03dac6" }]}
-          onPress={handleVendedorProductos}
-        >
-          <Text style={[styles.buttonText, { color: "#000" }]}>
-            Ir a Panel de Vendedor
-          </Text>
-        </Pressable> */}
+        {user.loggedIn && user.role === "cliente" && (
+          <Pressable
+            style={[styles.actionButton, { backgroundColor: "#6200ee" }]}
+            onPress={handleElegirSucursal}
+          >
+            <Text style={styles.buttonText}>Elegir Sucursal</Text>
+          </Pressable>
+        )}
 
-        <Text style={styles.infoText}>¿Querés ingresar a tu cuenta?</Text>
-        <Pressable
-          style={[styles.actionButton, { backgroundColor: "#03a9f4" }]}
-          onPress={() => router.push("./screens/Log_In")}
-        >
-          <Text style={styles.buttonText}>Log In</Text>
-        </Pressable>
-
-        <Text style={styles.infoText}>
-          Si aún no tenés cuenta, registrate:
-        </Text>
+        <Text style={styles.infoText}>Si aún no tenés cuenta, registrate:</Text>
 
         <Text style={styles.infoText}>Quiero comprar:</Text>
         <Pressable
           style={[styles.actionButton, { backgroundColor: "#4caf50" }]}
-          onPress={() => router.push("./screens/Registro_Cliente")}
+          onPress={handleRegistroCliente}
         >
           <Text style={styles.buttonText}>Registro Cliente</Text>
         </Pressable>
@@ -74,26 +78,17 @@ export default function HomeScreen() {
         <Text style={styles.infoText}>Quiero vender:</Text>
         <Pressable
           style={[styles.actionButton, { backgroundColor: "#8bc34a" }]}
-          onPress={() => router.push("./screens/Registro_Vendedor")}
+          onPress={handleRegistroVendedor}
         >
-          <Text style={styles.buttonText}>Registro Heladería</Text>
+          <Text style={styles.buttonText}>Registro Vendedor</Text>
         </Pressable>
       </View>
-
     </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-  },
-  backgroundImage: {
-    flex: 1,
-    width: "100%",
-    height: "100%",
-    resizeMode: "cover",
-  },
+  backgroundImage: { flex: 1, width: "100%", height: "100%", resizeMode: "cover" },
   container: {
     flex: 1,
     paddingHorizontal: width * 0.05,
@@ -117,11 +112,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: height * 0.02,
   },
-  buttonText: {
-    fontWeight: "bold",
-    fontSize: isSmallScreen ? 16 : Math.min(width * 0.045, height * 0.03),
-    color: "#fff",
-  },
+  buttonText: { fontWeight: "bold", fontSize: isSmallScreen ? 16 : Math.min(width * 0.045, height * 0.03), color: "#fff" },
   infoText: {
     fontSize: isSmallScreen ? 14 : Math.min(width * 0.04, height * 0.025),
     marginBottom: height * 0.02,

@@ -1,5 +1,6 @@
+// app/screens/Log_In.tsx
 import { useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -12,154 +13,77 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { BASE_URL } from "../services/apiConfig";
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch, RootState } from "../../store/store";
+import { loginUser } from "../../store/user/thunks";
 
 const { width, height } = Dimensions.get("window");
 const isSmallScreen = width < 400 || height < 700;
 const isWeb = Platform.OS === "web";
 
-type LoginResponseCliente = {
-  role: "cliente";
-  userId: string;
-  nombre: string | null;
-  email: string | null;
-};
-
-type LoginResponseVendedor = {
-  role: "vendedor";
-  sucursalId: string;
-  nombre: string | null;
-  email: string | null;
-};
-
-type LoginResponse = LoginResponseCliente | LoginResponseVendedor;
-
 export default function LoginScreen() {
   const router = useRouter();
+  const dispatch = useDispatch<AppDispatch>();
+  const user = useSelector((state: RootState) => state.user);
+
   const [role, setRole] = useState<"cliente" | "vendedor">("cliente");
   const slideAnim = useState(new Animated.Value(0))[0];
   const [switchWidth, setSwitchWidth] = useState(0);
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const canSubmit = useMemo(
-    () => email.trim().length > 3 && password.length > 0 && !loading,
-    [email, password, loading]
+    () => email.trim().length > 3 && password.length > 0 && !user.loading,
+    [email, password, user.loading]
   );
 
   const handleSwitch = (selectedRole: "cliente" | "vendedor") => {
     const targetValue = selectedRole === "cliente" ? 0 : 1;
-    Animated.timing(slideAnim, {
-      toValue: targetValue,
-      duration: 300,
-      useNativeDriver: false,
-    }).start(() => setRole(selectedRole));
+    Animated.timing(slideAnim, { toValue: targetValue, duration: 300, useNativeDriver: false }).start(() => setRole(selectedRole));
   };
 
-const handleLogin = async () => {
-  if (!canSubmit) return;
-  setLoading(true);
-  setErrorMsg(null);
+  const handleLogin = () => {
+    if (!canSubmit) return;
+    dispatch(loginUser({ email: email.trim().toLowerCase(), password, role }));
+  };
 
-  try {
-    const body = { email: email.trim().toLowerCase(), password, role };
-    console.log("📤 Enviando al backend:", body);
-
-    const r = await fetch(`${BASE_URL}/api/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-
-    console.log("📥 Respuesta del backend (raw):", r);
-
-    const data = await r.json().catch(() => ({}));
-    console.log("📦 JSON recibido del backend:", data);
-
-    if (!r.ok) {
-      const msg = data?.error ?? "Email o contraseña incorrectos";
-      setErrorMsg(msg);
-      return;
+  // Redireccionar al login exitoso
+  useEffect(() => {
+    if (user.loggedIn) {
+      if (user.role === "cliente" && user.userId) {
+        router.push({ pathname: "/screens/Seleccion_Sucursal", params: { userId: user.userId } });
+      } else if (user.role === "vendedor" && user.sucursalId) {
+        router.push({ pathname: "/screens/proveedor/Pedidos_Sucursal", params: { sucursalId: user.sucursalId } });
+      }
     }
-
-    if (data.role === "cliente") {
-      router.push({
-        pathname: "/screens/Seleccion_Sucursal",
-        params: { userId: data.userId },
-      });
-    } else if (data.role === "vendedor") {
-      router.push({
-        pathname: "/screens/proveedor/Pedidos_Sucursal", // base proveedor
-        params: { sucursalId: data.sucursalId },
-      });
-    } else {
-      setErrorMsg("Respuesta de servidor desconocida.");
-    }
-  } catch (e) {
-    console.error("❌ Error en el login:", e);
-    setErrorMsg("No se pudo conectar con el servidor");
-  } finally {
-    setLoading(false);
-  }
-};
+  }, [user.loggedIn]);
 
   const handleRegister = () => {
-    if (role === "cliente") {
-      router.push("/screens/Registro_Cliente");
-    } else {
-      router.push("/screens/Registro_Vendedor");
-    }
+    router.push(role === "cliente" ? "/screens/Registro_Cliente" : "/screens/Registro_Vendedor");
   };
 
   return (
-    <ImageBackground
-      source={require("../../assets/images/backgrounds/fondo4.jpg")}
-      style={styles.backgroundImage}
-    >
+    <ImageBackground source={require("../../assets/images/backgrounds/fondo4.jpg")} style={styles.backgroundImage}>
       <View style={styles.container}>
-        <Pressable
-          style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.7 }]}
-          onPress={() => router.push("/")}
-        >
+        <Pressable style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.7 }]} onPress={() => router.push("/")}>
           <Text style={styles.backText}>⬅️ Volver al inicio</Text>
         </Pressable>
 
         <Text style={styles.title}>Login</Text>
 
-        {/* SWITCH */}
-        <View
-          style={styles.switchContainer}
-          onLayout={(e) => setSwitchWidth(e.nativeEvent.layout.width)}
-        >
+        {/* Switch Cliente / Vendedor */}
+        <View style={styles.switchContainer} onLayout={(e) => setSwitchWidth(e.nativeEvent.layout.width)}>
           <Animated.View
             style={[
               styles.indicator,
-              {
-                transform: [
-                  {
-                    translateX: slideAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0, switchWidth / 2],
-                    }),
-                  },
-                ],
-              },
+              { transform: [{ translateX: slideAnim.interpolate({ inputRange: [0, 1], outputRange: [0, switchWidth / 2] }) }] },
             ]}
           />
-
           <Pressable style={styles.switchButton} onPress={() => handleSwitch("cliente")}>
-            <Text style={[styles.switchText, role === "cliente" && styles.activeText]}>
-              Cliente
-            </Text>
+            <Text style={[styles.switchText, role === "cliente" && styles.activeText]}>Cliente</Text>
           </Pressable>
-
           <Pressable style={styles.switchButton} onPress={() => handleSwitch("vendedor")}>
-            <Text style={[styles.switchText, role === "vendedor" && styles.activeText]}>
-              Vendedor
-            </Text>
+            <Text style={[styles.switchText, role === "vendedor" && styles.activeText]}>Vendedor</Text>
           </Pressable>
         </View>
 
@@ -172,7 +96,6 @@ const handleLogin = async () => {
           value={email}
           onChangeText={setEmail}
         />
-
         <TextInput
           style={styles.input}
           placeholder="Password"
@@ -181,22 +104,18 @@ const handleLogin = async () => {
           onChangeText={setPassword}
         />
 
-        {/* Mensaje de error más visual */}
-        {!!errorMsg && (
+        {!!user.error && (
           <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{errorMsg}</Text>
+            <Text style={styles.errorText}>{user.error}</Text>
           </View>
         )}
 
         <Pressable
           disabled={!canSubmit}
-          style={({ pressed }) => [
-            styles.loginButton,
-            (!canSubmit || pressed) && { opacity: 0.8 },
-          ]}
+          style={({ pressed }) => [styles.loginButton, (!canSubmit || pressed) && { opacity: 0.8 }]}
           onPress={handleLogin}
         >
-          {loading ? (
+          {user.loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
             <Text style={styles.loginText}>
@@ -208,9 +127,7 @@ const handleLogin = async () => {
         <Pressable onPress={handleRegister}>
           {({ pressed }) => (
             <Text style={[styles.linkText, pressed && { textDecorationLine: "underline" }]}>
-              {role === "cliente"
-                ? "¿No sos cliente? Registrate"
-                : "¿No sos vendedor? Registrate"}
+              {role === "cliente" ? "¿No sos cliente? Registrate" : "¿No sos vendedor? Registrate"}
             </Text>
           )}
         </Pressable>
@@ -219,6 +136,7 @@ const handleLogin = async () => {
   );
 }
 
+// --- Styles ---
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
