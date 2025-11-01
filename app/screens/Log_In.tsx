@@ -1,6 +1,6 @@
 // app/screens/Log_In.tsx
 import { useRouter } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -32,58 +32,94 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const canSubmit = useMemo(
-    () => email.trim().length > 3 && password.length > 0 && !user.loading,
-    [email, password, user.loading]
-  );
+  const canSubmit = email.trim().length > 3 && password.length > 0 && !user.loading;
 
   const handleSwitch = (selectedRole: "cliente" | "vendedor") => {
     const targetValue = selectedRole === "cliente" ? 0 : 1;
-    Animated.timing(slideAnim, { toValue: targetValue, duration: 300, useNativeDriver: false }).start(() => setRole(selectedRole));
+    Animated.timing(slideAnim, {
+      toValue: targetValue,
+      duration: 300,
+      useNativeDriver: false,
+    }).start(() => setRole(selectedRole));
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!canSubmit) return;
-    dispatch(loginUser({ email: email.trim().toLowerCase(), password, role }));
-  };
 
-  // Redireccionar al login exitoso
-  useEffect(() => {
-    if (user.loggedIn) {
-      if (user.role === "cliente" && user.userId) {
-        router.push({ pathname: "/screens/Seleccion_Sucursal", params: { userId: user.userId } });
-      } else if (user.role === "vendedor" && user.sucursalId) {
-        router.push({ pathname: "/screens/proveedor/Pedidos_Sucursal", params: { sucursalId: user.sucursalId } });
+    try {
+      const result = await dispatch(
+        loginUser({ email: email.trim().toLowerCase(), password, role })
+      ).unwrap(); // unwrap permite capturar el resultado directamente
+
+      // Redireccionar según el rol
+      if (role === "cliente" && result.userId) {
+        router.push({
+          pathname: "/screens/Seleccion_Sucursal",
+          params: { userId: result.userId },
+        });
+      } else if (role === "vendedor" && result.sucursalId) {
+        router.push({
+          pathname: "/screens/proveedor/Pedidos_Sucursal",
+          params: { sucursalId: result.sucursalId },
+        });
       }
+    } catch (err: any) {
+      console.log("Login fallido:", err.message || err);
+      // Aquí el estado de Redux ya tiene user.error
     }
-  }, [user.loggedIn]);
+  };
 
   const handleRegister = () => {
-    router.push(role === "cliente" ? "/screens/Registro_Cliente" : "/screens/Registro_Vendedor");
+    router.push(
+      role === "cliente"
+        ? "/screens/Registro_Cliente"
+        : "/screens/Registro_Vendedor"
+    );
   };
 
   return (
-    <ImageBackground source={require("../../assets/images/backgrounds/fondo4.jpg")} style={styles.backgroundImage}>
+    <ImageBackground
+      source={require("../../assets/images/backgrounds/fondo4.jpg")}
+      style={styles.backgroundImage}
+    >
       <View style={styles.container}>
-        <Pressable style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.7 }]} onPress={() => router.push("/")}>
+        <Pressable
+          style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.7 }]}
+          onPress={() => router.push("/")}
+        >
           <Text style={styles.backText}>⬅️ Volver al inicio</Text>
         </Pressable>
 
         <Text style={styles.title}>Login</Text>
 
-        {/* Switch Cliente / Vendedor */}
-        <View style={styles.switchContainer} onLayout={(e) => setSwitchWidth(e.nativeEvent.layout.width)}>
+        <View
+          style={styles.switchContainer}
+          onLayout={(e) => setSwitchWidth(e.nativeEvent.layout.width)}
+        >
           <Animated.View
             style={[
               styles.indicator,
-              { transform: [{ translateX: slideAnim.interpolate({ inputRange: [0, 1], outputRange: [0, switchWidth / 2] }) }] },
+              {
+                transform: [
+                  {
+                    translateX: slideAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, switchWidth / 2],
+                    }),
+                  },
+                ],
+              },
             ]}
           />
           <Pressable style={styles.switchButton} onPress={() => handleSwitch("cliente")}>
-            <Text style={[styles.switchText, role === "cliente" && styles.activeText]}>Cliente</Text>
+            <Text style={[styles.switchText, role === "cliente" && styles.activeText]}>
+              Cliente
+            </Text>
           </Pressable>
           <Pressable style={styles.switchButton} onPress={() => handleSwitch("vendedor")}>
-            <Text style={[styles.switchText, role === "vendedor" && styles.activeText]}>Vendedor</Text>
+            <Text style={[styles.switchText, role === "vendedor" && styles.activeText]}>
+              Vendedor
+            </Text>
           </Pressable>
         </View>
 
@@ -111,7 +147,6 @@ export default function LoginScreen() {
         )}
 
         <Pressable
-          disabled={!canSubmit}
           style={({ pressed }) => [styles.loginButton, (!canSubmit || pressed) && { opacity: 0.8 }]}
           onPress={handleLogin}
         >
@@ -127,7 +162,9 @@ export default function LoginScreen() {
         <Pressable onPress={handleRegister}>
           {({ pressed }) => (
             <Text style={[styles.linkText, pressed && { textDecorationLine: "underline" }]}>
-              {role === "cliente" ? "¿No sos cliente? Registrate" : "¿No sos vendedor? Registrate"}
+              {role === "cliente"
+                ? "¿No sos cliente? Registrate"
+                : "¿No sos vendedor? Registrate"}
             </Text>
           )}
         </Pressable>
