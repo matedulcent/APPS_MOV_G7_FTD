@@ -1,24 +1,13 @@
+// app/_layout.tsx
 import { Stack } from "expo-router";
-import { StyleSheet, View } from "react-native";
+import React from "react";
 import { Provider } from "react-redux";
-import { store } from "../store/store"; // <-- tu store
+import store from "../redux/store"; // <- default import
 
 export default function Layout() {
   return (
     <Provider store={store}>
-      <View style={styles.container}>
-        {/* Resto de la navegación */}
-        <Stack screenOptions={{ headerShown: false }} />
-
-        {/* PedidoCard siempre visible abajo */}
-        {/* <PedidoCard /> */}
-      </View>
+      <Stack />
     </Provider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});

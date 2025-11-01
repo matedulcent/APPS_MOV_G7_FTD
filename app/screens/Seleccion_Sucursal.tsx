@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -6,39 +6,28 @@ import {
   FlatList,
   Image,
   ImageBackground,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { useSelector } from "react-redux";
 import ScreenHeader from "../../components/ScreenHeader";
+import type { RootState } from "../../redux/store";
 import { BASE_URL } from "../services/apiConfig";
 
 const { width, height } = Dimensions.get("window");
 const isSmallScreen = width < 360;
-const isWeb = Platform.OS === "web";
 
-type UISucursal = {
-  id: string;
-  nombre: string;
-  direccion: string;
-  imagen: string;
-};
-
-type BackendSucursal = {
-  id: string;
-  nombre?: string | null;
-  domicilio?: string | null;
-  urlImagen?: string | null;
-};
-
+type UISucursal = { id: string; nombre: string; direccion: string; imagen: string };
+type BackendSucursal = { id: string; nombre?: string | null; domicilio?: string | null; urlImagen?: string | null };
 const PLACEHOLDER_IMG = "https://placehold.co/160x160?text=Helados";
 
 export default function SeleccionSucursalScreen() {
   const router = useRouter();
-  const { userId } = useLocalSearchParams<{ userId: string }>();
-  const [sucursalSeleccionada, setSucursalSeleccionada] = useState<string | null>(null);
+  const user = useSelector((state: RootState) => state.user);
+
+  const [sucursalSeleccionada, setSucursalSeleccionada] = useState<string | null>(user.sucursalId ?? null);
   const [sucursales, setSucursales] = useState<UISucursal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -62,7 +51,7 @@ export default function SeleccionSucursalScreen() {
         }));
 
         if (!cancelado) setSucursales(ui);
-      } catch (e: any) {
+      } catch {
         if (!cancelado) setError("No se pudieron cargar las sucursales. Intenta nuevamente.");
       } finally {
         if (!cancelado) setLoading(false);
@@ -70,26 +59,23 @@ export default function SeleccionSucursalScreen() {
     }
 
     fetchSucursales();
-    return () => {
-      cancelado = true;
-    };
+    return () => { cancelado = true; };
   }, []);
 
   const handleSeleccion = (sucursal: UISucursal) => {
     setSucursalSeleccionada(sucursal.id);
+
+    // Redirige pasando solo el ID de la sucursal, el resto ya viene del store
     router.push({
       pathname: "/screens/Categoria_Envase",
-      params: { sucursalId: sucursal.id, userId },
+      params: { sucursalId: sucursal.id },
     });
   };
 
   const renderSucursal = ({ item }: { item: UISucursal }) => {
     const isSelected = item.id === sucursalSeleccionada;
     return (
-      <Pressable
-        style={[styles.card, isSelected && styles.cardSelected]}
-        onPress={() => handleSeleccion(item)}
-      >
+      <Pressable style={[styles.card, isSelected && styles.cardSelected]} onPress={() => handleSeleccion(item)}>
         <Image source={{ uri: item.imagen }} style={styles.imagen} />
         <View style={styles.textContainer}>
           <Text style={styles.nombre}>{item.nombre}</Text>
@@ -100,13 +86,8 @@ export default function SeleccionSucursalScreen() {
   };
 
   return (
-    <ImageBackground
-      source={require("../../assets/images/backgrounds/fondo3.jpg")}
-      style={styles.backgroundImage}
-      resizeMode={isSmallScreen ? "stretch" : "cover"}
-    >
+    <ImageBackground source={require("../../assets/images/backgrounds/fondo3.jpg")} style={styles.backgroundImage} resizeMode={isSmallScreen ? "stretch" : "cover"}>
       <View style={styles.overlay}>
-        {/* 🔹 Header alineado igual que en Categoria_Gustos */}
         <ScreenHeader title="Seleccione su sucursal" />
 
         {loading && (
@@ -116,11 +97,7 @@ export default function SeleccionSucursalScreen() {
           </View>
         )}
 
-        {!loading && error && (
-          <View style={{ paddingVertical: height * 0.02 }}>
-            <Text style={{ color: "red", textAlign: "center" }}>{error}</Text>
-          </View>
-        )}
+        {!loading && error && <Text style={{ color: "red", textAlign: "center", marginVertical: 20 }}>{error}</Text>}
 
         {!loading && !error && (
           <FlatList
@@ -137,17 +114,8 @@ export default function SeleccionSucursalScreen() {
 
 const styles = StyleSheet.create({
   backgroundImage: { flex: 1, width: "100%", height: "100%" },
-  overlay: { flex: 1, padding: 20, backgroundColor: "rgba(255,255,255,0.6)" }, // padding igual que Categoria_Gustos
-  card: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    borderRadius: 10,
-    backgroundColor: "#f5f5f5",
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#ddd",
-  },
+  overlay: { flex: 1, padding: 20, backgroundColor: "rgba(255,255,255,0.6)" },
+  card: { flexDirection: "row", alignItems: "center", padding: 12, borderRadius: 10, backgroundColor: "#f5f5f5", marginBottom: 12, borderWidth: 1, borderColor: "#ddd" },
   cardSelected: { borderColor: "#6200ee", backgroundColor: "#e0d7ff" },
   imagen: { width: 70, height: 70, borderRadius: 10, marginRight: 12 },
   textContainer: { flex: 1 },

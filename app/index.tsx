@@ -9,7 +9,7 @@ import {
   View,
 } from "react-native";
 import { useSelector } from "react-redux";
-import { RootState } from "../store/store";
+import { RootState } from "../redux/store";
 
 const { width, height } = Dimensions.get("window");
 const isSmallScreen = width < 400 || height < 700;
