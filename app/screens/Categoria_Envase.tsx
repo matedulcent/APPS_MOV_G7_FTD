@@ -24,7 +24,8 @@ const isSmallScreen = width < 360;
 type Envase = { id: string; tipoEnvase: string; maxCantSabores: number };
 type Grupo = "Cucurucho" | "Kilo" | "Vaso" | "Otros";
 
-function labelForEnvase(e: Envase): string {
+function labelForEnvase(e?: Envase): string {
+  if (!e) return "Envase desconocido";
   const [kindRaw, restRaw] = e.tipoEnvase.split("_");
   const kind = (kindRaw ?? "").toLowerCase();
   const rest = restRaw ?? "";
@@ -76,14 +77,23 @@ export default function Categoria_Envase() {
   }, [sucursalId]);
 
   const grupos = useMemo(() => {
-    const g: Record<Grupo, (Envase & { display: string })[]> = { Cucurucho: [], Kilo: [], Vaso: [], Otros: [] };
-    for (const e of envasesOfrecidos) g[grupoDe(e)].push({ ...e, display: labelForEnvase(e) });
-    (Object.keys(g) as Grupo[]).forEach(k => g[k].sort((a, b) => a.display.localeCompare(b.display)));
+    const g: Record<Grupo, (Envase & { display: string })[]> = {
+      Cucurucho: [],
+      Kilo: [],
+      Vaso: [],
+      Otros: [],
+    };
+    for (const e of envasesOfrecidos)
+      g[grupoDe(e)].push({ ...e, display: labelForEnvase(e) });
+    (Object.keys(g) as Grupo[]).forEach((k) =>
+      g[k].sort((a, b) => a.display.localeCompare(b.display))
+    );
     return g;
   }, [envasesOfrecidos]);
 
   const handleToggle = (tipoEnvase: string) => dispatch(toggleEnvase(tipoEnvase));
-  const handleCantidad = (tipoEnvase: string, delta: number) => dispatch(updateCantidad({ opcion: tipoEnvase, delta }));
+  const handleCantidad = (tipoEnvase: string, delta: number) =>
+    dispatch(updateCantidad({ opcion: tipoEnvase, delta }));
 
   const handleConfirm = () => {
     if (selecciones.length === 0) {
@@ -91,11 +101,22 @@ export default function Categoria_Envase() {
       return;
     }
 
+    // Filtra los envases válidos para evitar undefined
+    const envasesValidos = selecciones.filter((sel) =>
+      envasesOfrecidos.some((e) => e.tipoEnvase === sel.opcion)
+    );
+
+    if (envasesValidos.length === 0) {
+      Alert.alert("Atención", "El envase seleccionado ya no existe.");
+      return;
+    }
+
     const pedidoFinal: Record<string, number> = {};
-    for (const { opcion, cantidad } of selecciones) {
-      const env = envasesOfrecidos.find(e => e.tipoEnvase === opcion);
+    for (const { opcion, cantidad } of envasesValidos) {
+      const env = envasesOfrecidos.find((e) => e.tipoEnvase === opcion);
       const max = env?.maxCantSabores ?? 1;
-      for (let i = 1; i <= cantidad; i++) pedidoFinal[`${labelForEnvase(env!)} (#${i})`] = max;
+      for (let i = 1; i <= cantidad; i++)
+        pedidoFinal[`${labelForEnvase(env)} (#${i})`] = max;
     }
 
     router.push({
@@ -106,21 +127,21 @@ export default function Categoria_Envase() {
 
   if (!sucursalId)
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+      <View style={styles.centered}>
         <Text>Selecciona una sucursal primero...</Text>
       </View>
     );
 
   if (loading)
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+      <View style={styles.centered}>
         <ActivityIndicator size="large" color="#f4679f" />
         <Text style={{ marginTop: 10 }}>Cargando envases...</Text>
       </View>
     );
 
   const ordenGrupos: Grupo[] = ["Cucurucho", "Kilo", "Vaso", "Otros"];
-  const dataGrupos = ordenGrupos.filter(g => grupos[g].length > 0);
+  const dataGrupos = ordenGrupos.filter((g) => grupos[g].length > 0);
 
   return (
     <ImageBackground
@@ -133,14 +154,16 @@ export default function Categoria_Envase() {
 
         <FlatList
           data={dataGrupos}
-          keyExtractor={g => g}
+          keyExtractor={(g) => g}
           contentContainerStyle={{ paddingBottom: height * 0.15 }}
           renderItem={({ item: grupo }) => {
             const envs = grupos[grupo];
-            const opciones = envs.map(e => e.display);
+            const opciones = envs.map((e) => e.display);
             const seleccionadosDisplay = selecciones
-              .filter(s => envs.some(e => e.tipoEnvase === s.opcion))
-              .map(s => envs.find(e => e.tipoEnvase === s.opcion)!.display);
+              .filter((s) => envs.some((e) => e.tipoEnvase === s.opcion))
+              .map(
+                (s) => envs.find((e) => e.tipoEnvase === s.opcion)?.display ?? ""
+              );
 
             return (
               <View style={{ marginBottom: 12 }}>
@@ -148,26 +171,39 @@ export default function Categoria_Envase() {
                   label={grupo}
                   options={opciones}
                   selected={seleccionadosDisplay}
-                  onSelect={displayValue => {
-                    const env = envs.find(e => e.display === displayValue);
+                  onSelect={(displayValue) => {
+                    const env = envs.find((e) => e.display === displayValue);
                     if (env) handleToggle(env.tipoEnvase);
                   }}
-                  icon={grupo === "Kilo" ? "scale" : grupo === "Vaso" ? "local-drink" : "icecream"}
+                  icon={
+                    grupo === "Kilo"
+                      ? "scale"
+                      : grupo === "Vaso"
+                        ? "local-drink"
+                        : "icecream"
+                  }
                 />
 
                 {selecciones
-                  .filter(s => envs.some(e => e.tipoEnvase === s.opcion))
+                  .filter((s) => envs.some((e) => e.tipoEnvase === s.opcion))
                   .map(({ opcion, cantidad }) => {
-                    const env = envs.find(e => e.tipoEnvase === opcion)!;
+                    const env = envs.find((e) => e.tipoEnvase === opcion);
+                    if (!env) return null; // Evita crash si no existe
                     return (
                       <View key={opcion} style={styles.itemRow}>
                         <Text style={styles.itemText}>{env.display}</Text>
                         <View style={styles.counter}>
-                          <Pressable style={styles.counterButton} onPress={() => handleCantidad(opcion, -1)}>
+                          <Pressable
+                            style={styles.counterButton}
+                            onPress={() => handleCantidad(opcion, -1)}
+                          >
                             <Text style={styles.counterText}>-</Text>
                           </Pressable>
                           <Text style={styles.counterValue}>{cantidad}</Text>
-                          <Pressable style={styles.counterButton} onPress={() => handleCantidad(opcion, 1)}>
+                          <Pressable
+                            style={styles.counterButton}
+                            onPress={() => handleCantidad(opcion, 1)}
+                          >
                             <Text style={styles.counterText}>+</Text>
                           </Pressable>
                         </View>
@@ -180,8 +216,13 @@ export default function Categoria_Envase() {
         />
 
         <View style={[styles.footer, { bottom: height * 0.13 }]}>
-          <Pressable style={[styles.button, { backgroundColor: "#f4679fff" }]} onPress={handleConfirm}>
-            <Text style={[styles.buttonText, { fontSize: width * 0.045 }]}>Siguiente</Text>
+          <Pressable
+            style={[styles.button, { backgroundColor: "#f4679fff" }]}
+            onPress={handleConfirm}
+          >
+            <Text style={[styles.buttonText, { fontSize: width * 0.045 }]}>
+              Siguiente
+            </Text>
           </Pressable>
         </View>
       </View>
@@ -191,14 +232,49 @@ export default function Categoria_Envase() {
 
 const styles = StyleSheet.create({
   backgroundImage: { flex: 1, width: "100%", height: "100%" },
-  overlay: { flex: 1, padding: 20, backgroundColor: "rgba(255,255,255,0.6)" },
-  itemRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 8, padding: 10, borderWidth: 1, borderColor: "#ddd", borderRadius: 8, backgroundColor: "#fff" },
+  overlay: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: "rgba(255,255,255,0.6)",
+  },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  itemRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 8,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    backgroundColor: "#fff",
+  },
   itemText: { fontSize: width * 0.045 },
   counter: { flexDirection: "row", alignItems: "center" },
-  counterButton: { backgroundColor: "#eee", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 4, marginHorizontal: 5 },
+  counterButton: {
+    backgroundColor: "#eee",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 4,
+    marginHorizontal: 5,
+  },
   counterText: { fontSize: 18, fontWeight: "bold" },
-  counterValue: { fontSize: 16, fontWeight: "bold", minWidth: 30, textAlign: "center" },
+  counterValue: {
+    fontSize: 16,
+    fontWeight: "bold",
+    minWidth: 30,
+    textAlign: "center",
+  },
   footer: { position: "absolute", left: 20, right: 20 },
-  button: { backgroundColor: "#6200ee", paddingVertical: 14, borderRadius: 8, alignItems: "center" },
+  button: {
+    backgroundColor: "#6200ee",
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: "center",
+  },
   buttonText: { color: "#fff", fontWeight: "bold" },
 });
