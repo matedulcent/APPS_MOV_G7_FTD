@@ -100,10 +100,14 @@ export default function DetallePedidoScreen() {
   const usuarioId = useSelector((state: RootState) => state.user.userId);
   const sucursalId = useSelector((state: RootState) => state.user.sucursalId);
 
+  // ✅ Filtramos envases vacíos
   const pedidoObj: Record<string, string[]> = useMemo(() => {
     const res: Record<string, string[]> = {};
     envases.forEach((e) => {
-      res[e.opcion] = selecciones[e.opcion] ?? [];
+      const gustos = selecciones[e.opcion] ?? [];
+      if (gustos.length > 0) {
+        res[e.opcion] = gustos;
+      }
     });
     return res;
   }, [envases, selecciones]);
@@ -183,15 +187,11 @@ export default function DetallePedidoScreen() {
             {Object.entries(pedidoObj).map(([envase, gustos]) => (
               <View key={envase} style={{ marginBottom: height * 0.015 }}>
                 <Text style={styles.cucuruchoTitle}>{envase}</Text>
-                {gustos.length > 0 ? (
-                  gustos.map((gusto, i) => (
-                    <Text key={i} style={styles.item}>
-                      🍦 {gusto}
-                    </Text>
-                  ))
-                ) : (
-                  <Text style={styles.item}>— No se seleccionaron sabores —</Text>
-                )}
+                {gustos.map((gusto, i) => (
+                  <Text key={i} style={styles.item}>
+                    🍦 {gusto}
+                  </Text>
+                ))}
               </View>
             ))}
           </ScrollView>

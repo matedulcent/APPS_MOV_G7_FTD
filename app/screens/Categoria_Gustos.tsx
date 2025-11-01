@@ -37,8 +37,7 @@ const grupoDeSabor = (nombre: string): Grupo => {
     /(frutilla|fresa|limon|naranja|frambuesa|mora|maracuya|anan|piña|mango|durazno|kiwi|uva|manzana|pera|cereza|sandia|melon|banana|platano)/.test(
       n
     )
-  )
-    return "Frutales";
+  ) return "Frutales";
   if (/(crema|americana|vainilla|tramontana|sambayon|flan|yogur|yogurt|ricota|panna)/.test(n))
     return "Cremas";
   return "Otros";
@@ -57,12 +56,7 @@ const SearchBarUX = ({
 }) => {
   const [focused, setFocused] = useState(false);
   return (
-    <View
-      style={[
-        styles.searchContainer,
-        { borderColor: focused ? "#fd5f81ff" : "#ccc" },
-      ]}
-    >
+    <View style={[styles.searchContainer, { borderColor: focused ? "#fd5f81ff" : "#ccc" }]}>
       <Ionicons name="search" size={20} color="#999" style={{ marginRight: 8 }} />
       <TextInput
         style={styles.searchInput}
@@ -92,7 +86,6 @@ export default function Categoria_Gustos() {
   const [searchText, setSearchText] = useState("");
   const [showSearch, setShowSearch] = useState(false);
 
-  // Parseo seguro de pedido recibido por params
   const pedidoParsed: Record<string, number> = useMemo(() => {
     try {
       return pedido ? JSON.parse(decodeURIComponent(pedido)) : {};
@@ -102,16 +95,17 @@ export default function Categoria_Gustos() {
     }
   }, [pedido]);
 
-  // Inicializar envases en Redux con array vacío si aún no existen
+  // Inicializar envases y selecciones
   useEffect(() => {
     Object.keys(pedidoParsed).forEach(envase => {
       if (!seleccionesRedux[envase]) {
         dispatch(setSeleccion({ envaseId: envase, gustos: [] }));
-        dispatch(toggleEnvase(envase)); // 🔹 asegurar que también quede en el array de envases
+        dispatch(toggleEnvase(envase));
       }
     });
   }, [pedidoParsed]);
 
+  // Cargar sabores desde API
   useEffect(() => {
     if (sucursalId) dispatch(fetchSabores(sucursalId));
   }, [sucursalId]);
@@ -130,9 +124,7 @@ export default function Categoria_Gustos() {
       if (q && !normalize(label).includes(q)) continue;
       res[grupoDeSabor(label)].push({ ...s, label });
     }
-    (Object.keys(res) as Grupo[]).forEach(g =>
-      res[g].sort((a, b) => a.label.localeCompare(b.label))
-    );
+    (Object.keys(res) as Grupo[]).forEach(g => res[g].sort((a, b) => a.label.localeCompare(b.label)));
     return res;
   }, [sabores, searchText]);
 
@@ -141,27 +133,28 @@ export default function Categoria_Gustos() {
   const maxSabores = pedidoParsed[envaseActual] ?? 0;
   const seleccionadosActual = seleccionesRedux[envaseActual] ?? [];
 
-  // 🔹 Toggle de gustos directamente en Redux
   const toggleSeleccion = (nombreGusto: string) => {
-    const existe = seleccionadosActual.includes(nombreGusto);
-    let nueva = existe
-      ? seleccionadosActual.filter(x => x !== nombreGusto)
-      : [...seleccionadosActual, nombreGusto];
+    let nueva: string[];
+    if (seleccionadosActual.includes(nombreGusto)) {
+      nueva = seleccionadosActual.filter(x => x !== nombreGusto);
+    } else {
+      nueva = [...seleccionadosActual, nombreGusto];
+    }
+
     if (nueva.length > maxSabores) nueva = nueva.slice(0, maxSabores);
 
     dispatch(setSeleccion({ envaseId: envaseActual, gustos: nueva }));
 
-    // 🔹 Asegurar que el envase esté en el array de envases
-    dispatch(toggleEnvase(envaseActual));
+    // Mantener envase en array si no estaba
+    if (!envases.includes(envaseActual)) dispatch(toggleEnvase(envaseActual));
   };
 
   const handleConfirm = () => {
-    const total = envases.length;
-    if (currentIndex < total - 1) {
+    if (currentIndex < envases.length - 1) {
       setCurrentIndex(i => i + 1);
-      return;
+    } else {
+      router.push("/screens/Detalle_Pedido");
     }
-    router.push("/screens/Detalle_Pedido");
   };
 
   if (loading)
@@ -179,13 +172,7 @@ export default function Categoria_Gustos() {
       </View>
     );
 
-  const ordenGrupos: Grupo[] = [
-    "Frutales",
-    "Cremas",
-    "Chocolates",
-    "Dulce de leche",
-    "Otros",
-  ];
+  const ordenGrupos: Grupo[] = ["Frutales", "Cremas", "Chocolates", "Dulce de leche", "Otros"];
   const dataGrupos = ordenGrupos.filter(g => grupos[g].length > 0);
 
   return (
@@ -197,28 +184,17 @@ export default function Categoria_Gustos() {
       <View style={styles.overlay}>
         <ScreenHeader
           title={`Gustos para ${envaseActual}`}
-          showSearch={true}
+          showSearch
           onToggleSearch={() => setShowSearch(prev => !prev)}
         />
 
-        {showSearch && (
-          <SearchBarUX
-            value={searchText}
-            onChangeText={setSearchText}
-            placeholder="Buscar gusto..."
-          />
-        )}
+        {showSearch && <SearchBarUX value={searchText} onChangeText={setSearchText} placeholder="Buscar gusto..." />}
 
         <View style={styles.selectionContainer}>
           <Text style={styles.selectionLabel}>Gustos seleccionados</Text>
           <View style={styles.progressBarBackground}>
             <View
-              style={[
-                styles.progressBarFill,
-                {
-                  width: `${(seleccionadosActual.length / maxSabores) * 100}%`,
-                },
-              ]}
+              style={[styles.progressBarFill, { width: `${(seleccionadosActual.length / maxSabores) * 100}%` }]}
             />
           </View>
           <Text style={styles.selectionCount}>
@@ -233,9 +209,7 @@ export default function Categoria_Gustos() {
           renderItem={({ item: grupo }) => {
             const items = grupos[grupo];
             const opciones = items.map(x => x.label);
-            const seleccionadasGrupo = seleccionadosActual.filter(s =>
-              opciones.includes(s)
-            );
+            const seleccionadasGrupo = seleccionadosActual.filter(s => opciones.includes(s));
 
             return (
               <View style={{ marginBottom: 12 }}>
@@ -261,7 +235,7 @@ export default function Categoria_Gustos() {
 
         <PedidoCardBottom
           selecciones={seleccionesRedux}
-          visible={true}
+          visible
           onConfirm={handleConfirm}
           currentIndex={currentIndex}
           totalVolumenes={envases.length}
@@ -275,51 +249,11 @@ const styles = StyleSheet.create({
   backgroundImage: { flex: 1, width: "100%", height: "100%" },
   overlay: { flex: 1, padding: 20, backgroundColor: "rgba(255,255,255,0.6)" },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  selectionContainer: {
-    marginVertical: 12,
-    alignItems: "center",
-  },
-  selectionLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 4,
-    color: "#444",
-  },
-  progressBarBackground: {
-    width: "80%",
-    height: 12,
-    backgroundColor: "#e0e0e0",
-    borderRadius: 6,
-    overflow: "hidden",
-  },
-  progressBarFill: {
-    height: "100%",
-    backgroundColor: "#fd5f81ff",
-    borderRadius: 6,
-  },
-  selectionCount: {
-    marginTop: 4,
-    fontSize: 12,
-    color: "#555",
-  },
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 25,
-    borderWidth: 1,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: "#333",
-  },
+  selectionContainer: { marginVertical: 12, alignItems: "center" },
+  selectionLabel: { fontSize: 14, fontWeight: "600", marginBottom: 4, color: "#444" },
+  progressBarBackground: { width: "80%", height: 12, backgroundColor: "#e0e0e0", borderRadius: 6, overflow: "hidden" },
+  progressBarFill: { height: "100%", backgroundColor: "#fd5f81ff", borderRadius: 6 },
+  selectionCount: { marginTop: 4, fontSize: 12, color: "#555" },
+  searchContainer: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 25, borderWidth: 1, marginBottom: 12, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 2, elevation: 2 },
+  searchInput: { flex: 1, fontSize: 14, color: "#333" },
 });

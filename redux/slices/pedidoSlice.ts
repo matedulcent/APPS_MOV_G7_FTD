@@ -25,10 +25,8 @@ const pedidoSlice = createSlice({
             const opcion = action.payload;
             const existente = state.envases.find((e) => e.opcion === opcion);
             if (existente) {
-                // si ya estaba, lo quita
                 state.envases = state.envases.filter((e) => e.opcion !== opcion);
             } else {
-                // si no estaba, lo agrega con cantidad 1
                 state.envases.push({ opcion, cantidad: 1 });
             }
         },
@@ -39,7 +37,6 @@ const pedidoSlice = createSlice({
             const env = state.envases.find((e) => e.opcion === opcion);
             if (env) {
                 env.cantidad = Math.max(0, env.cantidad + delta);
-                // eliminar si llega a 0
                 if (env.cantidad === 0) {
                     state.envases = state.envases.filter((e) => e.opcion !== opcion);
                 }
@@ -50,6 +47,11 @@ const pedidoSlice = createSlice({
         setSeleccion(state, action: PayloadAction<{ envaseId: string; gustos: string[] }>) {
             const { envaseId, gustos } = action.payload;
             state.selecciones[envaseId] = gustos;
+
+            // 🔹 Asegurar que el envase esté en la lista de envases si no existía
+            if (!state.envases.find((e) => e.opcion === envaseId)) {
+                state.envases.push({ opcion: envaseId, cantidad: 1 });
+            }
         },
 
         // 🔹 Limpiar todo el pedido
