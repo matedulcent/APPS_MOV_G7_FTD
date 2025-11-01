@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
     width: "90%",
     backgroundColor: "#fff8e1",
     borderRadius: 16,
-    padding: isWeb ? 16 : width * 0.04,
+    padding: isWeb ? 20 : width * 0.05,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
@@ -267,23 +267,24 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   ticketNotch: {
-    width: isWeb ? 40 : width * 0.1,
+    width: isWeb ? 40 : width * 0.12,
     height: isWeb ? 5 : height * 0.008,
     backgroundColor: "#ffd54f",
     borderRadius: 3,
     alignSelf: "center",
-    marginBottom: height * 0.1,
+    marginBottom: height * 0.02,
   },
   title: {
     fontSize: isWeb ? 22 : width * 0.055,
     fontWeight: "bold",
     textAlign: "center",
-    marginBottom: height * 0.015,
+    marginBottom: height * 0.02, // más cerca del contenido del ticket
   },
   cucuruchoTitle: {
     fontSize: isWeb ? 18 : width * 0.045,
     fontWeight: "bold",
     marginBottom: height * 0.005,
+    textAlign: "center", // opcional: centrado por cucurucho
   },
   content: {
     flexGrow: 1,
@@ -297,6 +298,7 @@ const styles = StyleSheet.create({
     paddingVertical: isWeb ? 12 : height * 0.02,
     borderRadius: 8,
     alignItems: "center",
+    marginTop: 10,
   },
   buttonText: {
     color: "#fff",
