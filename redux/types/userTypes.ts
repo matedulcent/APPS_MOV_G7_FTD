@@ -8,6 +8,12 @@ export interface UserState {
     error?: string;
     sucursalId?: string | null;
 }
+export interface LoginCredentials {
+    email: string;
+    password: string;
+    role: "cliente" | "vendedor";
+}
+
 
 // Accion types
 export const LOG_USER_PENDING = "LOG_USER_PENDING";

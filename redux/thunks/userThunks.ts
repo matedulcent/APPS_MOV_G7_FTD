@@ -1,23 +1,20 @@
 import { BASE_URL } from "../../app/services/apiConfig";
 import { logUserFailure, logUserPending, logUserSuccess } from "../actions/userActions";
 import { AppDispatch } from "../store";
-import { UserState } from "../types/userTypes";
-
-interface LoginCredentials {
-    email: string;
-    password: string;
-    role: "cliente" | "vendedor";
-}
+import { LoginCredentials, UserState } from "../types/userTypes";
 
 export const loginUser = (credentials: LoginCredentials) => async (dispatch: AppDispatch) => {
     dispatch(logUserPending());
+
     try {
         const res = await fetch(`${BASE_URL}/api/usuarios/login`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(credentials),
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                email: credentials.email.trim().toLowerCase(),
+                password: credentials.password,
+                role: credentials.role, // importante: cliente o vendedor
+            }),
         });
 
         if (!res.ok) {
