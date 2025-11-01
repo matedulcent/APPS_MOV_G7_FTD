@@ -1,5 +1,6 @@
+// app/screens/Detalle_Pedido.tsx
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -12,9 +13,8 @@ import {
   Text,
   View,
 } from "react-native";
-import { useSelector } from "react-redux";
-import { RootState } from "../../redux/store";
-import { BASE_URL } from "../services/apiConfig";
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch, RootState } from "../../redux/store";
 
 const { width, height } = Dimensions.get("window");
 const isSmallScreen = width < 360;
@@ -22,12 +22,13 @@ const isWeb = Platform.OS === "web";
 
 type PedidoItem = { envaseId: string; saborId: string };
 
+// Función para crear la orden en el backend
 async function crearOrden(payload: {
   usuarioId: string;
   sucursalId: string;
   items: PedidoItem[];
 }) {
-  const r = await fetch(`${BASE_URL}/api/ordenes`, {
+  const r = await fetch(`https://tu-backend.com/api/ordenes`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -39,17 +40,18 @@ async function crearOrden(payload: {
   return (await r.json()) as { ok: boolean; ordenId: string; data?: any };
 }
 
+// Mapeo de envases
 function mapEnvaseKeyToId(key: string): string {
   const [categoria] = key.split(" ");
-  if (categoria === "Cucuruchos" || categoria === "Cucurucho") {
+  if (categoria.toLowerCase().includes("cucurucho")) {
     const bolas = parseInt(key.match(/\((\d)\s+bolas?\)/)?.[1] ?? "1", 10);
     return { 1: "B1", 2: "B2", 3: "B3", 4: "B4" }[bolas] ?? "B1";
   }
-  if (categoria === "Vasos" || categoria === "Vaso") {
+  if (categoria.toLowerCase().includes("vaso")) {
     const bolas = parseInt(key.match(/\((\d)\s+bolas?\)/)?.[1] ?? "1", 10);
     return { 1: "B8", 2: "B9", 3: "B10", 4: "B11" }[bolas] ?? "B8";
   }
-  if (categoria === "Kilos" || categoria === "Kilo") {
+  if (categoria.toLowerCase().includes("kilo")) {
     const opt = key.match(/\(([^)]+)\)/)?.[1]?.trim();
     if (opt === "1/4 Kg") return "B6";
     if (opt === "1/2 Kg") return "B5";
@@ -58,6 +60,7 @@ function mapEnvaseKeyToId(key: string): string {
   return "B1";
 }
 
+// Mapeo de nombres de sabores
 function mapSaborNameToId(name: string): string | null {
   const n = name.trim().toLowerCase();
   const alias: Record<string, string> = {
@@ -88,17 +91,28 @@ function mapSaborNameToId(name: string): string | null {
 
 export default function DetallePedidoScreen() {
   const router = useRouter();
+  const dispatch = useDispatch<AppDispatch>();
   const [enviando, setEnviando] = useState(false);
 
-  // Tomamos datos de Redux
-  const userId = useSelector((state: RootState) => state.user.userId);
+  // ✅ Tomamos datos desde Redux
+  const selecciones = useSelector((state: RootState) => state.pedido.selecciones);
+  const envases = useSelector((state: RootState) => state.pedido.envases);
+  const usuarioId = useSelector((state: RootState) => state.user.userId);
   const sucursalId = useSelector((state: RootState) => state.user.sucursalId);
-  const pedidoObj = useSelector((state: RootState) => state.pedido.selecciones); // asumimos que items es { [envase: string]: string[] }
 
+  const pedidoObj: Record<string, string[]> = useMemo(() => {
+    const res: Record<string, string[]> = {};
+    envases.forEach((e) => {
+      res[e.opcion] = selecciones[e.opcion] ?? [];
+    });
+    return res;
+  }, [envases, selecciones]);
+
+  // Función para confirmar pedido
   const handleConfirmar = async () => {
     try {
-      if (!userId || !sucursalId) {
-        Alert.alert("Faltan datos", "No hay usuario o sucursal seleccionada.");
+      if (!usuarioId || !sucursalId) {
+        Alert.alert("Error", "No se pudo identificar al usuario o la sucursal.");
         return;
       }
 
@@ -118,7 +132,10 @@ export default function DetallePedidoScreen() {
       }
 
       if (saboresSinMapeo.length) {
-        Alert.alert("Sabores no reconocidos", `No se pudieron mapear: ${saboresSinMapeo.join(", ")}`);
+        Alert.alert(
+          "Sabores no reconocidos",
+          `No se pudieron mapear: ${saboresSinMapeo.join(", ")}`
+        );
         return;
       }
 
@@ -130,14 +147,14 @@ export default function DetallePedidoScreen() {
       setEnviando(true);
 
       const res = await crearOrden({
-        usuarioId: userId,
-        sucursalId: sucursalId!,
+        usuarioId,
+        sucursalId,
         items,
       });
 
       router.push({
         pathname: "/screens/Numero_Orden",
-        params: { userId, sucursalId, ordenId: res.ordenId },
+        params: { userId: usuarioId, sucursalId, ordenId: res.ordenId },
       });
     } catch (e: any) {
       console.error(e);
@@ -166,11 +183,15 @@ export default function DetallePedidoScreen() {
             {Object.entries(pedidoObj).map(([envase, gustos]) => (
               <View key={envase} style={{ marginBottom: height * 0.015 }}>
                 <Text style={styles.cucuruchoTitle}>{envase}</Text>
-                {gustos.map((gusto, i) => (
-                  <Text key={i} style={styles.item}>
-                    🍦 {gusto}
-                  </Text>
-                ))}
+                {gustos.length > 0 ? (
+                  gustos.map((gusto, i) => (
+                    <Text key={i} style={styles.item}>
+                      🍦 {gusto}
+                    </Text>
+                  ))
+                ) : (
+                  <Text style={styles.item}>— No se seleccionaron sabores —</Text>
+                )}
               </View>
             ))}
           </ScrollView>
@@ -235,10 +256,29 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginBottom: height * 0.02,
   },
-  title: { fontSize: isWeb ? 22 : width * 0.055, fontWeight: "bold", textAlign: "center", marginBottom: height * 0.02 },
-  cucuruchoTitle: { fontSize: isWeb ? 18 : width * 0.045, fontWeight: "bold", marginBottom: height * 0.005, textAlign: "center" },
+  title: {
+    fontSize: isWeb ? 22 : width * 0.055,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: height * 0.02,
+  },
+  cucuruchoTitle: {
+    fontSize: isWeb ? 18 : width * 0.045,
+    fontWeight: "bold",
+    marginBottom: height * 0.005,
+    textAlign: "center",
+  },
   content: { flexGrow: 1 },
-  item: { fontSize: isWeb ? 16 : width * 0.04, marginLeft: width * 0.03, marginBottom: height * 0.005 },
-  button: { paddingVertical: isWeb ? 12 : height * 0.02, borderRadius: 8, alignItems: "center", marginTop: 10 },
+  item: {
+    fontSize: isWeb ? 16 : width * 0.04,
+    marginLeft: width * 0.03,
+    marginBottom: height * 0.005,
+  },
+  button: {
+    paddingVertical: isWeb ? 12 : height * 0.02,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 10,
+  },
   buttonText: { color: "#fff", fontWeight: "bold", fontSize: isWeb ? 16 : width * 0.04 },
 });

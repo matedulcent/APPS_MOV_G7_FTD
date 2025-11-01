@@ -18,7 +18,7 @@ import Dropdown from "../../components/Dropdown";
 import PedidoCardBottom from "../../components/PedidoCardBottom";
 import ScreenHeader from "../../components/ScreenHeader";
 import { fetchSabores } from "../../redux/actions/saboresActions";
-import { toggleEnvase } from "../../redux/slices/pedidoSlice";
+import { setSeleccion, toggleEnvase } from "../../redux/slices/pedidoSlice";
 import type { AppDispatch, RootState } from "../../redux/store";
 
 const { height } = Dimensions.get("window");
@@ -46,7 +46,6 @@ const grupoDeSabor = (nombre: string): Grupo => {
 
 const labelOf = (s: Sabor) => s.tipoSabor;
 
-// 🔹 Componente para barra de búsqueda
 const SearchBarUX = ({
   value,
   onChangeText,
@@ -87,12 +86,13 @@ export default function Categoria_Gustos() {
   const loading = useSelector((state: RootState) => state.sabores.loading);
   const error = useSelector((state: RootState) => state.sabores.error);
   const sucursalId = useSelector((state: RootState) => state.user.sucursalId);
+  const seleccionesRedux = useSelector((state: RootState) => state.pedido.selecciones);
 
-  const [selecciones, setSelecciones] = useState<Record<string, string[]>>({});
   const [currentIndex, setCurrentIndex] = useState(0);
   const [searchText, setSearchText] = useState("");
-  const [showSearch, setShowSearch] = useState(false); // 🔹 toggle buscador
+  const [showSearch, setShowSearch] = useState(false);
 
+  // Parseo seguro de pedido recibido por params
   const pedidoParsed: Record<string, number> = useMemo(() => {
     try {
       return pedido ? JSON.parse(decodeURIComponent(pedido)) : {};
@@ -101,6 +101,16 @@ export default function Categoria_Gustos() {
       return {};
     }
   }, [pedido]);
+
+  // Inicializar envases en Redux con array vacío si aún no existen
+  useEffect(() => {
+    Object.keys(pedidoParsed).forEach(envase => {
+      if (!seleccionesRedux[envase]) {
+        dispatch(setSeleccion({ envaseId: envase, gustos: [] }));
+        dispatch(toggleEnvase(envase)); // 🔹 asegurar que también quede en el array de envases
+      }
+    });
+  }, [pedidoParsed]);
 
   useEffect(() => {
     if (sucursalId) dispatch(fetchSabores(sucursalId));
@@ -129,19 +139,20 @@ export default function Categoria_Gustos() {
   const envases = Object.keys(pedidoParsed);
   const envaseActual = envases[currentIndex] ?? "";
   const maxSabores = pedidoParsed[envaseActual] ?? 0;
-  const seleccionadosActual = selecciones[envaseActual] ?? [];
+  const seleccionadosActual = seleccionesRedux[envaseActual] ?? [];
 
+  // 🔹 Toggle de gustos directamente en Redux
   const toggleSeleccion = (nombreGusto: string) => {
-    setSelecciones(prev => {
-      const list = prev[envaseActual] ?? [];
-      const existe = list.includes(nombreGusto);
-      let nueva = existe
-        ? list.filter(x => x !== nombreGusto)
-        : [...list, nombreGusto];
-      if (nueva.length > maxSabores) nueva = nueva.slice(0, maxSabores);
-      return { ...prev, [envaseActual]: nueva };
-    });
-    dispatch(toggleEnvase(nombreGusto));
+    const existe = seleccionadosActual.includes(nombreGusto);
+    let nueva = existe
+      ? seleccionadosActual.filter(x => x !== nombreGusto)
+      : [...seleccionadosActual, nombreGusto];
+    if (nueva.length > maxSabores) nueva = nueva.slice(0, maxSabores);
+
+    dispatch(setSeleccion({ envaseId: envaseActual, gustos: nueva }));
+
+    // 🔹 Asegurar que el envase esté en el array de envases
+    dispatch(toggleEnvase(envaseActual));
   };
 
   const handleConfirm = () => {
@@ -150,10 +161,7 @@ export default function Categoria_Gustos() {
       setCurrentIndex(i => i + 1);
       return;
     }
-    router.push({
-      pathname: "/screens/Detalle_Pedido",
-      params: { pedido: encodeURIComponent(JSON.stringify(selecciones)) },
-    });
+    router.push("/screens/Detalle_Pedido");
   };
 
   if (loading)
@@ -187,14 +195,12 @@ export default function Categoria_Gustos() {
       resizeMode="cover"
     >
       <View style={styles.overlay}>
-        {/* 🔹 Header con toggle de buscador */}
         <ScreenHeader
           title={`Gustos para ${envaseActual}`}
           showSearch={true}
           onToggleSearch={() => setShowSearch(prev => !prev)}
         />
 
-        {/* 🔹 Buscador desplegable */}
         {showSearch && (
           <SearchBarUX
             value={searchText}
@@ -254,7 +260,7 @@ export default function Categoria_Gustos() {
         />
 
         <PedidoCardBottom
-          selecciones={selecciones}
+          selecciones={seleccionesRedux}
           visible={true}
           onConfirm={handleConfirm}
           currentIndex={currentIndex}
@@ -265,7 +271,6 @@ export default function Categoria_Gustos() {
   );
 }
 
-// 🔹 Estilos permanecen iguales
 const styles = StyleSheet.create({
   backgroundImage: { flex: 1, width: "100%", height: "100%" },
   overlay: { flex: 1, padding: 20, backgroundColor: "rgba(255,255,255,0.6)" },
