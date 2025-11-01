@@ -37,7 +37,6 @@ async function confirmAsync(title: string, message: string): Promise<boolean> {
   });
 }
 
-/** === API helpers === */
 async function fetchOrdenes(take = 50): Promise<OrdenLite[]> {
   const url = `${BASE_URL}/api/ordenes?take=${take}`;
   const r = await fetch(url);
@@ -73,8 +72,8 @@ export default function Pedidos_Sucursal() {
   const [busy, setBusy] = useState<Record<string, boolean>>({});
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
-  const cargar = useCallback(async () => {
-    setLoading(true);
+  const cargar = useCallback(async (sutil = false) => {
+    if (!sutil) setLoading(true);
     try {
       const all = await fetchOrdenes(50);
       const mias = all.filter((o) => o.sucursalId === sucursalId);
@@ -90,18 +89,23 @@ export default function Pedidos_Sucursal() {
     } catch (e: any) {
       Alert.alert("Error", e.message ?? "No se pudieron cargar los pedidos");
     } finally {
-      setLoading(false);
+      if (!sutil) setLoading(false);
     }
   }, [sucursalId]);
 
+  // Carga inicial y autorefresh sutil cada 5 segundos
   useEffect(() => {
     cargar();
+    const interval = setInterval(() => {
+      cargar(true).catch(() => { });
+    }, 5000);
+    return () => clearInterval(interval);
   }, [cargar]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await cargar();
+      await cargar(true);
     } finally {
       setRefreshing(false);
     }
@@ -116,7 +120,6 @@ export default function Pedidos_Sucursal() {
     if (!ok) return;
 
     setBusy((b) => ({ ...b, [pedido.id]: true }));
-
     setPedidos((prev) =>
       prev.map((p) => (p.id === pedido.id ? { ...p, estadoTerminado: true } : p))
     );
@@ -148,7 +151,6 @@ export default function Pedidos_Sucursal() {
 
   return (
     <View style={{ flex: 1, padding: 16 }}>
-      {/* Título principal */}
       <View style={{ alignItems: "center", marginBottom: 16 }}>
         <Text style={{ fontSize: 22, fontWeight: "900" }}>Pedidos</Text>
       </View>
@@ -161,7 +163,14 @@ export default function Pedidos_Sucursal() {
         <FlatList
           data={pedidos}
           keyExtractor={(p) => p.id}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={["#1e90ff"]}
+              tintColor="#1e90ff"
+            />
+          }
           renderItem={({ item }) => {
             const fecha = item.fecha ? new Date(item.fecha).toLocaleString() : "—";
             const isPendiente = !item.estadoTerminado;
@@ -257,7 +266,6 @@ export default function Pedidos_Sucursal() {
         />
       )}
 
-      {/* Botonera inferior */}
       <View style={{ gap: 10, marginTop: 8 }}>
         <Pressable
           onPress={() =>
