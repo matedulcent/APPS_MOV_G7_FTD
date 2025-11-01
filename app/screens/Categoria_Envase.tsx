@@ -23,7 +23,6 @@ const isWeb = Platform.OS === "web";
 type Envase = { id: string; tipoEnvase: string; maxCantSabores: number };
 type Grupo = "Cucurucho" | "Kilo" | "Vaso" | "Otros";
 
-
 // util: formatea etiqueta visible
 function labelForEnvase(e: Envase): string {
   const [kindRaw, restRaw] = e.tipoEnvase.split("_");
@@ -56,7 +55,6 @@ export default function Categoria_Envase() {
 
   const [loading, setLoading] = useState(true);
   const [envasesOfrecidos, setEnvasesOfrecidos] = useState<Envase[]>([]);
-  // seleccionamos por tipoEnvase (clave estable)
   const [selecciones, setSelecciones] = useState<{ envases: { opcion: string; cantidad: number }[] }>({ envases: [] });
 
   // cargar desde backend la oferta de la sucursal
@@ -88,7 +86,6 @@ export default function Categoria_Envase() {
       const display = labelForEnvase(e);
       g[grupoDe(e)].push({ ...e, display });
     }
-    // orden simple por display
     (Object.keys(g) as Grupo[]).forEach((k) => g[k].sort((a, b) => a.display.localeCompare(b.display)));
     return g;
   }, [envasesOfrecidos]);
@@ -120,13 +117,11 @@ export default function Categoria_Envase() {
       Alert.alert("Atención", "Debes seleccionar al menos un envase.");
       return;
     }
-    // armamos el pedido => key visible y cantidad de sabores que permite cada unidad
     const pedidoFinal: Record<string, number> = {};
     for (const { opcion, cantidad } of seleccionadas) {
       const env = envasesOfrecidos.find((e) => e.tipoEnvase === opcion);
       const max = env?.maxCantSabores ?? 1;
       for (let i = 1; i <= cantidad; i++) {
-        // ejemplo: "Kilo 1 (#2)" / "Cucurucho 2 (#1)"
         pedidoFinal[`${labelForEnvase(env!)} (#${i})`] = max;
       }
     }
@@ -156,27 +151,26 @@ export default function Categoria_Envase() {
       resizeMode={isSmallScreen ? "stretch" : "cover"}
     >
       <View style={styles.overlay}>
+        {/* 🔹 Header con botón volver, alineado igual que en Categoria_Gustos */}
         <ScreenHeader title="Seleccionar Envase" />
+
         <FlatList
           data={dataGrupos}
           keyExtractor={(g) => g}
           contentContainerStyle={{ paddingBottom: height * 0.15 }}
           renderItem={({ item: grupo }) => {
             const envs = grupos[grupo];
-            // opciones visibles del grupo
             const opciones = envs.map((e) => e.display);
-            // seleccionados del grupo (por display)
             const seleccionadosDisplay = (selecciones.envases ?? [])
               .filter((s) => envs.some((e) => e.tipoEnvase === s.opcion))
               .map((s) => envs.find((e) => e.tipoEnvase === s.opcion)!.display);
 
             return (
-              <View style={{ marginBottom: height * 0.03 }}>
+              <View style={{ marginBottom: 12 }}>
                 <Dropdown
                   label={grupo}
                   options={opciones}
                   selected={seleccionadosDisplay}
-                  // onSelect recibe el label; lo mapeamos a tipoEnvase
                   onSelect={(displayValue: string) => {
                     const env = envs.find((e) => e.display === displayValue);
                     if (env) toggleSeleccion(env.tipoEnvase);
@@ -192,17 +186,11 @@ export default function Categoria_Envase() {
                       <View key={opcion} style={styles.itemRow}>
                         <Text style={styles.itemText}>{env.display}</Text>
                         <View style={styles.counter}>
-                          <Pressable
-                            style={styles.counterButton}
-                            onPress={() => updateCantidad(opcion, -1)}
-                          >
+                          <Pressable style={styles.counterButton} onPress={() => updateCantidad(opcion, -1)}>
                             <Text style={styles.counterText}>-</Text>
                           </Pressable>
                           <Text style={styles.counterValue}>{cantidad}</Text>
-                          <Pressable
-                            style={styles.counterButton}
-                            onPress={() => updateCantidad(opcion, 1)}
-                          >
+                          <Pressable style={styles.counterButton} onPress={() => updateCantidad(opcion, 1)}>
                             <Text style={styles.counterText}>+</Text>
                           </Pressable>
                         </View>
@@ -225,13 +213,13 @@ export default function Categoria_Envase() {
 }
 
 const styles = StyleSheet.create({
-  backgroundImage: { flex: 1, width: "100%", height: "100%", resizeMode: "cover" },
-  overlay: { flex: 1, padding: isWeb ? 40 : width * 0.05, backgroundColor: "rgba(255,255,255,0.6)" },
+  backgroundImage: { flex: 1, width: "100%", height: "100%" },
+  overlay: { flex: 1, padding: 20, backgroundColor: "rgba(255,255,255,0.6)" }, // padding igual a Categoria_Gustos
   itemRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: height * 0.008,
+    marginTop: 8,
     padding: 10,
     borderWidth: 1,
     borderColor: "#ddd",
@@ -249,7 +237,7 @@ const styles = StyleSheet.create({
   },
   counterText: { fontSize: 18, fontWeight: "bold" },
   counterValue: { fontSize: 16, fontWeight: "bold", minWidth: 30, textAlign: "center" },
-  footer: { position: "absolute", left: isWeb ? 40 : width * 0.05, right: isWeb ? 40 : width * 0.05 },
+  footer: { position: "absolute", left: 20, right: 20 },
   button: { backgroundColor: "#6200ee", paddingVertical: 14, borderRadius: 8, alignItems: "center" },
   buttonText: { color: "#fff", fontWeight: "bold" },
 });

@@ -8,7 +8,7 @@ import {
   ImageBackground,
   StyleSheet,
   Text,
-  View
+  View,
 } from "react-native";
 import Dropdown from "../../components/Dropdown";
 import PedidoCardBottom from "../../components/PedidoCardBottom";
@@ -20,7 +20,6 @@ const { width, height } = Dimensions.get("window");
 const isSmallScreen = width < 360;
 
 type Sabor = { id: string; tipoSabor: string };
-
 
 /* ===== helpers de clasificación ===== */
 
@@ -38,30 +37,24 @@ type Grupo = "Frutales" | "Cremas" | "Chocolates" | "Dulce de leche" | "Otros";
 function grupoDeSabor(nombre: string): Grupo {
   const n = normalize(nombre);
 
-  // Chocolates
   if (/(chocolate|choco|cacao|amargo|blanco)/.test(n)) return "Chocolates";
-
-  // Dulce de leche
   if (/(dulce de leche|ddl)/.test(n)) return "Dulce de leche";
-
-  // Frutales
   if (
-    /(frutilla|fresa|limon|naranja|frambuesa|mora|maracuya|maracuy|anan|piña|mango|durazno|melocoton|kiwi|uva|manzana|pera|cereza|sandia|melon|banana|platano)/.test(
+    /(frutilla|fresa|limon|naranja|frambuesa|mora|maracuya|anan|piña|mango|durazno|kiwi|uva|manzana|pera|cereza|sandia|melon|banana|platano)/.test(
       n
     )
-  ) {
+  )
     return "Frutales";
-  }
-
-  // Cremas
-  if (/(crema|americana|vainilla|tramontana|sambayon|flan|yogur|yogurt|ricota|panna)/.test(n)) {
+  if (
+    /(crema|americana|vainilla|tramontana|sambayon|flan|yogur|yogurt|ricota|panna)/.test(
+      n
+    )
+  )
     return "Cremas";
-  }
 
   return "Otros";
 }
 
-/** etiqueta visible (tal cual) */
 const labelOf = (s: Sabor) => s.tipoSabor;
 
 /* ==================================== */
@@ -74,7 +67,6 @@ export default function Categoria_Gustos() {
   }>();
   const router = useRouter();
 
-  // viene de la pantalla de envases: { "Kilo 1 (#1)": 4, ... }
   const envasesYMax: Record<string, number> = pedido
     ? JSON.parse(decodeURIComponent(pedido))
     : {};
@@ -85,7 +77,6 @@ export default function Categoria_Gustos() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [searchText, setSearchText] = useState("");
 
-  // cargar oferta de la sucursal y quedarnos solo con sabores
   useEffect(() => {
     (async () => {
       try {
@@ -101,14 +92,13 @@ export default function Categoria_Gustos() {
     })();
   }, [sucursalId]);
 
-  // agrupamos por categoría y aplicamos búsqueda
   const grupos = useMemo(() => {
     const res: Record<Grupo, (Sabor & { label: string })[]> = {
-      "Frutales": [],
-      "Cremas": [],
-      "Chocolates": [],
+      Frutales: [],
+      Cremas: [],
+      Chocolates: [],
       "Dulce de leche": [],
-      "Otros": [],
+      Otros: [],
     };
     const q = normalize(searchText);
     for (const s of sabores) {
@@ -116,7 +106,6 @@ export default function Categoria_Gustos() {
       if (q && !normalize(label).includes(q)) continue;
       res[grupoDeSabor(label)].push({ ...s, label });
     }
-    // ordenar alfabéticamente dentro de cada grupo
     (Object.keys(res) as Grupo[]).forEach((g) =>
       res[g].sort((a, b) => a.label.localeCompare(b.label))
     );
@@ -132,7 +121,7 @@ export default function Categoria_Gustos() {
       const list = prev[envaseActual] ?? [];
       const existe = list.includes(nombreGusto);
       let nueva = existe ? list.filter((x) => x !== nombreGusto) : [...list, nombreGusto];
-      if (nueva.length > maxSabores) nueva = nueva.slice(0, maxSabores); // tope por envase
+      if (nueva.length > maxSabores) nueva = nueva.slice(0, maxSabores);
       return { ...prev, [envaseActual]: nueva };
     });
   };
@@ -143,7 +132,6 @@ export default function Categoria_Gustos() {
       setCurrentIndex((i) => i + 1);
       return;
     }
-    // fin → vamos al detalle
     const pedidoString = encodeURIComponent(JSON.stringify(selecciones));
     router.push({
       pathname: "/screens/Detalle_Pedido",
@@ -160,13 +148,7 @@ export default function Categoria_Gustos() {
     );
   }
 
-  const ordenGrupos: Grupo[] = [
-    "Frutales",
-    "Cremas",
-    "Chocolates",
-    "Dulce de leche",
-    "Otros",
-  ];
+  const ordenGrupos: Grupo[] = ["Frutales", "Cremas", "Chocolates", "Dulce de leche", "Otros"];
   const dataGrupos = ordenGrupos.filter((g) => grupos[g].length > 0);
 
   return (
@@ -176,7 +158,9 @@ export default function Categoria_Gustos() {
       resizeMode="cover"
     >
       <View style={styles.overlay}>
+        {/* 🔹 Header con botón Volver */}
         <ScreenHeader title="Gustos disponibles" />
+
         <SearchBar
           value={searchText}
           onChangeText={setSearchText}
@@ -205,10 +189,10 @@ export default function Categoria_Gustos() {
                     grupo === "Frutales"
                       ? "local-florist"
                       : grupo === "Chocolates"
-                      ? "cookie"
-                      : grupo === "Dulce de leche"
-                      ? "favorite"
-                      : "icecream"
+                        ? "cookie"
+                        : grupo === "Dulce de leche"
+                          ? "favorite"
+                          : "icecream"
                   }
                 />
               </View>
