@@ -7,7 +7,8 @@ import PedidoCardBottom from "../../components/PedidoCardBottom";
 import ScreenHeader from "../../components/ScreenHeader";
 import SearchBar from "../../components/SearchBar";
 import { fetchSabores } from "../../redux/actions/saboresActions"; // thunk clásico
-import type { AppDispatch } from "../../redux/store";
+import { toggleEnvase } from "../../redux/slices/pedidoSlice"; // slice de RTK
+import type { AppDispatch, RootState } from "../../redux/store";
 
 const { height } = Dimensions.get("window");
 
@@ -34,19 +35,20 @@ export default function Categoria_Gustos() {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
 
-  // Redux clásico
-  const sabores = useSelector((state: any) => state.sabores.items) as Sabor[];
-  const loading = useSelector((state: any) => state.sabores.loading);
-  const error = useSelector((state: any) => state.sabores.error);
-  const sucursalId = useSelector((state: any) => state.user.user.sucursalId);
-  const pedidoRedux = useSelector((state: any) => state.pedido.envasesYMax);
+  // Redux
+  const sabores = useSelector((state: RootState) => state.sabores.items);
+  const loading = useSelector((state: RootState) => state.sabores.loading);
+  const error = useSelector((state: RootState) => state.sabores.error);
+  const sucursalId = useSelector((state: RootState) => state.user.sucursalId);
+  const pedidoRedux = useSelector((state: RootState) => state.pedido.envases);
 
   const [selecciones, setSelecciones] = useState<Record<string, string[]>>({});
   const [currentIndex, setCurrentIndex] = useState(0);
   const [searchText, setSearchText] = useState("");
-  
+
+  // cargar sabores
   useEffect(() => {
-    if (sucursalId) dispatch(fetchSabores(sucursalId)); // thunk clásico
+    if (sucursalId) dispatch(fetchSabores(sucursalId));
   }, [sucursalId]);
 
   // agrupar sabores según búsqueda
@@ -67,9 +69,10 @@ export default function Categoria_Gustos() {
   }, [sabores, searchText]);
 
   const envaseActual = Object.keys(pedidoRedux)[currentIndex] ?? "";
-  const maxSabores = pedidoRedux[envaseActual] ?? 0;
+  const maxSabores = pedidoRedux[envaseActual]?.cantidad ?? 0;
   const seleccionadosActual = selecciones[envaseActual] ?? [];
 
+  // actualizar selección
   const toggleSeleccion = (nombreGusto: string) => {
     setSelecciones(prev => {
       const list = prev[envaseActual] ?? [];
@@ -78,6 +81,7 @@ export default function Categoria_Gustos() {
       if (nueva.length > maxSabores) nueva = nueva.slice(0, maxSabores);
       return { ...prev, [envaseActual]: nueva };
     });
+    dispatch(toggleEnvase(nombreGusto)); // actualizar también el slice
   };
 
   const handleConfirm = () => {

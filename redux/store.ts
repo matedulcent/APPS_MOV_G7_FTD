@@ -1,8 +1,7 @@
-// store.ts
 import { configureStore } from "@reduxjs/toolkit";
-import pedidoReducer from "./reducers/pedidoReducer";
 import saboresReducer from "./reducers/saboresReducer";
 import userReducer from "./reducers/userReducer";
+import pedidoReducer from "./slices/pedidoSlice";
 
 export const store = configureStore({
     reducer: {
@@ -10,10 +9,8 @@ export const store = configureStore({
         pedido: pedidoReducer,
         user: userReducer,
     },
-    // no hace falta configurar thunk, ya viene por defecto
 });
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
-
 export default store;
