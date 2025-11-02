@@ -156,9 +156,17 @@ export default function Categoria_Envase() {
 
   if (envasesOfrecidos.length === 0)
     return (
+
       <View style={styles.centered}>
         <Text>No hay envases disponibles en esta sucursal.</Text>
+        <Pressable
+          style={[styles.button, { marginTop: 20, backgroundColor: "#f4679f" }]}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.buttonText}>Volver atrás</Text>
+        </Pressable>
       </View>
+
     );
 
   const ordenGrupos: Grupo[] = ["Cucurucho", "Kilo", "Vaso", "Otros"];
@@ -289,7 +297,7 @@ const styles = StyleSheet.create({
   footer: { position: "absolute", left: 20, right: 20 },
   button: {
     backgroundColor: "#6200ee",
-    paddingVertical: 14,
+    padding: 14,
     borderRadius: 8,
     alignItems: "center",
   },

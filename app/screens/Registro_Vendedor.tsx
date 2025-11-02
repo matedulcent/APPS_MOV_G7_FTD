@@ -142,7 +142,7 @@ export default function RegistroVendedor() {
 
         <TextInput
           style={withError(styles.input, errors.nombre)}
-          placeholder="Nombre Completo"
+          placeholder="Nombre Local"
           value={nombre}
           onChangeText={(t) => { setNombre(t); if (errors.nombre) setErrors({ ...errors, nombre: undefined }); }}
         />

@@ -11,7 +11,14 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useDispatch } from "react-redux";
+import { LOG_OUT } from "../../../redux/types/userTypes";
 import { BASE_URL } from "./../../services/apiConfig";
+
+type Sucursal = {
+  id: string;
+  nombre: string;
+};
 
 type Envase = { id: string; tipoEnvase: string; maxCantSabores: number };
 type Sabor = { id: string; tipoSabor: string };
@@ -21,9 +28,17 @@ type OrdenLite = {
   fecha?: string | null;
   estadoTerminado: boolean;
   sucursalId: string;
+  
   usuarioId: string;
 };
 type OrdenFull = OrdenLite & { contenidos: Contenido[] };
+
+async function fetchSucursal(id: string): Promise<Sucursal> {
+  const url = `${BASE_URL}/api/sucursales/${id}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("No se pudo obtener la sucursal");
+  return res.json();
+}
 
 async function confirmAsync(title: string, message: string): Promise<boolean> {
   if (Platform.OS === "web") {
@@ -64,6 +79,7 @@ async function terminarOrden(
 export default function Pedidos_Sucursal() {
   const { sucursalId: qp } = useLocalSearchParams<{ sucursalId?: string }>();
   const router = useRouter();
+  const dispatch = useDispatch();
   const sucursalId = String(qp || "S1234");
 
   const [loading, setLoading] = useState(true);
@@ -71,6 +87,16 @@ export default function Pedidos_Sucursal() {
   const [pedidos, setPedidos] = useState<OrdenFull[]>([]);
   const [busy, setBusy] = useState<Record<string, boolean>>({});
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [heladeriaNombre, setHeladeriaNombre] = useState("Mi Heladería");
+
+  useEffect(() => {
+    fetchSucursal(sucursalId)
+      .then((sucursal) => setHeladeriaNombre(sucursal.nombre))
+      .catch((e) => {
+        console.error("Error al obtener la sucursal:", e);
+        setHeladeriaNombre("Heladería");
+      });
+  }, [sucursalId]);
 
   const cargar = useCallback(async (sutil = false) => {
     if (!sutil) setLoading(true);
@@ -93,7 +119,6 @@ export default function Pedidos_Sucursal() {
     }
   }, [sucursalId]);
 
-  // Carga inicial y autorefresh sutil cada 5 segundos
   useEffect(() => {
     cargar();
     const interval = setInterval(() => {
@@ -140,6 +165,11 @@ export default function Pedidos_Sucursal() {
     setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  const handleLogout = () => {
+    dispatch({ type: LOG_OUT });
+    router.replace("/"); // 🔹 vuelve al index
+  };
+
   if (loading) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
@@ -151,8 +181,11 @@ export default function Pedidos_Sucursal() {
 
   return (
     <View style={{ flex: 1, padding: 16 }}>
-      <View style={{ alignItems: "center", marginBottom: 16 }}>
-        <Text style={{ fontSize: 22, fontWeight: "900" }}>Pedidos</Text>
+      <View style={{ alignItems: "center", marginBottom: 16 , flexDirection: "row", justifyContent: "space-between" }}>
+        <Text style={{ fontSize: 20, fontWeight: "900" }}>
+        {heladeriaNombre}
+        </Text>
+        <Text style={{ fontSize: 22, fontWeight: "700" }}>Pedidos</Text>
       </View>
 
       {pedidos.length === 0 ? (
@@ -284,7 +317,23 @@ export default function Pedidos_Sucursal() {
         >
           <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700" }}>Editar gustos</Text>
         </Pressable>
+
+        {/* 🔹 Nuevo botón de logout */}
+        <Pressable
+          onPress={handleLogout}
+          style={{
+            padding: 14,
+            borderRadius: 14,
+            alignItems: "center",
+            backgroundColor: "#d32f2f",
+          }}
+        >
+          <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700" }}>
+            Cerrar sesión
+          </Text>
+        </Pressable>
       </View>
     </View>
   );
 }
+
