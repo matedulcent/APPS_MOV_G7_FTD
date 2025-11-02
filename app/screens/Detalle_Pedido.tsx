@@ -1,4 +1,7 @@
 // app/screens/Detalle_Pedido.tsx
+// arriba del archivo
+import { BASE_URL } from "../services/apiConfig"; // ajustá la ruta si difiere
+
 import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
@@ -22,23 +25,30 @@ const isWeb = Platform.OS === "web";
 
 type PedidoItem = { envaseId: string; saborId: string };
 
-// Función para crear la orden en el backend
 async function crearOrden(payload: {
   usuarioId: string;
   sucursalId: string;
-  items: PedidoItem[];
+  items: { envaseId: string; saborId: string }[];
 }) {
-  const r = await fetch(`https://tu-backend.com/api/ordenes`, {
+  const url = `${BASE_URL}/api/ordenes`;
+  console.log("[crearOrden] POST", url, payload);
+
+  const r = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
+
+  console.log("[crearOrden] status:", r.status);
+  const txt = await r.text().catch(() => "");
+  console.log("[crearOrden] body:", txt);
+
   if (!r.ok) {
-    const msg = await r.text().catch(() => "");
-    throw new Error(`Error ${r.status}: ${msg || "No se pudo crear la orden"}`);
+    throw new Error(`Error ${r.status}: ${txt || "No se pudo crear la orden"}`);
   }
-  return (await r.json()) as { ok: boolean; ordenId: string; data?: any };
+  return JSON.parse(txt) as { ok: boolean; ordenId: string; data?: any };
 }
+
 
 // Mapeo de envases
 function mapEnvaseKeyToId(key: string): string {

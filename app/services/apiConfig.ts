@@ -18,7 +18,7 @@ import { Platform } from "react-native";
 //                  \   /
 //                   \ /
 //                    ▼
-const LOCAL_IP = "192.168.68.118";
+const LOCAL_IP = "192.168.1.45";
 //                    ▲
 //                   / \
 //                  /   \

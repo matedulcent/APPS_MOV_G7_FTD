@@ -8,6 +8,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  TextInput,
 } from "react-native";
 import { BASE_URL } from "./../../services/apiConfig";
 
@@ -42,6 +43,18 @@ async function putOferta(
   return data;
 }
 
+// NUEVO: crear sabor global (solo nombre)
+async function postSabor(payload: { tipoSabor: string }) {
+  const r = await fetch(`${BASE_URL}/api/sabores`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.error || "No se pudo crear el sabor");
+  return data as Sabor;
+}
+
 /* ===== helpers de clasificación ===== */
 type Grupo =
   | "Cremas"
@@ -72,9 +85,7 @@ function grupoDeSabor(nombre: string): Grupo {
     return "Dulce de leche";
   }
   if (
-    /(crema|americana|vainilla|tramontana|sambayon|flan|yogur|yogurt|ricota|panna|nata)/.test(
-      n
-    )
+    /(crema|americana|vainilla|tramontana|sambayon|flan|yogur|yogurt|ricota|panna|nata)/.test(n)
   ) {
     return "Cremas";
   }
@@ -96,12 +107,8 @@ export default function Vendedor_Productos() {
 
   const [loading, setLoading] = useState(true);
   const [catalogoSabores, setCatalogoSabores] = useState<Sabor[]>([]);
-  const [seleccionSabores, setSeleccionSabores] = useState<Set<string>>(
-    new Set()
-  );
-  const [seleccionEnvases, setSeleccionEnvases] = useState<Set<string>>(
-    new Set()
-  );
+  const [seleccionSabores, setSeleccionSabores] = useState<Set<string>>(new Set());
+  const [seleccionEnvases, setSeleccionEnvases] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
 
   const [abierto, setAbierto] = useState<Record<Grupo, boolean>>({
@@ -111,6 +118,18 @@ export default function Vendedor_Productos() {
     Chocolates: false,
     Especiales: false,
   });
+
+  // NUEVO: inputs por grupo para "nuevo gusto"
+  const [nuevoSaborPorGrupo, setNuevoSaborPorGrupo] = useState<Record<Grupo, string>>({
+    Cremas: "",
+    Frutales: "",
+    "Dulce de leche": "",
+    Chocolates: "",
+    Especiales: "",
+  });
+
+  const onChangeNuevoSabor = (g: Grupo, v: string) =>
+    setNuevoSaborPorGrupo((prev) => ({ ...prev, [g]: v }));
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -151,6 +170,23 @@ export default function Vendedor_Productos() {
     }
   };
 
+  // NUEVO: crear gusto global (catálogo) y recargar
+  const crearSaborEnGrupo = async (g: Grupo) => {
+    const nombre = (nuevoSaborPorGrupo[g] || "").trim();
+    if (!nombre) {
+      Alert.alert("Nombre requerido", "Ingresá un nombre para el nuevo gusto.");
+      return;
+    }
+    try {
+      await postSabor({ tipoSabor: nombre });
+      await cargar();
+      setNuevoSaborPorGrupo((prev) => ({ ...prev, [g]: "" }));
+      Alert.alert("Listo", `Se agregó "${nombre}".`);
+    } catch (e: any) {
+      Alert.alert("Error", e?.message ?? "No se pudo crear el sabor");
+    }
+  };
+
   const irAPedidos = () =>
     router.push({
       pathname: "/screens/proveedor/Pedidos_Sucursal",
@@ -166,7 +202,8 @@ export default function Vendedor_Productos() {
       Especiales: [],
     };
     for (const s of catalogoSabores) {
-      map[grupoDeSabor(s.tipoSabor)].push(s);
+      const g = grupoDeSabor(s.tipoSabor); // SIEMPRE deducido por nombre
+      map[g].push(s);
     }
     (Object.keys(map) as Grupo[]).forEach((g) =>
       map[g].sort((a, b) => a.tipoSabor.localeCompare(b.tipoSabor))
@@ -183,9 +220,7 @@ export default function Vendedor_Productos() {
     );
   }
 
-  const gruposConContenido = ordenGrupos.filter(
-    (g) => (grupos[g] ?? []).length > 0
-  );
+  const gruposConContenido = ordenGrupos.filter((g) => (grupos[g] ?? []).length > 0 || true);
 
   return (
     <View style={{ flex: 1, padding: 16, gap: 12 }}>
@@ -197,10 +232,7 @@ export default function Vendedor_Productos() {
       </View>
 
       {/* Contenido principal */}
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 12 }}
-      >
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 12 }}>
         {gruposConContenido.map((g) => (
           <View
             key={g}
@@ -242,19 +274,49 @@ export default function Vendedor_Productos() {
                     }}
                   >
                     <Text style={{ fontWeight: "700" }}>{item.tipoSabor}</Text>
-                    <Text
-                      style={{
-                        marginTop: 6,
-                        fontSize: 12,
-                        opacity: 0.6,
-                      }}
-                    >
-                      Tocar para {checked ? "quitar" : "agregar"} este sabor a
-                      la oferta
+                    <Text style={{ marginTop: 6, fontSize: 12, opacity: 0.6 }}>
+                      Tocar para {checked ? "quitar" : "agregar"} este sabor a la oferta
                     </Text>
                   </Pressable>
                 );
               })}
+
+            {/* NUEVO: input + botón para crear gusto en este grupo */}
+            {abierto[g] && (
+              <View style={{ paddingHorizontal: 8, paddingBottom: 12 }}>
+                <View style={{ marginTop: 6, flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <TextInput
+                    placeholder={`Nuevo gusto en ${g}`}
+                    value={nuevoSaborPorGrupo[g]}
+                    onChangeText={(v) => onChangeNuevoSabor(g, v)}
+                    style={{
+                      flex: 1,
+                      paddingVertical: 10,
+                      paddingHorizontal: 12,
+                      borderWidth: 1,
+                      borderColor: "#ddd",
+                      borderRadius: 12,
+                      backgroundColor: "#fff",
+                    }}
+                  />
+                  <Pressable
+                    onPress={() => crearSaborEnGrupo(g)}
+                    style={{
+                      paddingVertical: 10,
+                      paddingHorizontal: 14,
+                      borderRadius: 12,
+                      backgroundColor: "#1e90ff",
+                    }}
+                  >
+                    <Text style={{ color: "#fff", fontWeight: "700" }}>+ Agregar</Text>
+                  </Pressable>
+                </View>
+                <Text style={{ marginTop: 6, fontSize: 12, opacity: 0.6 }}>
+                  El nuevo gusto se guarda en el catálogo global y luego podés activarlo
+                  para esta sucursal.
+                </Text>
+              </View>
+            )}
           </View>
         ))}
       </ScrollView>
