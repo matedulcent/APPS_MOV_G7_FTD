@@ -8,7 +8,8 @@ import {
   Text,
   View,
 } from "react-native";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { logOut } from "../redux/actions/userActions";
 import { RootState } from "../redux/store";
 
 const { width, height } = Dimensions.get("window");
@@ -16,6 +17,7 @@ const isSmallScreen = width < 400 || height < 700;
 
 export default function HomeScreen() {
   const router = useRouter();
+  const dispatch = useDispatch(); 
   const user = useSelector((state: RootState) => state.user);
 
   const handleLoginPress = () => {
@@ -39,6 +41,16 @@ export default function HomeScreen() {
     }
   };
 
+ 
+  const handleLogout = async () => {
+    try {
+      dispatch(logOut());
+      router.replace("/");
+    } catch (error) {
+      console.error("Error al cerrar sesión:", error);
+    }
+  };
+
   return (
     <ImageBackground
       source={require("../assets/images/backgrounds/fondo4.jpg")}
@@ -57,12 +69,21 @@ export default function HomeScreen() {
         )}
 
         {user.loggedIn && user.role === "cliente" && (
-          <Pressable
-            style={[styles.actionButton, { backgroundColor: "#6200ee" }]}
-            onPress={handleElegirSucursal}
-          >
-            <Text style={styles.buttonText}>Elegir Sucursal</Text>
-          </Pressable>
+          <>
+            <Pressable
+              style={[styles.actionButton, { backgroundColor: "#6200ee" }]}
+              onPress={handleElegirSucursal}
+            >
+              <Text style={styles.buttonText}>Elegir Sucursal</Text>
+            </Pressable>
+
+            <Pressable
+              style={[styles.actionButton, { backgroundColor: "#ee0044" }]}
+              onPress={handleLogout}
+            >
+              <Text style={styles.buttonText}>Deslogueate</Text>
+            </Pressable>
+          </>
         )}
 
         <Text style={styles.infoText}>Si aún no tenés cuenta, registrate:</Text>
@@ -112,7 +133,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: height * 0.02,
   },
-  buttonText: { fontWeight: "bold", fontSize: isSmallScreen ? 16 : Math.min(width * 0.045, height * 0.03), color: "#fff" },
+  buttonText: {
+    fontWeight: "bold",
+    fontSize: isSmallScreen ? 16 : Math.min(width * 0.045, height * 0.03),
+    color: "#fff",
+  },
   infoText: {
     fontSize: isSmallScreen ? 14 : Math.min(width * 0.04, height * 0.025),
     marginBottom: height * 0.02,
