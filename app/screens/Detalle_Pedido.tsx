@@ -17,6 +17,9 @@ import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../redux/store";
 import { BASE_URL } from "../services/apiConfig";
 
+/** ====== Configurable ====== */
+const AFTER_CONFIRM_REDIRECT_MS = 2000; // ⏳ tiempo de espera antes de redirigir
+
 const { width, height } = Dimensions.get("window");
 const isSmallScreen = width < 360;
 const isWeb = Platform.OS === "web";
@@ -73,34 +76,26 @@ function mapEnvaseKeyToId(key: string): string {
   return "B1";
 }
 
-// Mapeo de nombres de sabores
-function mapSaborNameToId(name: string): string | null {
-  const n = name.trim().toLowerCase();
-  const alias: Record<string, string> = {
-    frutilla: "F1",
-    chocolate: "F2",
-    "choco blanco": "F3",
-    "chocolate amargo": "F4",
-    "chocolate con almendras": "F5",
-    "choco menta": "F6",
-    ron: "F7",
-    "ron con pasas": "F8",
-    vainilla: "F9",
-    cacahuate: "F10",
-    "maní": "F11",
-    pistacho: "F12",
-    "crema cielo": "F13",
-    crema: "F14",
-    yogur: "F15",
-    ddl: "F16",
-    "dulce de leche": "F17",
-    caramelo: "F18",
-    americana: "F19",
-    "crema americana": "F20",
-    banana: "F21",
-  };
-  return alias[n] ?? null;
+// === Mapeo dinámico de sabores (sin hardcodear) ===
+async function getSaboresMap(): Promise<Record<string, string>> {
+  const url = `${BASE_URL}/api/sabores`;
+  try {
+    const r = await fetch(url);
+    const list = await r.json();
+    // genera: { "pera": "S_xxx", "chocolate": "S_yyy", ... }
+    const map: Record<string, string> = {};
+    (list || []).forEach((s: any) => {
+      const name = (s?.tipoSabor || "").toString().trim().toLowerCase();
+      const id = (s?.id || "").toString();
+      if (name && id) map[name] = id;
+    });
+    return map;
+  } catch (e) {
+    console.log("[getSaboresMap] Error:", e);
+    return {};
+  }
 }
+
 
 export default function DetallePedidoScreen() {
   const router = useRouter();
@@ -150,11 +145,15 @@ export default function DetallePedidoScreen() {
 
       const items: PedidoItem[] = [];
       const saboresSinMapeo: string[] = [];
+      // obtener el mapa dinámico de sabores desde el backend
+      const saboresMap = await getSaboresMap();
+
 
       for (const [envaseKey, gustos] of Object.entries(pedidoObj)) {
         const envaseId = mapEnvaseKeyToId(envaseKey);
         for (const g of gustos) {
-          const saborId = mapSaborNameToId(g);
+          const saborId = saboresMap[g.trim().toLowerCase()] || null;
+
           if (!saborId) {
             saboresSinMapeo.push(g);
             continue;
@@ -177,17 +176,23 @@ export default function DetallePedidoScreen() {
 
       setEnviando(true);
 
-      const { ordenId, data } = await crearOrden({ usuarioId, sucursalId, items });
+      const { ordenId } = await crearOrden({ usuarioId, sucursalId, items });
       if (!ordenId) {
         throw new Error("El servidor no devolvió el ID de la orden.");
       }
       console.log("[handleConfirmar] Creada OK. ordenId:", ordenId);
 
-      // Navegar mostrando el id creado
+      // 1) Mostramos la pantalla del número
       router.push({
         pathname: "/screens/Numero_Orden",
         params: { userId: usuarioId, sucursalId, ordenId },
       });
+
+      // 2) Y luego de X ms redirigimos al historial único
+      setTimeout(() => {
+        router.replace({ pathname: "/screens/Pedidos_Cliente" as never });
+      }, AFTER_CONFIRM_REDIRECT_MS);
+
     } catch (e: any) {
       console.error("[handleConfirmar] ERROR:", e);
       Alert.alert("Error", e?.message ?? "No se pudo crear la orden.");

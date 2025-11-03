@@ -286,7 +286,11 @@ export default function Pedidos_Sucursal() {
                     marginBottom: 6,
                   }}
                 >
-                  <Text style={{ fontWeight: "800" }}>Pedido #{item.id}</Text>
+                  <Text style={{ fontWeight: "800" }}>
+                      Pedido #
+                      {item.id.replace(/\D/g, "") || item.id}
+                    </Text>
+
                   <Text
                     style={{
                       fontWeight: "700",
