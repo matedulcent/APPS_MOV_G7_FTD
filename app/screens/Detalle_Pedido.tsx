@@ -1,8 +1,5 @@
 // app/screens/Detalle_Pedido.tsx
-// arriba del archivo
-import { BASE_URL } from "../services/apiConfig"; // ajustá la ruta si difiere
-
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -18,6 +15,7 @@ import {
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../redux/store";
+import { BASE_URL } from "../services/apiConfig";
 
 const { width, height } = Dimensions.get("window");
 const isSmallScreen = width < 360;
@@ -35,20 +33,25 @@ async function crearOrden(payload: {
 
   const r = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify(payload),
   });
 
   console.log("[crearOrden] status:", r.status);
-  const txt = await r.text().catch(() => "");
-  console.log("[crearOrden] body:", txt);
+  const text = await r.text().catch(() => "");
+  console.log("[crearOrden] body:", text);
 
   if (!r.ok) {
-    throw new Error(`Error ${r.status}: ${txt || "No se pudo crear la orden"}`);
+    throw new Error(`Error ${r.status}: ${text || "No se pudo crear la orden"}`);
   }
-  return JSON.parse(txt) as { ok: boolean; ordenId: string; data?: any };
-}
 
+  // Soporta respuesta nueva { id, ... } o vieja { ok, ordenId }
+  let data: any = {};
+  try { data = text ? JSON.parse(text) : {}; } catch {}
+  const ordenId = data?.id ?? data?.ordenId;
+  console.log("[crearOrden] ordenId resuelto:", ordenId);
+  return { ordenId, data };
+}
 
 // Mapeo de envases
 function mapEnvaseKeyToId(key: string): string {
@@ -84,7 +87,7 @@ function mapSaborNameToId(name: string): string | null {
     "ron con pasas": "F8",
     vainilla: "F9",
     cacahuate: "F10",
-    maní: "F11",
+    "maní": "F11",
     pistacho: "F12",
     "crema cielo": "F13",
     crema: "F14",
@@ -104,11 +107,25 @@ export default function DetallePedidoScreen() {
   const dispatch = useDispatch<AppDispatch>();
   const [enviando, setEnviando] = useState(false);
 
-  // ✅ Tomamos datos desde Redux
+  // ✅ Selecciones y envases del pedido
   const selecciones = useSelector((state: RootState) => state.pedido.selecciones);
   const envases = useSelector((state: RootState) => state.pedido.envases);
+
+  // ✅ Usuario
   const usuarioId = useSelector((state: RootState) => state.user.userId);
-  const sucursalId = useSelector((state: RootState) => state.user.sucursalId);
+
+  // ✅ sucursalId: cascada param -> pedidoSlice -> user.sucursalId (vendedor)
+  const { sucursalId: sucursalIdParam } = useLocalSearchParams<{ sucursalId?: string }>();
+  const sucursalIdFromPedido = useSelector((state: RootState) => (state as any)?.pedido?.sucursalId);
+  const sucursalIdUser = useSelector((state: RootState) => state.user.sucursalId);
+  const sucursalId = (sucursalIdParam as string) || sucursalIdFromPedido || sucursalIdUser || "";
+
+  console.log("[DetallePedido] sucursalId (param/pedido/user):", {
+    sucursalIdParam,
+    sucursalIdFromPedido,
+    sucursalIdUser,
+    usado: sucursalId,
+  });
 
   // ✅ Filtramos envases vacíos
   const pedidoObj: Record<string, string[]> = useMemo(() => {
@@ -122,11 +139,12 @@ export default function DetallePedidoScreen() {
     return res;
   }, [envases, selecciones]);
 
-  // Función para confirmar pedido
+  // Confirmar pedido
   const handleConfirmar = async () => {
     try {
       if (!usuarioId || !sucursalId) {
         Alert.alert("Error", "No se pudo identificar al usuario o la sucursal.");
+        console.log("[handleConfirmar] FALTA usuarioId o sucursalId", { usuarioId, sucursalId });
         return;
       }
 
@@ -146,32 +164,32 @@ export default function DetallePedidoScreen() {
       }
 
       if (saboresSinMapeo.length) {
-        Alert.alert(
-          "Sabores no reconocidos",
-          `No se pudieron mapear: ${saboresSinMapeo.join(", ")}`
-        );
+        Alert.alert("Sabores no reconocidos", `No se pudieron mapear: ${saboresSinMapeo.join(", ")}`);
+        console.log("[handleConfirmar] sabores sin mapeo:", saboresSinMapeo);
         return;
       }
 
       if (items.length === 0) {
         Alert.alert("Pedido vacío", "No hay ítems válidos para guardar.");
+        console.log("[handleConfirmar] Pedido vacío (items=0)");
         return;
       }
 
       setEnviando(true);
 
-      const res = await crearOrden({
-        usuarioId,
-        sucursalId,
-        items,
-      });
+      const { ordenId, data } = await crearOrden({ usuarioId, sucursalId, items });
+      if (!ordenId) {
+        throw new Error("El servidor no devolvió el ID de la orden.");
+      }
+      console.log("[handleConfirmar] Creada OK. ordenId:", ordenId);
 
+      // Navegar mostrando el id creado
       router.push({
         pathname: "/screens/Numero_Orden",
-        params: { userId: usuarioId, sucursalId, ordenId: res.ordenId },
+        params: { userId: usuarioId, sucursalId, ordenId },
       });
     } catch (e: any) {
-      console.error(e);
+      console.error("[handleConfirmar] ERROR:", e);
       Alert.alert("Error", e?.message ?? "No se pudo crear la orden.");
     } finally {
       setEnviando(false);

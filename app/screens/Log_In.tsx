@@ -47,14 +47,26 @@ export default function LoginScreen() {
   };
 
   useEffect(() => {
-    if (user.loggedIn) {
-      if (user.role === "vendedor") {
-        router.push("/screens/proveedor/Pedidos_Sucursal");
-      } else {
-        router.push("/screens/Seleccion_Sucursal");
-      }
+  if (!user.loggedIn) return;
+
+  if (user.role === "vendedor") {
+    const sid = (user as any).sucursalId ?? "";
+    console.log("[Login] Navegando como vendedor — sucursalId:", sid);
+
+    if (!sid) {
+      console.warn("[Login] ⚠️ No se recibió sucursalId del backend, se aborta la navegación");
+      return;
     }
-  }, [user.loggedIn, user.role]);
+
+    router.push({
+      pathname: "/screens/proveedor/Pedidos_Sucursal",
+      params: { sucursalId: sid },
+    });
+  } else {
+    console.log("[Login] Navegando como cliente");
+    router.push("/screens/Seleccion_Sucursal");
+  }
+}, [user.loggedIn, user.role, (user as any).sucursalId]);
 
 
 

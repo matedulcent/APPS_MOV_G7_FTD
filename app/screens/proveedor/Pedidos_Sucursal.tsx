@@ -11,24 +11,21 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import type { RootState } from "../../../redux/store";
 import { LOG_OUT } from "../../../redux/types/userTypes";
 import { BASE_URL } from "./../../services/apiConfig";
 
-type Sucursal = {
-  id: string;
-  nombre: string;
-};
-
+type Sucursal = { id: string; nombre: string; };
 type Envase = { id: string; tipoEnvase: string; maxCantSabores: number };
 type Sabor = { id: string; tipoSabor: string };
 type Contenido = { id: number; envase: Envase | null; sabor: Sabor | null };
+
 type OrdenLite = {
   id: string;
   fecha?: string | null;
   estadoTerminado: boolean;
   sucursalId: string;
-  
   usuarioId: string;
 };
 type OrdenFull = OrdenLite & { contenidos: Contenido[] };
@@ -52,11 +49,32 @@ async function confirmAsync(title: string, message: string): Promise<boolean> {
   });
 }
 
-async function fetchOrdenes(take = 50): Promise<OrdenLite[]> {
-  const url = `${BASE_URL}/api/ordenes?take=${take}`;
-  const r = await fetch(url);
+/** PRIMERO: /api/ordenes/sucursal/:id ; fallback a ?sucursalId= */
+async function fetchOrdenesRobusto(take = 50, sucursalId?: string): Promise<OrdenLite[]> {
+  if (!sucursalId) throw new Error("Falta sucursalId");
+  // 1) Ruta explícita
+  let url = `${BASE_URL}/api/ordenes/sucursal/${encodeURIComponent(sucursalId)}?take=${take}`;
+  console.log("[Pedidos] GET explícito:", url);
+  let r = await fetch(url);
+  if (r.ok) {
+    const data = await r.json();
+    console.log("[Pedidos] explícito length:", Array.isArray(data) ? data.length : "N/A");
+    return data;
+  }
+  const txt = await r.text().catch(() => "");
+  console.warn("[Pedidos] explícito FALLÓ:", r.status, txt);
+
+  // 2) Fallback querystring
+  const q = new URLSearchParams();
+  q.set("take", String(take));
+  q.set("sucursalId", sucursalId);
+  url = `${BASE_URL}/api/ordenes?${q.toString()}`;
+  console.log("[Pedidos] GET fallback:", url);
+  r = await fetch(url);
   if (!r.ok) throw new Error("No se pudo leer /api/ordenes");
-  return r.json();
+  const data = await r.json();
+  console.log("[Pedidos] fallback length:", Array.isArray(data) ? data.length : "N/A");
+  return data;
 }
 
 async function fetchOrdenDetalle(id: string): Promise<OrdenFull> {
@@ -78,9 +96,11 @@ async function terminarOrden(
 
 export default function Pedidos_Sucursal() {
   const { sucursalId: qp } = useLocalSearchParams<{ sucursalId?: string }>();
+  const sidFromUser = useSelector((s: RootState) => s.user.sucursalId);
+  const sucursalId = String(qp ?? sidFromUser ?? ""); // ✅ fallback a Redux si el param falta
+
   const router = useRouter();
   const dispatch = useDispatch();
-  const sucursalId = String(qp || "S1234");
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -90,6 +110,11 @@ export default function Pedidos_Sucursal() {
   const [heladeriaNombre, setHeladeriaNombre] = useState("Mi Heladería");
 
   useEffect(() => {
+    console.log("[Pedidos] sucursalId usado para cargar:", sucursalId, "(param:", qp, "redux:", sidFromUser, ")");
+    if (!sucursalId) {
+      Alert.alert("Error", "Falta sucursalId en la ruta.");
+      return;
+    }
     fetchSucursal(sucursalId)
       .then((sucursal) => setHeladeriaNombre(sucursal.nombre))
       .catch((e) => {
@@ -99,20 +124,46 @@ export default function Pedidos_Sucursal() {
   }, [sucursalId]);
 
   const cargar = useCallback(async (sutil = false) => {
+    if (!sucursalId) return;
     if (!sutil) setLoading(true);
     try {
-      const all = await fetchOrdenes(50);
-      const mias = all.filter((o) => o.sucursalId === sucursalId);
-      const detalles = await Promise.all(
-        mias.map((o) => fetchOrdenDetalle(o.id).catch(() => null))
+      // 1) Traigo lite (filtrado en el back)
+      const lites = await fetchOrdenesRobusto(50, sucursalId);
+      console.log("[Pedidos] IDs lite:", lites.map(o => o.id).join(", ") || "(vacío)");
+
+      // 2) Intento traer detalles; si alguno falla, dejo el lite
+      const detalleMap = new Map<string, OrdenFull>();
+      await Promise.all(
+        lites.map(async (o) => {
+          try {
+            const det = await fetchOrdenDetalle(o.id);
+            detalleMap.set(o.id, det);
+          } catch (err) {
+            console.warn("[Pedidos] Detalle falló para", o.id, err);
+          }
+        })
       );
-      const list = (detalles.filter(Boolean) as OrdenFull[]).sort((a, b) => {
+
+      // 3) Merge lite + detalle (fallback si detalle no llegó)
+      const merged: OrdenFull[] = lites.map((o) => {
+        const det = detalleMap.get(o.id);
+        return det ? det : { ...o, contenidos: [] };
+      });
+
+      merged.sort((a, b) => {
         const ta = a.fecha ? new Date(a.fecha).getTime() : 0;
         const tb = b.fecha ? new Date(b.fecha).getTime() : 0;
         return tb - ta || b.id.localeCompare(a.id);
       });
-      setPedidos(list);
+
+      console.log("[Pedidos] Final para render:", merged.length, "Primer ID:", merged[0]?.id);
+      if (!merged.length) {
+        console.log("[Pedidos] No se encontraron pedidos para sucursal:", sucursalId);
+      }
+
+      setPedidos(merged);
     } catch (e: any) {
+      console.error("[Pedidos] ERROR cargar:", e);
       Alert.alert("Error", e.message ?? "No se pudieron cargar los pedidos");
     } finally {
       if (!sutil) setLoading(false);
@@ -122,7 +173,7 @@ export default function Pedidos_Sucursal() {
   useEffect(() => {
     cargar();
     const interval = setInterval(() => {
-      cargar(true).catch(() => { });
+      cargar(true).catch(() => {});
     }, 5000);
     return () => clearInterval(interval);
   }, [cargar]);
@@ -150,8 +201,10 @@ export default function Pedidos_Sucursal() {
     );
 
     try {
-      await terminarOrden(pedido.id);
+      const res = await terminarOrden(pedido.id);
+      console.log("[Pedidos] PATCH terminar OK:", res);
     } catch (e: any) {
+      console.error("[Pedidos] PATCH terminar ERROR:", e);
       Alert.alert("Error", e?.message ?? "No se pudo marcar como terminado");
       setPedidos((prev) =>
         prev.map((p) => (p.id === pedido.id ? { ...p, estadoTerminado: false } : p))
@@ -167,7 +220,7 @@ export default function Pedidos_Sucursal() {
 
   const handleLogout = () => {
     dispatch({ type: LOG_OUT });
-    router.replace("/"); // 🔹 vuelve al index
+    router.replace("/");
   };
 
   if (loading) {
@@ -183,7 +236,7 @@ export default function Pedidos_Sucursal() {
     <View style={{ flex: 1, padding: 16 }}>
       <View style={{ alignItems: "center", marginBottom: 16 , flexDirection: "row", justifyContent: "space-between" }}>
         <Text style={{ fontSize: 20, fontWeight: "900" }}>
-        {heladeriaNombre}
+          {heladeriaNombre}
         </Text>
         <Text style={{ fontSize: 22, fontWeight: "700" }}>Pedidos</Text>
       </View>
@@ -191,6 +244,9 @@ export default function Pedidos_Sucursal() {
       {pedidos.length === 0 ? (
         <View style={{ paddingVertical: 24, alignItems: "center" }}>
           <Text style={{ opacity: 0.6 }}>No hay pedidos por ahora.</Text>
+          <Text style={{ opacity: 0.6, marginTop: 4, fontSize: 12 }}>
+            (Sucursal: {sucursalId})
+          </Text>
         </View>
       ) : (
         <FlatList
@@ -318,9 +374,11 @@ export default function Pedidos_Sucursal() {
           <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700" }}>Editar gustos</Text>
         </Pressable>
 
-        {/* 🔹 Nuevo botón de logout */}
         <Pressable
-          onPress={handleLogout}
+          onPress={() => {
+            dispatch({ type: LOG_OUT });
+            router.replace("/");
+          }}
           style={{
             padding: 14,
             borderRadius: 14,
@@ -336,4 +394,3 @@ export default function Pedidos_Sucursal() {
     </View>
   );
 }
-
