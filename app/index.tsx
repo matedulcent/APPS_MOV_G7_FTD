@@ -34,9 +34,9 @@ export default function HomeScreen() {
 
   const handleElegirSucursal = () => {
     if (user.loggedIn && user.role === "cliente" && user.userId) {
-      router.push({
-        pathname: "./screens/Seleccion_Sucursal",
-        params: { userId: user.userId },
+      router.replace({
+        pathname: "/cliente_tabs",
+        params: { screen: "Pedir Helado", userId: user.userId },
       });
     }
   };

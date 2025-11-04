@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import ScreenHeader from "../../components/ScreenHeader";
-import { setSucursal } from "../../redux/actions/userActions"; // <--- acción Redux
+import { setSucursal } from "../../redux/actions/userActions";
 import type { RootState } from "../../redux/store";
 import { BASE_URL } from "../services/apiConfig";
 
@@ -25,7 +25,7 @@ type BackendSucursal = { id: string; nombre?: string | null; domicilio?: string 
 const PLACEHOLDER_IMG = "https://placehold.co/160x160?text=Helados";
 
 export default function SeleccionSucursalScreen() {
-  const router = useRouter();
+  const navigation = useNavigation();
   const dispatch = useDispatch();
   const user = useSelector((state: RootState) => state.user);
 
@@ -61,13 +61,15 @@ export default function SeleccionSucursalScreen() {
     }
 
     fetchSucursales();
-    return () => { cancelado = true; };
+    return () => {
+      cancelado = true;
+    };
   }, []);
 
   const handleSeleccion = (sucursal: UISucursal) => {
-    setSucursalSeleccionadaLocal(sucursal.id); // estado local para UI
-    dispatch(setSucursal(sucursal.id));         // guardamos en Redux
-    router.push("/screens/Categoria_Envase");   // redirige sin params
+    setSucursalSeleccionadaLocal(sucursal.id);
+    dispatch(setSucursal(sucursal.id));
+    navigation.navigate("CategoriaEnvase" as never);
   };
 
   const renderSucursal = ({ item }: { item: UISucursal }) => {
@@ -91,16 +93,13 @@ export default function SeleccionSucursalScreen() {
     >
       <View style={styles.overlay}>
         <ScreenHeader title="Seleccione su sucursal" />
-
         {loading && (
           <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingTop: 20 }}>
             <ActivityIndicator size="large" color="#f4679f" />
             <Text style={{ marginTop: 8 }}>Cargando sucursales...</Text>
           </View>
         )}
-
         {!loading && error && <Text style={{ color: "red", textAlign: "center", marginVertical: 20 }}>{error}</Text>}
-
         {!loading && !error && (
           <FlatList
             data={sucursales}
@@ -117,7 +116,16 @@ export default function SeleccionSucursalScreen() {
 const styles = StyleSheet.create({
   backgroundImage: { flex: 1, width: "100%", height: "100%" },
   overlay: { flex: 1, padding: 20, backgroundColor: "rgba(255,255,255,0.6)" },
-  card: { flexDirection: "row", alignItems: "center", padding: 12, borderRadius: 10, backgroundColor: "#f5f5f5", marginBottom: 12, borderWidth: 1, borderColor: "#ddd" },
+  card: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: "#f5f5f5",
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#ddd",
+  },
   cardSelected: { borderColor: "#6200ee", backgroundColor: "#e0d7ff" },
   imagen: { width: 70, height: 70, borderRadius: 10, marginRight: 12 },
   textContainer: { flex: 1 },

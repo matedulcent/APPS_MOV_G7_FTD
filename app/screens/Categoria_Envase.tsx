@@ -242,7 +242,7 @@ export default function Categoria_Envase() {
           }}
         />
 
-        <View style={[styles.footer, { bottom: height * 0.13 }]}>
+        <View style={[styles.footer, { bottom: height * 0.03 }]}>
           <Pressable
             style={[styles.button, { backgroundColor: "#f4679fff" }]}
             onPress={handleConfirm}

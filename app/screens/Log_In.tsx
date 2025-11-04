@@ -64,7 +64,10 @@ export default function LoginScreen() {
     });
   } else {
     console.log("[Login] Navegando como cliente");
-    router.push("/screens/Seleccion_Sucursal");
+    router.replace("/cliente_tabs");
+
+
+    // router.push("/screens/Seleccion_Sucursal");
   }
 }, [user.loggedIn, user.role, (user as any).sucursalId]);
 

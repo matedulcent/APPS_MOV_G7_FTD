@@ -188,9 +188,9 @@ export default function DetallePedidoScreen() {
         params: { userId: usuarioId, sucursalId, ordenId },
       });
 
-      // 2) Y luego de X ms redirigimos al historial único
+      
       setTimeout(() => {
-        router.replace({ pathname: "/screens/Pedidos_Cliente" as never });
+        router.replace({ pathname: "/index" as never });
       }, AFTER_CONFIRM_REDIRECT_MS);
 
     } catch (e: any) {
