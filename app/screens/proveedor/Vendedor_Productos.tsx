@@ -5,10 +5,11 @@ import {
   Alert,
   Pressable,
   ScrollView,
+  StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
-  TextInput,
 } from "react-native";
 import { BASE_URL } from "./../../services/apiConfig";
 
@@ -43,7 +44,6 @@ async function putOferta(
   return data;
 }
 
-// NUEVO: crear sabor global (solo nombre)
 async function postSabor(payload: { tipoSabor: string }) {
   const r = await fetch(`${BASE_URL}/api/sabores`, {
     method: "POST",
@@ -55,7 +55,6 @@ async function postSabor(payload: { tipoSabor: string }) {
   return data as Sabor;
 }
 
-/* ===== helpers de clasificación ===== */
 type Grupo =
   | "Cremas"
   | "Frutales"
@@ -77,28 +76,12 @@ function normalize(s: string) {
 
 function grupoDeSabor(nombre: string): Grupo {
   const n = normalize(nombre);
-
-  if (/(chocolate|choco|cacao|amargo|blanco|almendra|almendras|menta)/.test(n)) {
-    return "Chocolates";
-  }
-  if (/(dulce de leche|ddl)/.test(n)) {
-    return "Dulce de leche";
-  }
-  if (
-    /(crema|americana|vainilla|tramontana|sambayon|flan|yogur|yogurt|ricota|panna|nata)/.test(n)
-  ) {
-    return "Cremas";
-  }
-  if (
-    /(frutilla|fresa|limon|naranja|frambuesa|mora|maracuya|anan|piña|mango|durazno|melocoton|kiwi|uva|manzana|pera|cereza|sandia|melon|banana|platano)/.test(
-      n
-    )
-  ) {
-    return "Frutales";
-  }
+  if (/(chocolate|choco|cacao|amargo|blanco|almendra|almendras|menta)/.test(n)) return "Chocolates";
+  if (/(dulce de leche|ddl)/.test(n)) return "Dulce de leche";
+  if (/(crema|americana|vainilla|tramontana|sambayon|flan|yogur|yogurt|ricota|panna|nata)/.test(n)) return "Cremas";
+  if (/(frutilla|fresa|limon|naranja|frambuesa|mora|maracuya|anan|piña|mango|durazno|melocoton|kiwi|uva|manzana|pera|cereza|sandia|melon|banana|platano)/.test(n)) return "Frutales";
   return "Especiales";
 }
-/* ==================================== */
 
 export default function Vendedor_Productos() {
   const { sucursalId: qp } = useLocalSearchParams<{ sucursalId?: string }>();
@@ -119,7 +102,6 @@ export default function Vendedor_Productos() {
     Especiales: false,
   });
 
-  // NUEVO: inputs por grupo para "nuevo gusto"
   const [nuevoSaborPorGrupo, setNuevoSaborPorGrupo] = useState<Record<Grupo, string>>({
     Cremas: "",
     Frutales: "",
@@ -170,7 +152,6 @@ export default function Vendedor_Productos() {
     }
   };
 
-  // NUEVO: crear gusto global (catálogo) y recargar
   const crearSaborEnGrupo = async (g: Grupo) => {
     const nombre = (nuevoSaborPorGrupo[g] || "").trim();
     if (!nombre) {
@@ -202,7 +183,7 @@ export default function Vendedor_Productos() {
       Especiales: [],
     };
     for (const s of catalogoSabores) {
-      const g = grupoDeSabor(s.tipoSabor); // SIEMPRE deducido por nombre
+      const g = grupoDeSabor(s.tipoSabor);
       map[g].push(s);
     }
     (Object.keys(map) as Grupo[]).forEach((g) =>
@@ -213,9 +194,9 @@ export default function Vendedor_Productos() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator />
-        <Text style={{ marginTop: 8 }}>Cargando gustos...</Text>
+      <View style={styles.loaderContainer}>
+        <ActivityIndicator size="large" color="#f4679f" />
+        <Text style={styles.loaderText}>Cargando gustos...</Text>
       </View>
     );
   }
@@ -223,38 +204,20 @@ export default function Vendedor_Productos() {
   const gruposConContenido = ordenGrupos.filter((g) => (grupos[g] ?? []).length > 0 || true);
 
   return (
-    <View style={{ flex: 1, padding: 16, gap: 12 }}>
-      {/* TÍTULO CENTRADO */}
-      <View style={{ alignItems: "center", marginBottom: 8 }}>
-        <Text style={{ fontSize: 22, fontWeight: "900", textAlign: "center" }}>
-          Gustos ofrecidos
-        </Text>
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Gustos ofrecidos</Text>
       </View>
 
-      {/* Contenido principal */}
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 12 }}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         {gruposConContenido.map((g) => (
-          <View
-            key={g}
-            style={{
-              borderRadius: 12,
-              overflow: "hidden",
-              borderWidth: 1,
-              borderColor: "#e6e6e6",
-              marginBottom: 12,
-            }}
-          >
+          <View key={g} style={styles.groupCard}>
             <TouchableOpacity
               onPress={() => setAbierto((prev) => ({ ...prev, [g]: !prev[g] }))}
-              style={{
-                padding: 12,
-                backgroundColor: "#f5f5f5",
-                flexDirection: "row",
-                justifyContent: "space-between",
-              }}
+              style={styles.groupHeader}
             >
-              <Text style={{ fontWeight: "800" }}>{g}</Text>
-              <Text style={{ opacity: 0.7 }}>{abierto[g] ? "▲" : "▼"}</Text>
+              <Text style={styles.groupTitle}>{g}</Text>
+              <Text style={styles.groupArrow}>{abierto[g] ? "▲" : "▼"}</Text>
             </TouchableOpacity>
 
             {abierto[g] &&
@@ -264,54 +227,33 @@ export default function Vendedor_Productos() {
                   <Pressable
                     key={item.id}
                     onPress={() => toggleSabor(item.id)}
-                    style={{
-                      padding: 12,
-                      margin: 8,
-                      borderRadius: 12,
-                      borderWidth: 1.5,
-                      borderColor: checked ? "#1e90ff" : "#ddd",
-                      backgroundColor: checked ? "#eaf3ff" : "#fff",
-                    }}
+                    style={[styles.saborCard, checked && styles.saborCardSelected]}
                   >
-                    <Text style={{ fontWeight: "700" }}>{item.tipoSabor}</Text>
-                    <Text style={{ marginTop: 6, fontSize: 12, opacity: 0.6 }}>
+                    <Text style={styles.saborNombre}>{item.tipoSabor}</Text>
+                    <Text style={styles.saborHint}>
                       Tocar para {checked ? "quitar" : "agregar"} este sabor a la oferta
                     </Text>
                   </Pressable>
                 );
               })}
 
-            {/* NUEVO: input + botón para crear gusto en este grupo */}
             {abierto[g] && (
-              <View style={{ paddingHorizontal: 8, paddingBottom: 12 }}>
-                <View style={{ marginTop: 6, flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <View style={styles.newSaborContainer}>
+                <View style={styles.newSaborRow}>
                   <TextInput
                     placeholder={`Nuevo gusto en ${g}`}
                     value={nuevoSaborPorGrupo[g]}
                     onChangeText={(v) => onChangeNuevoSabor(g, v)}
-                    style={{
-                      flex: 1,
-                      paddingVertical: 10,
-                      paddingHorizontal: 12,
-                      borderWidth: 1,
-                      borderColor: "#ddd",
-                      borderRadius: 12,
-                      backgroundColor: "#fff",
-                    }}
+                    style={styles.newSaborInput}
                   />
                   <Pressable
                     onPress={() => crearSaborEnGrupo(g)}
-                    style={{
-                      paddingVertical: 10,
-                      paddingHorizontal: 14,
-                      borderRadius: 12,
-                      backgroundColor: "#1e90ff",
-                    }}
+                    style={styles.newSaborButton}
                   >
-                    <Text style={{ color: "#fff", fontWeight: "700" }}>+ Agregar</Text>
+                    <Text style={styles.newSaborButtonText}>+ Agregar</Text>
                   </Pressable>
                 </View>
-                <Text style={{ marginTop: 6, fontSize: 12, opacity: 0.6 }}>
+                <Text style={styles.newSaborHint}>
                   El nuevo gusto se guarda en el catálogo global y luego podés activarlo
                   para esta sucursal.
                 </Text>
@@ -321,22 +263,76 @@ export default function Vendedor_Productos() {
         ))}
       </ScrollView>
 
-      {/* Botones al pie */}
-      <View style={{ gap: 10, marginTop: 4 }}>
-        <Pressable
-          onPress={irAPedidos}
-          style={{
-            padding: 14,
-            borderRadius: 14,
-            alignItems: "center",
-            backgroundColor: "#222",
-          }}
-        >
-          <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700" }}>
-            Volver a Pedidos
-          </Text>
+      <View style={styles.footer}>
+        <Pressable onPress={irAPedidos} style={styles.footerButton}>
+          <Text style={styles.footerButtonText}>Volver a Pedidos</Text>
         </Pressable>
       </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, padding: 16, backgroundColor: "rgba(255,255,255,0.6)" },
+  header: { alignItems: "center", marginBottom: 8 },
+  title: { fontSize: 22, fontWeight: "900", textAlign: "center" },
+  scroll: { flex: 1 },
+  scrollContent: { paddingBottom: 12 },
+  groupCard: {
+    borderRadius: 12,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    marginBottom: 12,
+    backgroundColor: "#fff",
+  },
+  groupHeader: {
+    padding: 12,
+    backgroundColor: "#f5f5f5",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  groupTitle: { fontWeight: "800" },
+  groupArrow: { opacity: 0.7 },
+  saborCard: {
+    padding: 12,
+    margin: 8,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "#ddd",
+    backgroundColor: "#fff",
+  },
+  saborCardSelected: { borderColor: "#1e90ff", backgroundColor: "#eaf3ff" },
+  saborNombre: { fontWeight: "700" },
+  saborHint: { marginTop: 6, fontSize: 12, opacity: 0.6 },
+  newSaborContainer: { paddingHorizontal: 8, paddingBottom: 12 },
+  newSaborRow: { marginTop: 6, flexDirection: "row", alignItems: "center", gap: 8 },
+  newSaborInput: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 12,
+    backgroundColor: "#fff",
+  },
+  newSaborButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: "#1e90ff",
+  },
+  newSaborButtonText: { color: "#fff", fontWeight: "700" },
+  newSaborHint: { marginTop: 6, fontSize: 12, opacity: 0.6 },
+  footer: { gap: 10, marginTop: 4 },
+  footerButton: {
+    padding: 14,
+    borderRadius: 14,
+    alignItems: "center",
+    backgroundColor: "#222",
+  },
+  footerButtonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  loaderContainer: { flex: 1, alignItems: "center", justifyContent: "center" },
+  loaderText: { marginTop: 8 },
+});

@@ -5,24 +5,26 @@ import {
   Alert,
   Pressable,
   ScrollView,
+  StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
-  TextInput,
 } from "react-native";
 import { BASE_URL } from "./../../services/apiConfig";
 
+// ==== Tipos ====
 type Envase = { id: string; tipoEnvase: string; maxCantSabores: number };
 type Sabor = { id: string; tipoSabor: string };
+type Grupo = "Conos" | "Kilo" | "Vasos" | "Especiales";
 
+// ==== API ====
 async function getCatalogoEnvases(): Promise<Envase[]> {
   const r = await fetch(`${BASE_URL}/api/envases`);
   if (!r.ok) throw new Error("No se pudo leer /api/envases");
   return r.json();
 }
-async function getOferta(
-  sucursalId: string
-): Promise<{ envases: Envase[]; sabores: Sabor[] }> {
+async function getOferta(sucursalId: string): Promise<{ envases: Envase[]; sabores: Sabor[] }> {
   const r = await fetch(`${BASE_URL}/api/sucursales/${sucursalId}/oferta`);
   if (!r.ok) throw new Error("No se pudo leer oferta de sucursal");
   return r.json();
@@ -30,7 +32,7 @@ async function getOferta(
 async function putOferta(
   sucursalId: string,
   envaseIds: string[],
-  saborIds: string[],
+  saborIds: string[]
 ): Promise<{ envases: Envase[]; sabores: Sabor[] }> {
   const payload = { envaseIds, saborIds };
   const r = await fetch(`${BASE_URL}/api/sucursales/${sucursalId}/oferta`, {
@@ -42,8 +44,6 @@ async function putOferta(
   if (!r.ok) throw new Error(data?.error || "Error actualizando oferta");
   return data;
 }
-
-// NUEVO: crear envase global en catálogo
 async function postEnvase(payload: { tipoEnvase: string; maxCantSabores: number }) {
   const r = await fetch(`${BASE_URL}/api/envases`, {
     method: "POST",
@@ -55,15 +55,13 @@ async function postEnvase(payload: { tipoEnvase: string; maxCantSabores: number 
   return data as Envase;
 }
 
-// ===== helpers de UI (para agrupar y rotular) =====
-type Grupo = "Conos" | "Kilo" | "Vasos" | "Especiales";
-
+// ==== Helpers ====
 function grupoDe(tipoEnvase: string): Grupo {
   const k = (tipoEnvase.split("_")[0] || "").toLowerCase();
   if (k === "cucurucho") return "Conos";
   if (k === "kilo") return "Kilo";
   if (k === "vaso") return "Vasos";
-  return "Especiales"; // antes "Otros"
+  return "Especiales";
 }
 function labelFor(tipoEnvase: string) {
   const [kindRaw, restRaw] = tipoEnvase.split("_");
@@ -77,11 +75,10 @@ function labelFor(tipoEnvase: string) {
   }
   if (kind === "cucurucho") return `Cono ${rest}`;
   if (kind === "vaso") return `Vaso ${rest}`;
-  // especiales: mostramos tal cual
   return tipoEnvase.replace("_", " ");
 }
-// ===================================================
 
+// ==== Componente principal ====
 export default function Vendedor_Envases() {
   const { sucursalId: qp } = useLocalSearchParams<{ sucursalId?: string }>();
   const router = useRouter();
@@ -92,36 +89,29 @@ export default function Vendedor_Envases() {
   const [seleccionEnvases, setSeleccionEnvases] = useState<Set<string>>(new Set());
   const [seleccionSabores, setSeleccionSabores] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
-
   const [abierto, setAbierto] = useState<Record<Grupo, boolean>>({
     Conos: false,
     Kilo: false,
     Vasos: false,
     Especiales: false,
   });
-
-  // NUEVO: inputs por grupo para crear envases
-  type NuevoEnvaseInputs = {
-    rest: string;           // "1", "2" (bolas), "0.25" (kilos) o libre para especiales
-    max: string;            // número como string para TextInput
-  };
-  const [nuevoPorGrupo, setNuevoPorGrupo] = useState<Record<Grupo, NuevoEnvaseInputs>>({
+  const [nuevoPorGrupo, setNuevoPorGrupo] = useState<Record<
+    Grupo,
+    { rest: string; max: string }
+  >>({
     Conos: { rest: "", max: "" },
     Kilo: { rest: "", max: "" },
     Vasos: { rest: "", max: "" },
     Especiales: { rest: "", max: "" },
   });
 
-  const onChangeNuevo = (g: Grupo, field: keyof NuevoEnvaseInputs, v: string) =>
+  const onChangeNuevo = (g: Grupo, field: "rest" | "max", v: string) =>
     setNuevoPorGrupo((prev) => ({ ...prev, [g]: { ...prev[g], [field]: v } }));
 
   const cargar = useCallback(async () => {
     setLoading(true);
     try {
-      const [envases, oferta] = await Promise.all([
-        getCatalogoEnvases(),
-        getOferta(sucursalId),
-      ]);
+      const [envases, oferta] = await Promise.all([getCatalogoEnvases(), getOferta(sucursalId)]);
       setCatalogoEnvases(envases);
       setSeleccionEnvases(new Set((oferta.envases ?? []).map((e) => e.id)));
       setSeleccionSabores(new Set((oferta.sabores ?? []).map((s) => s.id)));
@@ -132,13 +122,14 @@ export default function Vendedor_Envases() {
     }
   }, [sucursalId]);
 
-  useEffect(() => { cargar(); }, [cargar]);
+  useEffect(() => {
+    cargar();
+  }, [cargar]);
 
   const toggleEnvase = async (id: string) => {
     if (saving) return;
     const next = new Set(seleccionEnvases);
     next.has(id) ? next.delete(id) : next.add(id);
-
     setSeleccionEnvases(next);
     setSaving(true);
     try {
@@ -152,35 +143,16 @@ export default function Vendedor_Envases() {
     }
   };
 
-  // NUEVO: crear envase global y recargar
   const crearEnvaseEnGrupo = async (g: Grupo) => {
     const { rest, max } = nuevoPorGrupo[g];
     const maxNum = Number(max);
-
-    // Validaciones mínimas por grupo
-    if (!rest.trim()) {
-      Alert.alert("Dato requerido", g === "Kilo" ? "Ingresá 1, 0.5 o 0.25" :
-        g === "Conos" || g === "Vasos" ? "Ingresá la cantidad de bolas" :
-        "Ingresá un identificador (p. ej., especial_1)");
+    if (!rest.trim() || !Number.isFinite(maxNum) || maxNum <= 0) {
+      Alert.alert("Error", "Datos inválidos.");
       return;
     }
-    if (!Number.isFinite(maxNum) || maxNum <= 0) {
-      Alert.alert("Dato requerido", "Ingresá la cantidad máxima de sabores (número > 0).");
-      return;
-    }
-
-    // Construcción de tipoEnvase según convención actual
     const kind =
-      g === "Conos" ? "cucurucho" :
-      g === "Vasos" ? "vaso" :
-      g === "Kilo" ? "kilo" :
-      "especial";
-
-    // Normalizamos rest para Kilo (permitimos 1, 0.5, 0.25)
-    const restNorm = g === "Kilo"
-      ? (rest === "1/2" ? "0.5" : rest.replace(",", "."))
-      : rest;
-
+      g === "Conos" ? "cucurucho" : g === "Vasos" ? "vaso" : g === "Kilo" ? "kilo" : "especial";
+    const restNorm = g === "Kilo" ? rest.replace(",", ".") : rest;
     const tipoEnvase = `${kind}_${restNorm}`;
 
     try {
@@ -193,8 +165,7 @@ export default function Vendedor_Envases() {
     }
   };
 
-  const irAPedidos = () =>
-    router.push({ pathname: "/screens/proveedor/Pedidos_Sucursal", params: { sucursalId } });
+  const irAPedidos = () => router.push({ pathname: "/screens/proveedor/Pedidos_Sucursal", params: { sucursalId } });
 
   const grupos = useMemo(() => {
     const map: Record<Grupo, Envase[]> = { Conos: [], Kilo: [], Vasos: [], Especiales: [] };
@@ -207,40 +178,29 @@ export default function Vendedor_Envases() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator />
-        <Text style={{ marginTop: 8 }}>Cargando envases...</Text>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#f4679f" />
+        <Text style={styles.loadingText}>Cargando envases...</Text>
       </View>
     );
   }
 
   const orden: Grupo[] = ["Conos", "Kilo", "Vasos", "Especiales"];
-  const gruposConContenido = orden.filter((g) => (grupos[g] ?? []).length > 0 || true);
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#fff" }}>
-      {/* Header */}
-      <View style={{ padding: 16, borderBottomWidth: 1, borderColor: "#eee", alignItems: "center" }}>
-        <Text style={{ fontSize: 20, fontWeight: "800", textAlign: "center" }}>
-          Envases ofrecidos
-        </Text>
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Envases ofrecidos</Text>
       </View>
 
-      {/* Contenido */}
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 120 }}>
-        {gruposConContenido.map((g) => (
-          <View key={g} style={{ marginBottom: 12 }}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {orden.map((g) => (
+          <View key={g} style={styles.group}>
             <TouchableOpacity
               onPress={() => setAbierto((prev) => ({ ...prev, [g]: !prev[g] }))}
-              style={{
-                padding: 12,
-                backgroundColor: "#f7f7f7",
-                borderRadius: 8,
-                flexDirection: "row",
-                justifyContent: "space-between",
-              }}
+              style={styles.groupHeader}
             >
-              <Text style={{ fontWeight: "800" }}>{g}</Text>
+              <Text style={styles.groupTitle}>{g}</Text>
               <Text>{abierto[g] ? "▲" : "▼"}</Text>
             </TouchableOpacity>
 
@@ -251,76 +211,35 @@ export default function Vendedor_Envases() {
                   <Pressable
                     key={item.id}
                     onPress={() => toggleEnvase(item.id)}
-                    style={{
-                      padding: 12,
-                      marginTop: 6,
-                      borderRadius: 8,
-                      borderWidth: 1.5,
-                      borderColor: checked ? "#1e90ff" : "#ddd",
-                      backgroundColor: checked ? "#eaf3ff" : "#fff",
-                    }}
+                    style={[styles.itemCard, checked && styles.itemCardSelected]}
                   >
-                    <Text style={{ fontWeight: "700" }}>{labelFor(item.tipoEnvase)}</Text>
-                    <Text style={{ opacity: 0.7 }}>Máx. sabores: {item.maxCantSabores}</Text>
+                    <Text style={styles.itemTitle}>{labelFor(item.tipoEnvase)}</Text>
+                    <Text style={styles.itemSubtitle}>Máx. sabores: {item.maxCantSabores}</Text>
                   </Pressable>
                 );
               })}
 
-            {/* NUEVO: input + botón para crear envase en este grupo */}
             {abierto[g] && (
-              <View style={{ marginTop: 8 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <View style={styles.newContainer}>
+                <View style={styles.newRow}>
                   <TextInput
-                    placeholder={
-                      g === "Kilo"
-                        ? "Cantidad (1, 0.5, 0.25)"
-                        : g === "Conos" || g === "Vasos"
-                        ? "Bolas (1, 2, 3, 4)"
-                        : "Identificador (ej: especial_1)"
-                    }
-                    keyboardType={g === "Especiales" ? "default" : "numeric"}
+                    placeholder="Tipo"
                     value={nuevoPorGrupo[g].rest}
                     onChangeText={(v) => onChangeNuevo(g, "rest", v)}
-                    style={{
-                      flex: 1,
-                      paddingVertical: 10,
-                      paddingHorizontal: 12,
-                      borderWidth: 1,
-                      borderColor: "#ddd",
-                      borderRadius: 12,
-                      backgroundColor: "#fff",
-                    }}
+                    style={styles.input}
                   />
                   <TextInput
                     placeholder="Máx. sabores"
-                    keyboardType="numeric"
                     value={nuevoPorGrupo[g].max}
                     onChangeText={(v) => onChangeNuevo(g, "max", v)}
-                    style={{
-                      width: 120,
-                      paddingVertical: 10,
-                      paddingHorizontal: 12,
-                      borderWidth: 1,
-                      borderColor: "#ddd",
-                      borderRadius: 12,
-                      backgroundColor: "#fff",
-                    }}
+                    style={[styles.input, styles.inputSmall]}
                   />
-                  <Pressable
-                    onPress={() => crearEnvaseEnGrupo(g)}
-                    style={{
-                      paddingVertical: 10,
-                      paddingHorizontal: 14,
-                      borderRadius: 12,
-                      backgroundColor: "#1e90ff",
-                    }}
-                  >
-                    <Text style={{ color: "#fff", fontWeight: "700" }}>+ Agregar</Text>
+                  <Pressable style={styles.addButton} onPress={() => crearEnvaseEnGrupo(g)}>
+                    <Text style={styles.addButtonText}>+ Agregar</Text>
                   </Pressable>
                 </View>
-                <Text style={{ marginTop: 6, fontSize: 12, opacity: 0.6 }}>
-                  El nuevo envase se guarda en el catálogo global y luego podés activarlo para esta
-                  sucursal.
+                <Text style={styles.hintText}>
+                  El nuevo envase se guarda en el catálogo global.
                 </Text>
               </View>
             )}
@@ -328,31 +247,86 @@ export default function Vendedor_Envases() {
         ))}
       </ScrollView>
 
-      {/* Footer */}
-      <View
-        style={{
-          position: "absolute",
-          bottom: 20,
-          left: 16,
-          right: 16,
-          flexDirection: "row",
-          justifyContent: "space-between",
-          gap: 10,
-        }}
-      >
-        <Pressable
-          onPress={irAPedidos}
-          style={{
-            flex: 1,
-            padding: 14,
-            borderRadius: 12,
-            alignItems: "center",
-            backgroundColor: "#222",
-          }}
-        >
-          <Text style={{ color: "#fff", fontWeight: "700" }}>Volver a Pedidos</Text>
+      <View style={styles.footer}>
+        <Pressable onPress={irAPedidos} style={styles.primaryButton}>
+          <Text style={styles.primaryButtonText}>Volver a Pedidos</Text>
         </Pressable>
       </View>
     </View>
   );
 }
+
+// ==== Stylesheet ====
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#fff" },
+  header: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderColor: "#eee",
+    alignItems: "center",
+  },
+  headerTitle: { fontSize: 20, fontWeight: "800", textAlign: "center" },
+  scrollContent: { padding: 16, paddingBottom: 120 },
+  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+  loadingText: { marginTop: 8, color: "#555" },
+
+  group: { marginBottom: 12 },
+  groupHeader: {
+    padding: 12,
+    backgroundColor: "#f7f7f7",
+    borderRadius: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  groupTitle: { fontWeight: "800", fontSize: 16 },
+
+  itemCard: {
+    padding: 12,
+    marginTop: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    backgroundColor: "#fff",
+  },
+  itemCardSelected: {
+    borderColor: "#6200ee",
+    backgroundColor: "#e0d7ff",
+  },
+  itemTitle: { fontWeight: "700", fontSize: 15 },
+  itemSubtitle: { fontSize: 13, color: "#555", marginTop: 2 },
+
+  newContainer: { marginTop: 8 },
+  newRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  input: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 10,
+    backgroundColor: "#fff",
+  },
+  inputSmall: { width: 120 },
+  addButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: "#1e90ff",
+  },
+  addButtonText: { color: "#fff", fontWeight: "700" },
+  hintText: { marginTop: 6, fontSize: 12, color: "#666" },
+
+  footer: {
+    position: "absolute",
+    bottom: 20,
+    left: 16,
+    right: 16,
+  },
+  primaryButton: {
+    padding: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    backgroundColor: "#222",
+  },
+  primaryButtonText: { color: "#fff", fontWeight: "700" },
+});
