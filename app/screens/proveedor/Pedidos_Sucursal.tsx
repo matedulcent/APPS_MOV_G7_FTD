@@ -126,11 +126,18 @@ export default function Pedidos_Sucursal() {
     }
   }, [sucursalId]);
 
+  // useEffect(() => {
+  //   cargar();
+  //   const interval = setInterval(() => cargar(true), 5000);
+  //   return () => clearInterval(interval);
+  // }, [cargar]);
+
   useEffect(() => {
     cargar();
     const interval = setInterval(() => cargar(true), 5000);
     return () => clearInterval(interval);
   }, [cargar]);
+
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
