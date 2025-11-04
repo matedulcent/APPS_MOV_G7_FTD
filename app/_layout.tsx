@@ -1,22 +1,34 @@
 // app/_layout.tsx
-import { Stack } from "expo-router";
-import { StyleSheet, View } from "react-native";
+import { Slot } from "expo-router";
+import React, { useEffect } from "react";
+import { Provider, useDispatch } from "react-redux";
+import store from "../redux/store";
+import { storage } from "./services/storage"; // web => localStorage, native => AsyncStorage
 
-export default function Layout() {
-  return (
-    <View style={styles.container}>
-      {/* Resto de la navegación */}
-      <Stack screenOptions={{ headerShown: false }} />
+function Hydrator() {
+  const dispatch = useDispatch();
 
-      {/* PedidoCard siempre visible abajo */}
-      
-    </View>
-  );
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = await storage.getItem("user");
+        if (raw) {
+          const saved = JSON.parse(raw);
+          dispatch({ type: "HYDRATE_USER", payload: saved });
+        }
+      } catch (e) {
+        console.warn("[Hydrator] No se pudo hidratar usuario:", e);
+      }
+    })();
+  }, [dispatch]);
+
+  return <Slot />;
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
-//<PedidoCard />
+export default function RootLayout() {
+  return (
+    <Provider store={store}>
+      <Hydrator />
+    </Provider>
+  );
+}
