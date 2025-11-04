@@ -1,3 +1,4 @@
+// app/screens/LoginScreen.tsx
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
@@ -38,7 +39,8 @@ export default function LoginScreen() {
 
   const handleSwitch = (selectedRole: "cliente" | "vendedor") => {
     const targetValue = selectedRole === "cliente" ? 0 : 1;
-    Animated.timing(slideAnim, { toValue: targetValue, duration: 300, useNativeDriver: false }).start(() => setRole(selectedRole));
+    Animated.timing(slideAnim, { toValue: targetValue, duration: 300, useNativeDriver: false })
+      .start(() => setRole(selectedRole));
   };
 
   const handleLogin = async () => {
@@ -47,31 +49,22 @@ export default function LoginScreen() {
   };
 
   useEffect(() => {
-  if (!user.loggedIn) return;
+    if (!user.loggedIn) return;
 
-  if (user.role === "vendedor") {
-    const sid = (user as any).sucursalId ?? "";
-    console.log("[Login] Navegando como vendedor — sucursalId:", sid);
-
-    if (!sid) {
-      console.warn("[Login] ⚠️ No se recibió sucursalId del backend, se aborta la navegación");
-      return;
+    if (user.role === "vendedor") {
+      const sid = (user as any).sucursalId ?? "";
+      console.log("[Login] Navegando como vendedor — sucursalId:", sid);
+      if (!sid) {
+        console.warn("[Login] ⚠️ No se recibió sucursalId del backend, se aborta la navegación");
+        return;
+      }
+      router.push({ pathname: "/screens/proveedor/Pedidos_Sucursal", params: { sucursalId: sid } });
+    } else {
+      console.log("[Login] Navegando como cliente");
+      router.replace("/cliente_tabs");
+      // router.push("/screens/Seleccion_Sucursal");
     }
-
-    router.push({
-      pathname: "/screens/proveedor/Pedidos_Sucursal",
-      params: { sucursalId: sid },
-    });
-  } else {
-    console.log("[Login] Navegando como cliente");
-    router.replace("/cliente_tabs");
-
-
-    // router.push("/screens/Seleccion_Sucursal");
-  }
-}, [user.loggedIn, user.role, (user as any).sucursalId]);
-
-
+  }, [user.loggedIn, user.role, (user as any).sucursalId]);
 
   const handleRegister = () => {
     router.push(role === "cliente" ? "/screens/Registro_Cliente" : "/screens/Registro_Vendedor");
@@ -88,7 +81,10 @@ export default function LoginScreen() {
 
         <View style={styles.switchContainer} onLayout={(e) => setSwitchWidth(e.nativeEvent.layout.width)}>
           <Animated.View
-            style={[styles.indicator, { transform: [{ translateX: slideAnim.interpolate({ inputRange: [0, 1], outputRange: [0, switchWidth / 2] }) }] }]}
+            style={[
+              styles.indicator,
+              { transform: [{ translateX: slideAnim.interpolate({ inputRange: [0, 1], outputRange: [0, switchWidth / 2] }) }] },
+            ]}
           />
           <Pressable style={styles.switchButton} onPress={() => handleSwitch("cliente")}>
             <Text style={[styles.switchText, role === "cliente" && styles.activeText]}>Cliente</Text>
@@ -112,9 +108,9 @@ export default function LoginScreen() {
           secureTextEntry
           value={password}
           onChangeText={setPassword}
-          autoCapitalize="none"  
-          autoCorrect={false}    
-          keyboardType="default" 
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="default"
         />
 
         {user.error && (
@@ -123,8 +119,16 @@ export default function LoginScreen() {
           </View>
         )}
 
-        <Pressable disabled={!canSubmit} style={({ pressed }) => [styles.loginButton, (!canSubmit || pressed) && { opacity: 0.8 }]} onPress={handleLogin}>
-          {user.loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.loginText}>{role === "cliente" ? "Entrar como Cliente" : "Entrar como Vendedor"}</Text>}
+        <Pressable
+          disabled={!canSubmit}
+          style={({ pressed }) => [styles.loginButton, (!canSubmit || pressed) && { opacity: 0.8 }]}
+          onPress={handleLogin}
+        >
+          {user.loading ? <ActivityIndicator color="#fff" /> : (
+            <Text style={styles.loginText}>
+              {role === "cliente" ? "Entrar como Cliente" : "Entrar como Vendedor"}
+            </Text>
+          )}
         </Pressable>
 
         <Pressable onPress={handleRegister}>

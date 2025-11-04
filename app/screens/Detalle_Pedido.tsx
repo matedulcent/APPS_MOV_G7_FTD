@@ -184,7 +184,7 @@ export default function DetallePedidoScreen() {
 
       // 1) Mostramos la pantalla del número
       router.push({
-        pathname: "/screens/Numero_Orden",
+        pathname: "./Numero_Orden",
         params: { userId: usuarioId, sucursalId, ordenId },
       });
 

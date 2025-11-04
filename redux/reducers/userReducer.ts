@@ -17,25 +17,29 @@ interface Action {
 }
 
 export default function userReducer(state = initialState, action: Action): UserState {
-    switch (action.type) {
-        case LOG_USER_PENDING:
-            return { ...state, loading: true, error: undefined };
+  switch (action.type) {
+    case LOG_USER_PENDING:
+      return { ...state, loading: true, error: undefined };
 
-        case LOG_USER_SUCCESS:
-            const payloadData = action.payload as Partial<UserState> | undefined;
-            return { ...state, ...payloadData, loading: false, loggedIn: true, error: undefined };
+    case LOG_USER_SUCCESS:
+      const payloadData = action.payload as Partial<UserState> | undefined;
+      return { ...state, ...payloadData, loading: false, loggedIn: true, error: undefined };
 
-        case LOG_USER_FAILURE:
-            return { ...state, loading: false, loggedIn: false, error: action.payload as string };
+    case LOG_USER_FAILURE:
+      return { ...state, loading: false, loggedIn: false, error: action.payload as string };
 
-        case LOG_OUT:
-            return { ...initialState };
+    case LOG_OUT:
+      return { ...initialState };
 
-        // 🔹 nuevo caso para actualizar la sucursal
-        case "SET_SUCURSAL":
-            return { ...state, sucursalId: action.payload as string };
+    case "SET_SUCURSAL":
+      return { ...state, sucursalId: action.payload as string };
 
-        default:
-            return state;
-    }
+    // 🔹 NUEVO CASO para hidratar desde AsyncStorage
+    case "HYDRATE_USER":
+        return { ...state, ...((action.payload as Partial<UserState>) ?? {}), loggedIn: true };
+
+    default:
+      return state;
+  }
+
 }

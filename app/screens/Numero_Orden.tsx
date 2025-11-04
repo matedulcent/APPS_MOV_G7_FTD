@@ -1,7 +1,7 @@
-// app/screens/Numero_Orden.tsx
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Dimensions,
   ImageBackground,
   Platform,
@@ -9,28 +9,98 @@ import {
   Text,
   View,
 } from "react-native";
+import { BASE_URL } from "../services/apiConfig";
 
-const { width, height } = Dimensions.get("window");
+const { width } = Dimensions.get("window");
 const isSmallScreen = width < 360;
 const isWeb = Platform.OS === "web";
 
-/** ====== Configurable ====== */
-const AFTER_NUMBER_REDIRECT_MS = 2000; // ⏳ tiempo antes de ir al historial
+const AFTER_NUMBER_REDIRECT_MS = 2000;   // tiempo antes de redirigir
+const FIRST_TRY_DELAY_MS = 200;
+const FETCH_TIMEOUT_MS = 1500;
+
+type OrdenDetalle = {
+  id: string;
+  fecha: string | null;
+  estadoTerminado: boolean;
+  sucursalId: string;
+  usuarioId: string;
+};
 
 export default function Numero_Orden() {
   const router = useRouter();
   const { ordenId, userId } = useLocalSearchParams<{ ordenId?: string; userId?: string }>();
 
+  const numeroSolo = useMemo(
+    () => (ordenId || "").toString().replace(/\D/g, "") || (ordenId as string) || "—",
+    [ordenId]
+  );
+
+  const [loading, setLoading] = useState(true);
+  const [detalle, setDetalle] = useState<OrdenDetalle | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Si no llega ordenId, mandar directo al cliente_tabs
+  useEffect(() => {
+    if (!ordenId) {
+      router.replace({ pathname: "/cliente_tabs", params: { userId: userId || "" } });
+    }
+  }, [ordenId, router, userId]);
+
+  // Fetch del detalle
+  useEffect(() => {
+    let cancel = false;
+    if (!ordenId) return;
+
+    const getDetalle = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        await new Promise((r) => setTimeout(r, FIRST_TRY_DELAY_MS));
+
+        const ctrl = new AbortController();
+        const to = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+
+        const url = `${BASE_URL}/api/ordenes/${encodeURIComponent(String(ordenId))}`;
+        console.log("[Numero_Orden] GET", url);
+        const r = await fetch(url, { signal: ctrl.signal });
+
+        clearTimeout(to);
+
+        if (!r.ok) {
+          const t = await r.text().catch(() => "");
+          throw new Error(`GET /api/ordenes/${ordenId} ${r.status}: ${t}`);
+        }
+        const json: OrdenDetalle = await r.json();
+        if (!cancel) setDetalle(json);
+      } catch (e: any) {
+        if (!cancel) setError(e?.message || "No se pudo leer el pedido.");
+      } finally {
+        if (!cancel) setLoading(false);
+      }
+    };
+
+    getDetalle();
+    return () => { cancel = true; };
+  }, [ordenId]);
+
+  // Redirección automática al historial (cliente_tabs)
   useEffect(() => {
     const t = setTimeout(() => {
       router.replace({
-        pathname: "/screens/Pedidos_Cliente" as never,
-        // ⚠️ pasamos userId para que la lista pueda filtrar aunque Redux no esté listo
-        params: { highlightId: (ordenId as string) || "", userId: (userId as string) || "" },
+        pathname: "/cliente_tabs", // ✅ archivo está en app/
+        params: {
+          highlightId: (ordenId as string) || "",
+          userId: (userId as string) || "",
+        },
       });
     }, AFTER_NUMBER_REDIRECT_MS);
     return () => clearTimeout(t);
   }, [router, ordenId, userId]);
+
+  const estadoText = detalle?.estadoTerminado ? "Terminado" : "Pendiente";
+  const estadoColor = detalle?.estadoTerminado ? "#2e7d32" : "#e67e22";
 
   return (
     <ImageBackground
@@ -43,9 +113,23 @@ export default function Numero_Orden() {
           <View style={styles.ticketNotch} />
           <Text style={styles.title}>¡Pedido Confirmado!</Text>
           <Text style={styles.subtitle}>Tu número de pedido es:</Text>
-          <Text style={styles.orderId}>{ordenId}</Text>
-          <Text style={styles.infoText}>
-            En breve serás redirigido a tu historial de pedidos...
+          <Text style={styles.orderId}>#{numeroSolo}</Text>
+
+          {loading ? (
+            <View style={{ alignItems: "center", gap: 6 }}>
+              <ActivityIndicator />
+              <Text style={styles.infoText}>Consultando pedido en el servidor…</Text>
+            </View>
+          ) : error ? (
+            <Text style={[styles.infoText, { color: "#c0392b" }]}>{error}</Text>
+          ) : (
+            <Text style={[styles.infoText, { color: estadoColor, fontWeight: "700" }]}>
+              Estado: {estadoText}
+            </Text>
+          )}
+
+          <Text style={[styles.infoText, { marginTop: 10 }]}>
+            En breve serás redirigido a tu historial de pedidos…
           </Text>
         </View>
       </View>
@@ -84,7 +168,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   title: { fontSize: isWeb ? 24 : W * 0.06, fontWeight: "bold", marginBottom: 6 },
-  subtitle: { fontSize: isWeb ? 18 : W * 0.045, marginBottom: 16 },
-  orderId: { fontSize: isWeb ? 26 : W * 0.07, fontWeight: "bold", color: "#42e9e9ff", marginBottom: 16 },
-  infoText: { opacity: 0.7 },
+  subtitle: { fontSize: isWeb ? 18 : W * 0.045, marginBottom: 10 },
+  orderId: { fontSize: isWeb ? 26 : W * 0.07, fontWeight: "bold", color: "#42e9e9ff", marginBottom: 8 },
+  infoText: { opacity: 0.8, textAlign: "center" },
 });
