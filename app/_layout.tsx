@@ -1,17 +1,34 @@
 // app/_layout.tsx
-import { Stack } from "expo-router";
-import React from "react";
-import { Provider } from "react-redux";
-import { store } from "../redux/store"; // <- agregar las llaves
+import { Slot } from "expo-router";
+import React, { useEffect } from "react";
+import { Provider, useDispatch } from "react-redux";
+import store from "../redux/store";
+import { storage } from "./services/storage"; // web => localStorage, native => AsyncStorage
 
-export default function Layout() {
+function Hydrator() {
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = await storage.getItem("user");
+        if (raw) {
+          const saved = JSON.parse(raw);
+          dispatch({ type: "HYDRATE_USER", payload: saved });
+        }
+      } catch (e) {
+        console.warn("[Hydrator] No se pudo hidratar usuario:", e);
+      }
+    })();
+  }, [dispatch]);
+
+  return <Slot />;
+}
+
+export default function RootLayout() {
   return (
     <Provider store={store}>
-      <Stack
-        screenOptions={{
-          headerShown: false, // <-- oculta el banner en todas las pantallas
-        }}
-      />
+      <Hydrator />
     </Provider>
   );
 }

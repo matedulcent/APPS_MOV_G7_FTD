@@ -20,7 +20,7 @@ import { Platform } from "react-native";
 //                    ▼
 
 //const LOCAL_IP = "192.168.0.158"; //Tobio
-const LOCAL_IP = "192.168.1.45"; //Santi
+const LOCAL_IP = "172.29.159.108"; //Santi
 
 //                    ▲
 //                   / \
