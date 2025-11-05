@@ -3,26 +3,26 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Platform,
   Pressable,
   ScrollView,
   Text,
   TouchableOpacity,
-  View
+  View,
+  TextInput,
 } from "react-native";
+import { BASE_URL } from "./../../services/apiConfig";
 
 type Envase = { id: string; tipoEnvase: string; maxCantSabores: number };
-type Sabor  = { id: string; tipoSabor: string };
-
-const BASE_URL =
-  Platform.OS === "android" ? "http://10.0.2.2:3001" : "http://localhost:3001";
+type Sabor = { id: string; tipoSabor: string };
 
 async function getCatalogoEnvases(): Promise<Envase[]> {
   const r = await fetch(`${BASE_URL}/api/envases`);
   if (!r.ok) throw new Error("No se pudo leer /api/envases");
   return r.json();
 }
-async function getOferta(sucursalId: string): Promise<{ envases: Envase[]; sabores: Sabor[] }> {
+async function getOferta(
+  sucursalId: string
+): Promise<{ envases: Envase[]; sabores: Sabor[] }> {
   const r = await fetch(`${BASE_URL}/api/sucursales/${sucursalId}/oferta`);
   if (!r.ok) throw new Error("No se pudo leer oferta de sucursal");
   return r.json();
@@ -43,15 +43,27 @@ async function putOferta(
   return data;
 }
 
+// NUEVO: crear envase global en catálogo
+async function postEnvase(payload: { tipoEnvase: string; maxCantSabores: number }) {
+  const r = await fetch(`${BASE_URL}/api/envases`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.error || "No se pudo crear el envase");
+  return data as Envase;
+}
+
 // ===== helpers de UI (para agrupar y rotular) =====
-type Grupo = "Conos" | "Kilo" | "Vasos" | "Otros";
+type Grupo = "Conos" | "Kilo" | "Vasos" | "Especiales";
 
 function grupoDe(tipoEnvase: string): Grupo {
   const k = (tipoEnvase.split("_")[0] || "").toLowerCase();
   if (k === "cucurucho") return "Conos";
   if (k === "kilo") return "Kilo";
   if (k === "vaso") return "Vasos";
-  return "Otros";
+  return "Especiales"; // antes "Otros"
 }
 function labelFor(tipoEnvase: string) {
   const [kindRaw, restRaw] = tipoEnvase.split("_");
@@ -65,6 +77,7 @@ function labelFor(tipoEnvase: string) {
   }
   if (kind === "cucurucho") return `Cono ${rest}`;
   if (kind === "vaso") return `Vaso ${rest}`;
+  // especiales: mostramos tal cual
   return tipoEnvase.replace("_", " ");
 }
 // ===================================================
@@ -80,13 +93,27 @@ export default function Vendedor_Envases() {
   const [seleccionSabores, setSeleccionSabores] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
 
-  // estado de despliegue por grupo
   const [abierto, setAbierto] = useState<Record<Grupo, boolean>>({
-    Conos: true,
-    Kilo: true,
-    Vasos: true,
-    Otros: false,
+    Conos: false,
+    Kilo: false,
+    Vasos: false,
+    Especiales: false,
   });
+
+  // NUEVO: inputs por grupo para crear envases
+  type NuevoEnvaseInputs = {
+    rest: string;           // "1", "2" (bolas), "0.25" (kilos) o libre para especiales
+    max: string;            // número como string para TextInput
+  };
+  const [nuevoPorGrupo, setNuevoPorGrupo] = useState<Record<Grupo, NuevoEnvaseInputs>>({
+    Conos: { rest: "", max: "" },
+    Kilo: { rest: "", max: "" },
+    Vasos: { rest: "", max: "" },
+    Especiales: { rest: "", max: "" },
+  });
+
+  const onChangeNuevo = (g: Grupo, field: keyof NuevoEnvaseInputs, v: string) =>
+    setNuevoPorGrupo((prev) => ({ ...prev, [g]: { ...prev[g], [field]: v } }));
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -125,18 +152,53 @@ export default function Vendedor_Envases() {
     }
   };
 
-  const irAEditarGustos = () =>
-    router.push({ pathname: "/screens/proveedor/Vendedor_Productos", params: { sucursalId } });
+  // NUEVO: crear envase global y recargar
+  const crearEnvaseEnGrupo = async (g: Grupo) => {
+    const { rest, max } = nuevoPorGrupo[g];
+    const maxNum = Number(max);
+
+    // Validaciones mínimas por grupo
+    if (!rest.trim()) {
+      Alert.alert("Dato requerido", g === "Kilo" ? "Ingresá 1, 0.5 o 0.25" :
+        g === "Conos" || g === "Vasos" ? "Ingresá la cantidad de bolas" :
+        "Ingresá un identificador (p. ej., especial_1)");
+      return;
+    }
+    if (!Number.isFinite(maxNum) || maxNum <= 0) {
+      Alert.alert("Dato requerido", "Ingresá la cantidad máxima de sabores (número > 0).");
+      return;
+    }
+
+    // Construcción de tipoEnvase según convención actual
+    const kind =
+      g === "Conos" ? "cucurucho" :
+      g === "Vasos" ? "vaso" :
+      g === "Kilo" ? "kilo" :
+      "especial";
+
+    // Normalizamos rest para Kilo (permitimos 1, 0.5, 0.25)
+    const restNorm = g === "Kilo"
+      ? (rest === "1/2" ? "0.5" : rest.replace(",", "."))
+      : rest;
+
+    const tipoEnvase = `${kind}_${restNorm}`;
+
+    try {
+      await postEnvase({ tipoEnvase, maxCantSabores: maxNum });
+      await cargar();
+      setNuevoPorGrupo((prev) => ({ ...prev, [g]: { rest: "", max: "" } }));
+      Alert.alert("Listo", `Se agregó "${labelFor(tipoEnvase)}".`);
+    } catch (e: any) {
+      Alert.alert("Error", e?.message ?? "No se pudo crear el envase");
+    }
+  };
 
   const irAPedidos = () =>
     router.push({ pathname: "/screens/proveedor/Pedidos_Sucursal", params: { sucursalId } });
 
-  // agrupación (derivada del catálogo)
   const grupos = useMemo(() => {
-    const map: Record<Grupo, Envase[]> = { Conos: [], Kilo: [], Vasos: [], Otros: [] };
-    for (const e of catalogoEnvases) {
-      map[grupoDe(e.tipoEnvase)].push(e);
-    }
+    const map: Record<Grupo, Envase[]> = { Conos: [], Kilo: [], Vasos: [], Especiales: [] };
+    for (const e of catalogoEnvases) map[grupoDe(e.tipoEnvase)].push(e);
     (Object.keys(map) as Grupo[]).forEach((g) =>
       map[g].sort((a, b) => labelFor(a.tipoEnvase).localeCompare(labelFor(b.tipoEnvase)))
     );
@@ -152,40 +214,38 @@ export default function Vendedor_Envases() {
     );
   }
 
-  const orden: Grupo[] = ["Conos", "Kilo", "Vasos"];
-  const gruposConContenido = orden.filter((g) => (grupos[g] ?? []).length > 0);
+  const orden: Grupo[] = ["Conos", "Kilo", "Vasos", "Especiales"];
+  const gruposConContenido = orden.filter((g) => (grupos[g] ?? []).length > 0 || true);
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: "#fff" }}>
       {/* Header */}
-      <View style={{ padding: 16, paddingBottom: 8 }}>
-        <Text style={{ fontSize: 18, fontWeight: "700" }}>
-          Envases ofrecidos — Sucursal {sucursalId}
+      <View style={{ padding: 16, borderBottomWidth: 1, borderColor: "#eee", alignItems: "center" }}>
+        <Text style={{ fontSize: 20, fontWeight: "800", textAlign: "center" }}>
+          Envases ofrecidos
         </Text>
       </View>
 
-      {/* CONTENIDO SCROLLEABLE (3 listas) */}
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 140 }} // espacio para el footer fijo
-      >
+      {/* Contenido */}
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 120 }}>
         {gruposConContenido.map((g) => (
-          <View
-            key={g}
-            style={{ borderRadius: 12, overflow: "hidden", borderWidth: 1, borderColor: "#e6e6e6", marginBottom: 12 }}
-          >
-            {/* header de grupo */}
+          <View key={g} style={{ marginBottom: 12 }}>
             <TouchableOpacity
               onPress={() => setAbierto((prev) => ({ ...prev, [g]: !prev[g] }))}
-              style={{ padding: 12, backgroundColor: "#f5f5f5", flexDirection: "row", justifyContent: "space-between" }}
+              style={{
+                padding: 12,
+                backgroundColor: "#f7f7f7",
+                borderRadius: 8,
+                flexDirection: "row",
+                justifyContent: "space-between",
+              }}
             >
               <Text style={{ fontWeight: "800" }}>{g}</Text>
-              <Text style={{ opacity: 0.7 }}>{abierto[g] ? "▲" : "▼"}</Text>
+              <Text>{abierto[g] ? "▲" : "▼"}</Text>
             </TouchableOpacity>
 
-            {/* lista del grupo */}
             {abierto[g] &&
-              (grupos[g] ?? []).map((item) => {
+              grupos[g].map((item) => {
                 const checked = seleccionEnvases.has(item.id);
                 return (
                   <Pressable
@@ -193,8 +253,8 @@ export default function Vendedor_Envases() {
                     onPress={() => toggleEnvase(item.id)}
                     style={{
                       padding: 12,
-                      margin: 8,
-                      borderRadius: 12,
+                      marginTop: 6,
+                      borderRadius: 8,
                       borderWidth: 1.5,
                       borderColor: checked ? "#1e90ff" : "#ddd",
                       backgroundColor: checked ? "#eaf3ff" : "#fff",
@@ -202,41 +262,95 @@ export default function Vendedor_Envases() {
                   >
                     <Text style={{ fontWeight: "700" }}>{labelFor(item.tipoEnvase)}</Text>
                     <Text style={{ opacity: 0.7 }}>Máx. sabores: {item.maxCantSabores}</Text>
-                    <Text style={{ marginTop: 6, fontSize: 12, opacity: 0.6 }}>
-                      Tocar para {checked ? "quitar" : "agregar"} este envase a la oferta
-                    </Text>
                   </Pressable>
                 );
               })}
+
+            {/* NUEVO: input + botón para crear envase en este grupo */}
+            {abierto[g] && (
+              <View style={{ marginTop: 8 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <TextInput
+                    placeholder={
+                      g === "Kilo"
+                        ? "Cantidad (1, 0.5, 0.25)"
+                        : g === "Conos" || g === "Vasos"
+                        ? "Bolas (1, 2, 3, 4)"
+                        : "Identificador (ej: especial_1)"
+                    }
+                    keyboardType={g === "Especiales" ? "default" : "numeric"}
+                    value={nuevoPorGrupo[g].rest}
+                    onChangeText={(v) => onChangeNuevo(g, "rest", v)}
+                    style={{
+                      flex: 1,
+                      paddingVertical: 10,
+                      paddingHorizontal: 12,
+                      borderWidth: 1,
+                      borderColor: "#ddd",
+                      borderRadius: 12,
+                      backgroundColor: "#fff",
+                    }}
+                  />
+                  <TextInput
+                    placeholder="Máx. sabores"
+                    keyboardType="numeric"
+                    value={nuevoPorGrupo[g].max}
+                    onChangeText={(v) => onChangeNuevo(g, "max", v)}
+                    style={{
+                      width: 120,
+                      paddingVertical: 10,
+                      paddingHorizontal: 12,
+                      borderWidth: 1,
+                      borderColor: "#ddd",
+                      borderRadius: 12,
+                      backgroundColor: "#fff",
+                    }}
+                  />
+                  <Pressable
+                    onPress={() => crearEnvaseEnGrupo(g)}
+                    style={{
+                      paddingVertical: 10,
+                      paddingHorizontal: 14,
+                      borderRadius: 12,
+                      backgroundColor: "#1e90ff",
+                    }}
+                  >
+                    <Text style={{ color: "#fff", fontWeight: "700" }}>+ Agregar</Text>
+                  </Pressable>
+                </View>
+                <Text style={{ marginTop: 6, fontSize: 12, opacity: 0.6 }}>
+                  El nuevo envase se guarda en el catálogo global y luego podés activarlo para esta
+                  sucursal.
+                </Text>
+              </View>
+            )}
           </View>
         ))}
       </ScrollView>
 
-      {/* FOOTER FIJO */}
+      {/* Footer */}
       <View
         style={{
           position: "absolute",
+          bottom: 20,
           left: 16,
           right: 16,
-          bottom: 16,
+          flexDirection: "row",
+          justifyContent: "space-between",
           gap: 10,
         }}
-        pointerEvents="box-none"
       >
         <Pressable
-          onPress={irAEditarGustos}
-          style={{ padding: 14, borderRadius: 14, alignItems: "center", backgroundColor: "#1e90ff" }}
-        >
-          <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700" }}>Editar gustos</Text>
-        </Pressable>
-
-        <Pressable
           onPress={irAPedidos}
-          style={{ padding: 14, borderRadius: 14, alignItems: "center", backgroundColor: "#222" }}
+          style={{
+            flex: 1,
+            padding: 14,
+            borderRadius: 12,
+            alignItems: "center",
+            backgroundColor: "#222",
+          }}
         >
-          <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700" }}>
-            Ver pedidos de la sucursal
-          </Text>
+          <Text style={{ color: "#fff", fontWeight: "700" }}>Volver a Pedidos</Text>
         </Pressable>
       </View>
     </View>

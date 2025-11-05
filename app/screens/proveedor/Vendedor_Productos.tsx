@@ -3,26 +3,26 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Platform,
   Pressable,
   ScrollView,
   Text,
   TouchableOpacity,
   View,
+  TextInput,
 } from "react-native";
+import { BASE_URL } from "./../../services/apiConfig";
 
 type Envase = { id: string; tipoEnvase: string; maxCantSabores: number };
-type Sabor  = { id: string; tipoSabor: string };
-
-const BASE_URL =
-  Platform.OS === "android" ? "http://10.0.2.2:3001" : "http://localhost:3001";
+type Sabor = { id: string; tipoSabor: string };
 
 async function getCatalogoSabores(): Promise<Sabor[]> {
   const r = await fetch(`${BASE_URL}/api/sabores`);
   if (!r.ok) throw new Error("No se pudo leer /api/sabores");
   return r.json();
 }
-async function getOferta(sucursalId: string): Promise<{ envases: Envase[]; sabores: Sabor[] }> {
+async function getOferta(
+  sucursalId: string
+): Promise<{ envases: Envase[]; sabores: Sabor[] }> {
   const r = await fetch(`${BASE_URL}/api/sucursales/${sucursalId}/oferta`);
   if (!r.ok) throw new Error("No se pudo leer oferta de sucursal");
   return r.json();
@@ -30,7 +30,7 @@ async function getOferta(sucursalId: string): Promise<{ envases: Envase[]; sabor
 async function putOferta(
   sucursalId: string,
   envaseIds: string[],
-  saborIds: string[],
+  saborIds: string[]
 ): Promise<{ envases: Envase[]; sabores: Sabor[] }> {
   const payload = { envaseIds, saborIds };
   const r = await fetch(`${BASE_URL}/api/sucursales/${sucursalId}/oferta`, {
@@ -43,10 +43,33 @@ async function putOferta(
   return data;
 }
 
-/* ===== helpers de clasificación ===== */
-type Grupo = "Cremas" | "Frutales" | "Dulce de leche" | "Chocolates" | "Especiales";
+// NUEVO: crear sabor global (solo nombre)
+async function postSabor(payload: { tipoSabor: string }) {
+  const r = await fetch(`${BASE_URL}/api/sabores`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.error || "No se pudo crear el sabor");
+  return data as Sabor;
+}
 
-const ordenGrupos: Grupo[] = ["Cremas", "Frutales", "Dulce de leche", "Chocolates", "Especiales"];
+/* ===== helpers de clasificación ===== */
+type Grupo =
+  | "Cremas"
+  | "Frutales"
+  | "Dulce de leche"
+  | "Chocolates"
+  | "Especiales";
+
+const ordenGrupos: Grupo[] = [
+  "Cremas",
+  "Frutales",
+  "Dulce de leche",
+  "Chocolates",
+  "Especiales",
+];
 
 function normalize(s: string) {
   return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -61,10 +84,16 @@ function grupoDeSabor(nombre: string): Grupo {
   if (/(dulce de leche|ddl)/.test(n)) {
     return "Dulce de leche";
   }
-  if (/(crema|americana|vainilla|tramontana|sambayon|flan|yogur|yogurt|ricota|panna|nata)/.test(n)) {
+  if (
+    /(crema|americana|vainilla|tramontana|sambayon|flan|yogur|yogurt|ricota|panna|nata)/.test(n)
+  ) {
     return "Cremas";
   }
-  if (/(frutilla|fresa|limon|naranja|frambuesa|mora|maracuya|anan|piña|mango|durazno|melocoton|kiwi|uva|manzana|pera|cereza|sandia|melon|banana|platano)/.test(n)) {
+  if (
+    /(frutilla|fresa|limon|naranja|frambuesa|mora|maracuya|anan|piña|mango|durazno|melocoton|kiwi|uva|manzana|pera|cereza|sandia|melon|banana|platano)/.test(
+      n
+    )
+  ) {
     return "Frutales";
   }
   return "Especiales";
@@ -82,14 +111,25 @@ export default function Vendedor_Productos() {
   const [seleccionEnvases, setSeleccionEnvases] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
 
-  // estado de despliegue por grupo
   const [abierto, setAbierto] = useState<Record<Grupo, boolean>>({
-    Cremas: true,
-    Frutales: true,
-    "Dulce de leche": true,
-    Chocolates: true,
-    Especiales: true,
+    Cremas: false,
+    Frutales: false,
+    "Dulce de leche": false,
+    Chocolates: false,
+    Especiales: false,
   });
+
+  // NUEVO: inputs por grupo para "nuevo gusto"
+  const [nuevoSaborPorGrupo, setNuevoSaborPorGrupo] = useState<Record<Grupo, string>>({
+    Cremas: "",
+    Frutales: "",
+    "Dulce de leche": "",
+    Chocolates: "",
+    Especiales: "",
+  });
+
+  const onChangeNuevoSabor = (g: Grupo, v: string) =>
+    setNuevoSaborPorGrupo((prev) => ({ ...prev, [g]: v }));
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -108,7 +148,9 @@ export default function Vendedor_Productos() {
     }
   }, [sucursalId]);
 
-  useEffect(() => { cargar(); }, [cargar]);
+  useEffect(() => {
+    cargar();
+  }, [cargar]);
 
   const toggleSabor = async (id: string) => {
     if (saving) return;
@@ -128,13 +170,29 @@ export default function Vendedor_Productos() {
     }
   };
 
-  const irAEditarEnvases = () =>
-    router.push({ pathname: "/screens/proveedor/Vendedor_Envases", params: { sucursalId } });
+  // NUEVO: crear gusto global (catálogo) y recargar
+  const crearSaborEnGrupo = async (g: Grupo) => {
+    const nombre = (nuevoSaborPorGrupo[g] || "").trim();
+    if (!nombre) {
+      Alert.alert("Nombre requerido", "Ingresá un nombre para el nuevo gusto.");
+      return;
+    }
+    try {
+      await postSabor({ tipoSabor: nombre });
+      await cargar();
+      setNuevoSaborPorGrupo((prev) => ({ ...prev, [g]: "" }));
+      Alert.alert("Listo", `Se agregó "${nombre}".`);
+    } catch (e: any) {
+      Alert.alert("Error", e?.message ?? "No se pudo crear el sabor");
+    }
+  };
 
   const irAPedidos = () =>
-    router.push({ pathname: "/screens/proveedor/Pedidos_Sucursal", params: { sucursalId } });
+    router.push({
+      pathname: "/screens/proveedor/Pedidos_Sucursal",
+      params: { sucursalId },
+    });
 
-  // 👇 useMemo ANTES del return condicional
   const grupos = useMemo(() => {
     const map: Record<Grupo, Sabor[]> = {
       Cremas: [],
@@ -144,7 +202,8 @@ export default function Vendedor_Productos() {
       Especiales: [],
     };
     for (const s of catalogoSabores) {
-      map[grupoDeSabor(s.tipoSabor)].push(s);
+      const g = grupoDeSabor(s.tipoSabor); // SIEMPRE deducido por nombre
+      map[g].push(s);
     }
     (Object.keys(map) as Grupo[]).forEach((g) =>
       map[g].sort((a, b) => a.tipoSabor.localeCompare(b.tipoSabor))
@@ -161,19 +220,19 @@ export default function Vendedor_Productos() {
     );
   }
 
-  const gruposConContenido = ordenGrupos.filter((g) => (grupos[g] ?? []).length > 0);
+  const gruposConContenido = ordenGrupos.filter((g) => (grupos[g] ?? []).length > 0 || true);
 
   return (
     <View style={{ flex: 1, padding: 16, gap: 12 }}>
-      <Text style={{ fontSize: 18, fontWeight: "700" }}>
-        Sabores ofrecidos — Sucursal {sucursalId}
-      </Text>
+      {/* TÍTULO CENTRADO */}
+      <View style={{ alignItems: "center", marginBottom: 8 }}>
+        <Text style={{ fontSize: 22, fontWeight: "900", textAlign: "center" }}>
+          Gustos ofrecidos
+        </Text>
+      </View>
 
-      {/* Contenedor scrolleable con 5 listas */}
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 12 }}
-      >
+      {/* Contenido principal */}
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 12 }}>
         {gruposConContenido.map((g) => (
           <View
             key={g}
@@ -185,7 +244,6 @@ export default function Vendedor_Productos() {
               marginBottom: 12,
             }}
           >
-            {/* Header del grupo */}
             <TouchableOpacity
               onPress={() => setAbierto((prev) => ({ ...prev, [g]: !prev[g] }))}
               style={{
@@ -199,7 +257,6 @@ export default function Vendedor_Productos() {
               <Text style={{ opacity: 0.7 }}>{abierto[g] ? "▲" : "▼"}</Text>
             </TouchableOpacity>
 
-            {/* Lista del grupo */}
             {abierto[g] &&
               (grupos[g] ?? []).map((item) => {
                 const checked = seleccionSabores.has(item.id);
@@ -223,25 +280,60 @@ export default function Vendedor_Productos() {
                   </Pressable>
                 );
               })}
+
+            {/* NUEVO: input + botón para crear gusto en este grupo */}
+            {abierto[g] && (
+              <View style={{ paddingHorizontal: 8, paddingBottom: 12 }}>
+                <View style={{ marginTop: 6, flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <TextInput
+                    placeholder={`Nuevo gusto en ${g}`}
+                    value={nuevoSaborPorGrupo[g]}
+                    onChangeText={(v) => onChangeNuevoSabor(g, v)}
+                    style={{
+                      flex: 1,
+                      paddingVertical: 10,
+                      paddingHorizontal: 12,
+                      borderWidth: 1,
+                      borderColor: "#ddd",
+                      borderRadius: 12,
+                      backgroundColor: "#fff",
+                    }}
+                  />
+                  <Pressable
+                    onPress={() => crearSaborEnGrupo(g)}
+                    style={{
+                      paddingVertical: 10,
+                      paddingHorizontal: 14,
+                      borderRadius: 12,
+                      backgroundColor: "#1e90ff",
+                    }}
+                  >
+                    <Text style={{ color: "#fff", fontWeight: "700" }}>+ Agregar</Text>
+                  </Pressable>
+                </View>
+                <Text style={{ marginTop: 6, fontSize: 12, opacity: 0.6 }}>
+                  El nuevo gusto se guarda en el catálogo global y luego podés activarlo
+                  para esta sucursal.
+                </Text>
+              </View>
+            )}
           </View>
         ))}
       </ScrollView>
 
-      {/* Botones al pie (sin cambios) */}
+      {/* Botones al pie */}
       <View style={{ gap: 10, marginTop: 4 }}>
         <Pressable
-          onPress={irAEditarEnvases}
-          style={{ padding: 14, borderRadius: 14, alignItems: "center", backgroundColor: "#1e90ff" }}
-        >
-          <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700" }}>Editar envases</Text>
-        </Pressable>
-
-        <Pressable
           onPress={irAPedidos}
-          style={{ padding: 14, borderRadius: 14, alignItems: "center", backgroundColor: "#222" }}
+          style={{
+            padding: 14,
+            borderRadius: 14,
+            alignItems: "center",
+            backgroundColor: "#222",
+          }}
         >
           <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700" }}>
-            Ver pedidos de la sucursal
+            Volver a Pedidos
           </Text>
         </Pressable>
       </View>
