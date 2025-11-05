@@ -272,9 +272,9 @@ return (
         )}
       </View>
 
-      {/* 👇 Botón abajo del rectángulo crema */}
+      {/*  Botón abajo del rectángulo crema  onPress={() => router.replace("/cliente_tabs")}*/}
       <Pressable
-        onPress={() => router.replace("/cliente_tabs")}
+        onPress={() => router.replace("/")}
         style={({ pressed }) => [
           styles.backButtonBottom,
           pressed && { opacity: 0.8 },
