@@ -1,4 +1,5 @@
 // app/screens/Numero_Orden.tsx
+import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
@@ -10,6 +11,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { DANGER, INK, MINT, MUTED, PINK } from "../../constants/brand";
 import { BASE_URL } from "../services/apiConfig";
 const ORD_BASE = `${BASE_URL}/api/ordenes`;
 
@@ -101,7 +103,7 @@ export default function Numero_Orden() {
   }, [router, ordenId, userId]);
 
   const estadoText = detalle?.estadoTerminado ? "Terminado" : "Pendiente";
-  const estadoColor = detalle?.estadoTerminado ? "#2e7d32" : "#e67e22";
+  const estadoColor = detalle?.estadoTerminado ? MINT : "#e67e22";
 
   return (
     <ImageBackground
@@ -111,18 +113,21 @@ export default function Numero_Orden() {
     >
       <View style={styles.overlay}>
         <View style={styles.ticket}>
+          <View style={styles.iconWrap}>
+            <Ionicons name="checkmark-circle" size={40} color={MINT} />
+          </View>
           <View style={styles.ticketNotch} />
-          <Text style={styles.title}>¡Pedido Confirmado!</Text>
+          <Text style={styles.title}>¡Pedido confirmado!</Text>
           <Text style={styles.subtitle}>Tu número de pedido es:</Text>
           <Text style={styles.orderId}>#{numeroSolo}</Text>
 
           {loading ? (
             <View style={{ alignItems: "center", gap: 6 }}>
-              <ActivityIndicator />
+              <ActivityIndicator color={PINK} />
               <Text style={styles.infoText}>Consultando pedido en el servidor…</Text>
             </View>
           ) : error ? (
-            <Text style={[styles.infoText, { color: "#c0392b" }]}>{error}</Text>
+            <Text style={[styles.infoText, { color: DANGER }]}>{error}</Text>
           ) : (
             <Text style={[styles.infoText, { color: estadoColor, fontWeight: "700" }]}>
               Estado: {estadoText}
@@ -146,30 +151,31 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: isWeb ? 40 : W * 0.05,
-    backgroundColor: "rgba(255,255,255,0.6)",
+    backgroundColor: "rgba(255,255,255,0.55)",
   },
   ticket: {
     width: "90%",
-    backgroundColor: "#fff8e1",
-    borderRadius: 16,
-    padding: isWeb ? 20 : W * 0.05,
+    backgroundColor: "rgba(255,255,255,0.96)",
+    borderRadius: 24,
+    padding: isWeb ? 24 : W * 0.06,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
     alignItems: "center",
   },
+  iconWrap: { marginBottom: 8 },
   ticketNotch: {
     width: isWeb ? 40 : W * 0.12,
     height: isWeb ? 5 : 4,
-    backgroundColor: "#ffd54f",
+    backgroundColor: "#e0e0e6",
     borderRadius: 3,
     alignSelf: "center",
     marginBottom: 16,
   },
-  title: { fontSize: isWeb ? 24 : W * 0.06, fontWeight: "bold", marginBottom: 6 },
-  subtitle: { fontSize: isWeb ? 18 : W * 0.045, marginBottom: 10 },
-  orderId: { fontSize: isWeb ? 26 : W * 0.07, fontWeight: "bold", color: "#42e9e9ff", marginBottom: 8 },
-  infoText: { opacity: 0.8, textAlign: "center" },
+  title: { fontSize: isWeb ? 24 : W * 0.06, fontWeight: "800", marginBottom: 6, color: INK },
+  subtitle: { fontSize: isWeb ? 18 : W * 0.045, marginBottom: 10, color: MUTED },
+  orderId: { fontSize: isWeb ? 26 : W * 0.07, fontWeight: "800", color: PINK, marginBottom: 8 },
+  infoText: { color: MUTED, textAlign: "center" },
 });

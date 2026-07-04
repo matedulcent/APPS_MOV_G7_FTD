@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   Dimensions,
+  Image,
   ImageBackground,
   KeyboardAvoidingView,
   Platform,
@@ -12,12 +13,15 @@ import {
   TextInput,
   View
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import ActionButton from "../../components/ActionButton";
 import PasswordInput from "../../components/PasswordInput";
+import { BORDER, CARD_BG, DANGER, INK, MUTED, PINK } from "../../constants/brand";
+import { parseApiError } from "../services/apiError";
 import { BASE_URL } from "../services/apiConfig";
 
-const { width, height } = Dimensions.get("window");
-const isSmallScreen = width < 400 || height < 700;
-const isWeb = Platform.OS === "web";
+const { width } = Dimensions.get("window");
+const isSmallScreen = width < 400;
 
 type Errors = Partial<{
   nombre: string;
@@ -29,6 +33,7 @@ type Errors = Partial<{
 
 export default function RegistroCliente() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -67,7 +72,7 @@ export default function RegistroCliente() {
       });
 
       if (!r.ok) {
-        const msg = (await r.text()) || `Error ${r.status}`;
+        const msg = await parseApiError(r, "No se pudo completar el registro");
         // Intento mapear el mensaje del back a un campo
         const mapped: Errors = {};
         if (/email.*registrado/i.test(msg) || /email inválido/i.test(msg)) {
@@ -103,168 +108,194 @@ export default function RegistroCliente() {
       style={styles.backgroundImage}
     >
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-      <View style={styles.container}>
-        <Pressable
-          style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.7 }]}
-          onPress={() => router.push("/")}
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 },
+          ]}
+          keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.backText}>⬅️ Volver al inicio</Text>
-        </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.7 }]}
+            onPress={() => router.push("/")}
+          >
+            <Text style={styles.backText}>← Volver al inicio</Text>
+          </Pressable>
 
-        <Text style={styles.title}>Registro de Cliente</Text>
+          <View style={styles.logoWrap}>
+            <Image
+              source={require("../../assets/images/icons/HH sin nombre.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
 
-        <TextInput
-          style={withError(styles.input, errors.nombre)}
-          placeholder="Nombre Completo"
-          value={nombre}
-          onChangeText={(t) => {
-            setNombre(t);
-            if (errors.nombre) setErrors({ ...errors, nombre: undefined });
-          }}
-          autoCapitalize="none"
-        />
-        {errors.nombre ? <Text style={styles.errorText}>{errors.nombre}</Text> : null}
+          <View style={styles.card}>
+            <Text style={styles.title}>Creá tu cuenta</Text>
+            <Text style={styles.subtitle}>Para pedir en tu heladería favorita</Text>
 
-        <TextInput
-          style={withError(styles.input, errors.email)}
-          placeholder="Email"
-          value={email}
-          onChangeText={(t) => {
-            setEmail(t);
-            if (errors.email) setErrors({ ...errors, email: undefined });
-          }}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-        {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
+            <View style={styles.form}>
+              <TextInput
+                style={withError(styles.input, errors.nombre)}
+                placeholder="Nombre completo"
+                placeholderTextColor="#999"
+                value={nombre}
+                onChangeText={(t) => {
+                  setNombre(t);
+                  if (errors.nombre) setErrors({ ...errors, nombre: undefined });
+                }}
+                autoCapitalize="none"
+              />
+              {errors.nombre ? <Text style={styles.errorText}>{errors.nombre}</Text> : null}
 
-        <PasswordInput
-          style={withError(styles.input, errors.password)}
-          placeholder="Contraseña"
-          value={password}
-          onChangeText={(t) => {
-            setPassword(t);
-            if (errors.password) setErrors({ ...errors, password: undefined });
-          }}
-        />
-        {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
+              <TextInput
+                style={withError(styles.input, errors.email)}
+                placeholder="Email"
+                placeholderTextColor="#999"
+                value={email}
+                onChangeText={(t) => {
+                  setEmail(t);
+                  if (errors.email) setErrors({ ...errors, email: undefined });
+                }}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
 
-        <PasswordInput
-          style={withError(styles.input, errors.confirmPassword)}
-          placeholder="Confirmar contraseña"
-          value={confirmPassword}
-          onChangeText={(t) => {
-            setConfirmPassword(t);
-            if (errors.confirmPassword) setErrors({ ...errors, confirmPassword: undefined });
-          }}
-        />
-        {errors.confirmPassword ? (
-          <Text style={styles.errorText}>{errors.confirmPassword}</Text>
-        ) : null}
+              <PasswordInput
+                style={withError(styles.input, errors.password)}
+                placeholder="Contraseña"
+                placeholderTextColor="#999"
+                value={password}
+                onChangeText={(t) => {
+                  setPassword(t);
+                  if (errors.password) setErrors({ ...errors, password: undefined });
+                }}
+              />
+              {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
 
-        {errors.general ? (
-          <Text style={[styles.errorText, { textAlign: "center", marginBottom: 6 }]}>
-            {errors.general}
-          </Text>
-        ) : null}
+              <PasswordInput
+                style={withError(styles.input, errors.confirmPassword)}
+                placeholder="Confirmar contraseña"
+                placeholderTextColor="#999"
+                value={confirmPassword}
+                onChangeText={(t) => {
+                  setConfirmPassword(t);
+                  if (errors.confirmPassword) setErrors({ ...errors, confirmPassword: undefined });
+                }}
+              />
+              {errors.confirmPassword ? (
+                <Text style={styles.errorText}>{errors.confirmPassword}</Text>
+              ) : null}
 
-        <Pressable
-          style={({ pressed }) => [styles.registerButton, pressed && { opacity: 0.8 }]}
-          onPress={handleRegister}
-          disabled={loading}
-        >
-          <Text style={styles.registerText}>
-            {loading ? "Creando..." : "Registrarse"}
-          </Text>
-        </Pressable>
+              {errors.general ? (
+                <Text style={[styles.errorText, { textAlign: "center" }]}>{errors.general}</Text>
+              ) : null}
+            </View>
 
-        <Pressable onPress={() => router.push("/screens/Log_In")}>
-          {({ pressed }) => (
-            <Text style={[styles.linkText, pressed && { textDecorationLine: "underline" }]}>
-              ¿Ya tienes cuenta? Inicia sesión
-            </Text>
-          )}
-        </Pressable>
-      </View>
-      </ScrollView>
+            <View style={{ marginTop: 8, gap: 12 }}>
+              <ActionButton
+                label="Registrarme"
+                icon="person-add-outline"
+                onPress={handleRegister}
+                loading={loading}
+              />
+              <Pressable onPress={() => router.push("/screens/Log_In")}>
+                {({ pressed }) => (
+                  <Text style={[styles.linkText, pressed && { textDecorationLine: "underline" }]}>
+                    ¿Ya tenés cuenta? Iniciá sesión
+                  </Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollContent: { flexGrow: 1, justifyContent: "center" },
-  container: {
+  backgroundImage: { flex: 1, width: "100%", height: "100%", resizeMode: "cover" },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: "center",
-    padding: isWeb ? 40 : width * 0.05,
-    backgroundColor: "rgba(255,255,255,0.8)",
-    borderRadius: isWeb ? 0 : 10,
-    width: "100%",
-    alignSelf: "stretch",
-  },
-  title: {
-    fontSize: isWeb ? 32 : isSmallScreen ? 20 : width * 0.07,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: height * 0.04,
-  },
-  backgroundImage: {
-    flex: 1,
-    width: "100%",
-    height: "100%",
-    resizeMode: isSmallScreen ? "stretch" : "cover",
-  },
-  input: {
-    flexDirection: "row",
     alignItems: "center",
-    padding: isWeb ? 14 : width * 0.04,
-    borderRadius: 10,
-    backgroundColor: "#f5f5f5",
-    marginBottom: height * 0.008,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    fontSize: isWeb ? 14 : width * 0.04,
-  },
-  inputError: {
-    borderColor: "#d32f2f",
-  },
-  errorText: {
-    color: "#d32f2f",
-    marginBottom: height * 0.01,
-    fontSize: isWeb ? 12 : width * 0.035,
-  },
-  registerButton: {
-    backgroundColor: "#4caf50",
-    paddingVertical: isWeb ? 12 : height * 0.02,
-    borderRadius: 12,
-    alignItems: "center",
-    marginTop: height * 0.01,
-    marginBottom: height * 0.02,
+    paddingHorizontal: width * 0.06,
   },
   backButton: {
-    paddingVertical: isWeb ? 10 : height * 0.015,
-    paddingHorizontal: isWeb ? 20 : width * 0.04,
-    borderRadius: 20,
-    alignSelf: "center",
+    alignSelf: "flex-start",
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    marginBottom: 8,
+  },
+  backText: { color: "#fff", fontSize: 14, fontWeight: "700" },
+  logoWrap: {
+    width: isSmallScreen ? 84 : 96,
+    height: isSmallScreen ? 84 : 96,
+    borderRadius: 999,
+    backgroundColor: "#fff",
+    alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.85)",
-    marginBottom: height * 0.025,
+    marginBottom: -36,
+    zIndex: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  backText: {
-    color: "#000000ff",
-    fontSize: isWeb ? 14 : width * 0.04,
-    fontWeight: "bold",
+  logo: { width: "78%", height: "78%" },
+  card: {
+    width: "100%",
+    maxWidth: 420,
+    backgroundColor: CARD_BG,
+    borderRadius: 24,
+    paddingTop: 48,
+    paddingBottom: 24,
+    paddingHorizontal: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
   },
-  registerText: {
-    color: "#fff",
-    fontSize: isWeb ? 18 : width * 0.05,
-    fontWeight: "bold",
+  title: {
+    fontSize: isSmallScreen ? 20 : 24,
+    fontWeight: "800",
+    textAlign: "center",
+    color: INK,
+  },
+  subtitle: {
+    fontSize: 13,
+    textAlign: "center",
+    color: MUTED,
+    marginTop: 4,
+    marginBottom: 20,
+  },
+  form: { gap: 10 },
+  input: {
+    paddingVertical: 13,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: "#f7f7f9",
+    borderWidth: 1,
+    borderColor: BORDER,
+    fontSize: 14.5,
+    color: INK,
+  },
+  inputError: {
+    borderColor: DANGER,
+  },
+  errorText: {
+    color: DANGER,
+    fontSize: 12,
+    marginTop: -4,
   },
   linkText: {
     textAlign: "center",
-    color: "#007AFF",
-    marginTop: height * 0.015,
-    fontSize: isWeb ? 14 : width * 0.04,
+    color: PINK,
+    fontWeight: "600",
+    fontSize: 13.5,
   },
 });

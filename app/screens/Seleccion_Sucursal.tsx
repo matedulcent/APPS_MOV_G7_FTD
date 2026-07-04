@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -13,6 +14,7 @@ import {
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import ScreenHeader from "../../components/ScreenHeader";
+import { BORDER, CARD_BG, DANGER, INK, MUTED, PINK } from "../../constants/brand";
 import { setSucursal } from "../../redux/actions/userActions"; // <--- acción Redux
 import type { RootState } from "../../redux/store";
 import { BASE_URL } from "../services/apiConfig";
@@ -22,7 +24,8 @@ const isSmallScreen = width < 360;
 
 type UISucursal = { id: string; nombre: string; direccion: string; imagen: string };
 type BackendSucursal = { id: string; nombre?: string | null; domicilio?: string | null; urlImagen?: string | null };
-const PLACEHOLDER_IMG = "https://placehold.co/160x160?text=Helados";
+
+const esUrlValida = (s?: string) => !!s && /^https?:\/\//.test(s);
 
 export default function SeleccionSucursalScreen() {
   const router = useRouter();
@@ -49,7 +52,7 @@ export default function SeleccionSucursalScreen() {
           id: s.id,
           nombre: s.nombre ?? "Sucursal sin nombre",
           direccion: s.domicilio ?? "Dirección no disponible",
-          imagen: s.urlImagen ?? PLACEHOLDER_IMG,
+          imagen: s.urlImagen ?? "",
         }));
 
         if (!cancelado) setSucursales(ui);
@@ -73,12 +76,30 @@ export default function SeleccionSucursalScreen() {
   const renderSucursal = ({ item }: { item: UISucursal }) => {
     const isSelected = item.id === sucursalSeleccionada;
     return (
-      <Pressable style={[styles.card, isSelected && styles.cardSelected]} onPress={() => handleSeleccion(item)}>
-        <Image source={{ uri: item.imagen }} style={styles.imagen} />
+      <Pressable
+        style={({ pressed }) => [
+          styles.card,
+          isSelected && styles.cardSelected,
+          pressed && { opacity: 0.85 },
+        ]}
+        onPress={() => handleSeleccion(item)}
+      >
+        {esUrlValida(item.imagen) ? (
+          <Image source={{ uri: item.imagen }} style={styles.imagen} />
+        ) : (
+          <View style={[styles.imagen, styles.imagenPlaceholder]}>
+            <Ionicons name="ice-cream" size={30} color={PINK} />
+          </View>
+        )}
         <View style={styles.textContainer}>
           <Text style={styles.nombre}>{item.nombre}</Text>
           <Text style={styles.direccion}>{item.direccion}</Text>
         </View>
+        <Ionicons
+          name="chevron-forward"
+          size={20}
+          color={isSelected ? PINK : "#c6c6cf"}
+        />
       </Pressable>
     );
   };
@@ -90,16 +111,16 @@ export default function SeleccionSucursalScreen() {
       resizeMode={isSmallScreen ? "stretch" : "cover"}
     >
       <View style={styles.overlay}>
-        <ScreenHeader title="Seleccione su sucursal" />
+        <ScreenHeader title="Elegí tu heladería" />
 
         {loading && (
           <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingTop: 20 }}>
-            <ActivityIndicator size="large" color="#f4679f" />
-            <Text style={{ marginTop: 8 }}>Cargando sucursales...</Text>
+            <ActivityIndicator size="large" color={PINK} />
+            <Text style={{ marginTop: 8, color: MUTED }}>Cargando sucursales...</Text>
           </View>
         )}
 
-        {!loading && error && <Text style={{ color: "red", textAlign: "center", marginVertical: 20 }}>{error}</Text>}
+        {!loading && error && <Text style={styles.errorText}>{error}</Text>}
 
         {!loading && !error && (
           <FlatList
@@ -116,11 +137,27 @@ export default function SeleccionSucursalScreen() {
 
 const styles = StyleSheet.create({
   backgroundImage: { flex: 1, width: "100%", height: "100%" },
-  overlay: { flex: 1, padding: 20, backgroundColor: "rgba(255,255,255,0.6)" },
-  card: { flexDirection: "row", alignItems: "center", padding: 12, borderRadius: 10, backgroundColor: "#f5f5f5", marginBottom: 12, borderWidth: 1, borderColor: "#ddd" },
-  cardSelected: { borderColor: "#6200ee", backgroundColor: "#e0d7ff" },
-  imagen: { width: 70, height: 70, borderRadius: 10, marginRight: 12 },
+  overlay: { flex: 1, padding: 20, backgroundColor: "rgba(255,255,255,0.55)" },
+  card: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderRadius: 16,
+    backgroundColor: CARD_BG,
+    marginBottom: 12,
+    borderWidth: 1.5,
+    borderColor: BORDER,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  cardSelected: { borderColor: PINK, backgroundColor: "#fff0f6" },
+  imagen: { width: 64, height: 64, borderRadius: 14, marginRight: 14 },
+  imagenPlaceholder: { backgroundColor: "#fdeaf1", alignItems: "center", justifyContent: "center" },
   textContainer: { flex: 1 },
-  nombre: { fontSize: 16, fontWeight: "bold" },
-  direccion: { fontSize: 14, color: "#555", marginTop: 4 },
+  nombre: { fontSize: 16, fontWeight: "700", color: INK },
+  direccion: { fontSize: 13, color: MUTED, marginTop: 3 },
+  errorText: { color: DANGER, textAlign: "center", marginVertical: 20 },
 });

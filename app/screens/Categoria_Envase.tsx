@@ -12,8 +12,11 @@ import {
   View,
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import ActionButton from "../../components/ActionButton";
 import Dropdown from "../../components/Dropdown";
 import ScreenHeader from "../../components/ScreenHeader";
+import { BORDER, CARD_BG, INK, MUTED, PINK } from "../../constants/brand";
 import {
   syncEnvasesDisponibles,
   toggleEnvase,
@@ -56,6 +59,7 @@ function grupoDe(e: Envase): Grupo {
 export default function Categoria_Envase() {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
+  const insets = useSafeAreaInsets();
   const sucursalId = useSelector((state: RootState) => state.user.sucursalId);
   const selecciones = useSelector((state: RootState) => state.pedido.envases);
 
@@ -147,31 +151,26 @@ export default function Categoria_Envase() {
   if (!sucursalId)
     return (
       <View style={styles.centered}>
-        <Text>Selecciona una sucursal primero...</Text>
+        <Text style={{ color: MUTED }}>Selecciona una sucursal primero...</Text>
       </View>
     );
 
   if (loading)
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#f4679f" />
-        <Text style={{ marginTop: 10 }}>Cargando envases...</Text>
+        <ActivityIndicator size="large" color={PINK} />
+        <Text style={{ marginTop: 10, color: MUTED }}>Cargando envases...</Text>
       </View>
     );
 
   if (envasesOfrecidos.length === 0)
     return (
-
       <View style={styles.centered}>
-        <Text>No hay envases disponibles en esta sucursal.</Text>
-        <Pressable
-          style={[styles.button, { marginTop: 20, backgroundColor: "#f4679f" }]}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.buttonText}>Volver atrás</Text>
-        </Pressable>
+        <Text style={{ color: MUTED }}>No hay envases disponibles en esta sucursal.</Text>
+        <View style={{ marginTop: 20, width: "60%" }}>
+          <ActionButton label="Volver atrás" icon="arrow-back" onPress={() => router.back()} />
+        </View>
       </View>
-
     );
 
   const ordenGrupos: Grupo[] = ["Cucurucho", "Kilo", "Vaso", "Otros"];
@@ -184,12 +183,12 @@ export default function Categoria_Envase() {
       resizeMode={isSmallScreen ? "stretch" : "cover"}
     >
       <View style={styles.overlay}>
-        <ScreenHeader title="Seleccionar Envase" />
+        <ScreenHeader title="Seleccionar envase" />
 
         <FlatList
           data={dataGrupos}
           keyExtractor={g => g}
-          contentContainerStyle={{ paddingBottom: height * 0.15 }}
+          contentContainerStyle={{ paddingBottom: height * 0.16 }}
           renderItem={({ item: grupo }) => {
             const envs = grupos[grupo];
             const opciones = envs.map(e => e.display);
@@ -226,14 +225,14 @@ export default function Categoria_Envase() {
                         <Text style={styles.itemText}>{env.display}</Text>
                         <View style={styles.counter}>
                           <Pressable
-                            style={styles.counterButton}
+                            style={({ pressed }) => [styles.counterButton, pressed && { opacity: 0.7 }]}
                             onPress={() => handleCantidad(opcion, -1)}
                           >
                             <Text style={styles.counterText}>-</Text>
                           </Pressable>
                           <Text style={styles.counterValue}>{cantidad}</Text>
                           <Pressable
-                            style={styles.counterButton}
+                            style={({ pressed }) => [styles.counterButton, pressed && { opacity: 0.7 }]}
                             onPress={() => handleCantidad(opcion, 1)}
                           >
                             <Text style={styles.counterText}>+</Text>
@@ -247,13 +246,8 @@ export default function Categoria_Envase() {
           }}
         />
 
-        <View style={[styles.footer, { bottom: height * 0.13 }]}>
-          <Pressable
-            style={[styles.button, { backgroundColor: "#f4679fff" }]}
-            onPress={handleConfirm}
-          >
-            <Text style={[styles.buttonText, { fontSize: width * 0.045 }]}>Siguiente</Text>
-          </Pressable>
+        <View style={[styles.footer, { bottom: insets.bottom + 16 }]}>
+          <ActionButton label="Siguiente" icon="arrow-forward" onPress={handleConfirm} />
         </View>
       </View>
     </ImageBackground>
@@ -265,46 +259,41 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     padding: 20,
-    backgroundColor: "rgba(255,255,255,0.6)",
+    backgroundColor: "rgba(255,255,255,0.55)",
   },
   centered: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    padding: 20,
   },
   itemRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginTop: 8,
-    padding: 10,
+    padding: 12,
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    backgroundColor: "#fff",
+    borderColor: BORDER,
+    borderRadius: 12,
+    backgroundColor: CARD_BG,
   },
-  itemText: { fontSize: width * 0.045 },
+  itemText: { fontSize: width * 0.042, color: INK, fontWeight: "600" },
   counter: { flexDirection: "row", alignItems: "center" },
   counterButton: {
-    backgroundColor: "#eee",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 4,
+    backgroundColor: "#fdeaf1",
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 8,
     marginHorizontal: 5,
   },
-  counterText: { fontSize: 18, fontWeight: "bold" },
+  counterText: { fontSize: 18, fontWeight: "bold", color: PINK },
   counterValue: {
     fontSize: 16,
     fontWeight: "bold",
     minWidth: 30,
     textAlign: "center",
+    color: INK,
   },
   footer: { position: "absolute", left: 20, right: 20 },
-  button: {
-    backgroundColor: "#6200ee",
-    padding: 14,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  buttonText: { color: "#fff", fontWeight: "bold" },
 });

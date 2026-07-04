@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { Animated, Dimensions, PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { CARD_BG, INK, MUTED, PINK } from "../constants/brand";
 
 type PedidoCardProps = {
     selecciones?: { [key: string]: string[] | number };
@@ -94,7 +95,10 @@ export default function PedidoCardBottom({
             </ScrollView>
 
             {onConfirm && (
-                <Pressable style={[styles.button, { backgroundColor: "#4cd7c7ff" }]} onPress={onConfirm}>
+                <Pressable
+                    style={({ pressed }) => [styles.button, pressed && { opacity: 0.85 }]}
+                    onPress={onConfirm}
+                >
                     <Text style={styles.buttonText}>{botonTexto}</Text>
                 </Pressable>
             )}
@@ -108,35 +112,36 @@ const styles = StyleSheet.create({
         left: 16,
         right: 16,
         height: Dimensions.get("window").height / 2,
-        backgroundColor: "#fff8e1",
-        borderTopLeftRadius: 16,
-        borderTopRightRadius: 16,
+        backgroundColor: CARD_BG,
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
         padding: 16,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: -3 },
         shadowOpacity: 0.15,
-        shadowRadius: 5,
-        elevation: 5,
+        shadowRadius: 8,
+        elevation: 8,
         borderWidth: 1,
-        borderColor: "#ffd54f",
+        borderColor: "#eee",
     },
     ticketNotch: {
         width: 40,
         height: 5,
-        backgroundColor: "#ffd54f",
+        backgroundColor: "#e0e0e6",
         borderRadius: 3,
         alignSelf: "center",
         marginBottom: 10,
     },
-    title: { fontSize: 20, fontWeight: "bold", marginBottom: 12, textAlign: "center" },
+    title: { fontSize: 18, fontWeight: "800", marginBottom: 12, textAlign: "center", color: INK },
     content: { maxHeight: Dimensions.get("window").height / 2 - 100 },
-    itemTitle: { fontSize: 16, fontWeight: "bold", marginBottom: 4 },
-    subItem: { marginLeft: 12, fontSize: 14, marginBottom: 2 },
+    itemTitle: { fontSize: 15, fontWeight: "700", marginBottom: 4, color: INK },
+    subItem: { marginLeft: 12, fontSize: 13.5, marginBottom: 2, color: MUTED },
     button: {
-        padding: 12,
-        borderRadius: 8,
+        backgroundColor: PINK,
+        padding: 14,
+        borderRadius: 14,
         marginTop: 10,
         alignItems: "center",
     },
-    buttonText: { color: "white", fontWeight: "bold", fontSize: 16 },
+    buttonText: { color: "white", fontWeight: "700", fontSize: 15.5 },
 });

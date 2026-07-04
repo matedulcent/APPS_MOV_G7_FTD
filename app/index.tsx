@@ -1,75 +1,22 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
 import {
   Dimensions,
   Image,
   ImageBackground,
-  Platform,
-  Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import ActionButton from "../components/ActionButton";
+import { BORDER, CARD_BG, DANGER, INK, MINT, MUTED, MUTED_LIGHT, PINK } from "../constants/brand";
 import { logOut } from "../redux/actions/userActions";
 import { RootState } from "../redux/store";
 
-const { width, height } = Dimensions.get("window");
-const isSmallScreen = width < 400 || height < 700;
-const isWeb = Platform.OS === "web";
-
-const PINK = "#f4679f";
-const MINT = "#3fbfad";
-const INK = "#2c2c3a";
-
-type IconName = keyof typeof Ionicons.glyphMap;
-
-function ActionButton({
-  label,
-  icon,
-  onPress,
-  variant = "solid",
-  color = PINK,
-}: {
-  label: string;
-  icon: IconName;
-  onPress: () => void;
-  variant?: "solid" | "outline" | "ghost";
-  color?: string;
-}) {
-  const isSolid = variant === "solid";
-  const isOutline = variant === "outline";
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.button,
-        isSolid && { backgroundColor: color },
-        isOutline && { backgroundColor: "transparent", borderWidth: 1.5, borderColor: color },
-        variant === "ghost" && { backgroundColor: "transparent" },
-        pressed && { opacity: 0.8 },
-      ]}
-    >
-      <Ionicons
-        name={icon}
-        size={19}
-        color={isSolid ? "#fff" : color}
-        style={{ marginRight: 8 }}
-      />
-      <Text
-        style={[
-          styles.buttonText,
-          { color: isSolid ? "#fff" : color },
-          variant === "ghost" && { fontWeight: "600" },
-        ]}
-      >
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
+const { width } = Dimensions.get("window");
+const isSmallScreen = width < 400;
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -156,7 +103,7 @@ export default function HomeScreen() {
                 label="Cerrar sesión"
                 icon="log-out-outline"
                 variant="ghost"
-                color="#c0392b"
+                color={DANGER}
                 onPress={handleLogout}
               />
             </View>
@@ -174,7 +121,7 @@ export default function HomeScreen() {
                 label="Cerrar sesión"
                 icon="log-out-outline"
                 variant="ghost"
-                color="#c0392b"
+                color={DANGER}
                 onPress={handleLogout}
               />
             </View>
@@ -212,7 +159,7 @@ const styles = StyleSheet.create({
   card: {
     width: "100%",
     maxWidth: 420,
-    backgroundColor: "rgba(255,255,255,0.94)",
+    backgroundColor: CARD_BG,
     borderRadius: 24,
     paddingTop: 56,
     paddingBottom: 28,
@@ -233,34 +180,23 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: isSmallScreen ? 13 : 14,
     textAlign: "center",
-    color: "#6b6b78",
+    color: MUTED,
     marginTop: 6,
   },
   divider: {
     height: 1,
-    backgroundColor: "#eee",
+    backgroundColor: BORDER,
     marginVertical: 20,
   },
   section: { gap: 12 },
   sectionLabel: {
     textAlign: "center",
     fontSize: 12,
-    color: "#8a8a95",
+    color: MUTED_LIGHT,
     fontWeight: "600",
     marginTop: 4,
     marginBottom: -2,
     textTransform: "uppercase",
     letterSpacing: 0.5,
-  },
-  button: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: isWeb ? 13 : 14,
-    borderRadius: 14,
-  },
-  buttonText: {
-    fontWeight: "700",
-    fontSize: isSmallScreen ? 14.5 : 15.5,
   },
 });

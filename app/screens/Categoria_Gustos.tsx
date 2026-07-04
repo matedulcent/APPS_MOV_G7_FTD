@@ -17,6 +17,7 @@ import { useDispatch, useSelector } from "react-redux";
 import Dropdown from "../../components/Dropdown";
 import PedidoCardBottom from "../../components/PedidoCardBottom";
 import ScreenHeader from "../../components/ScreenHeader";
+import { DANGER, INK, MUTED, PINK } from "../../constants/brand";
 import { fetchSabores } from "../../redux/actions/saboresActions";
 import { limpiarPedido, setSeleccion, toggleEnvase } from "../../redux/slices/pedidoSlice";
 import type { AppDispatch, RootState } from "../../redux/store";
@@ -60,7 +61,7 @@ const SearchBarUX = ({
 }) => {
   const [focused, setFocused] = useState(false);
   return (
-    <View style={[styles.searchContainer, { borderColor: focused ? "#fd5f81ff" : "#ccc" }]}>
+    <View style={[styles.searchContainer, { borderColor: focused ? PINK : "#ddd" }]}>
       <Ionicons name="search" size={20} color="#999" style={{ marginRight: 8 }} />
       <TextInput
         style={styles.searchInput}
@@ -174,15 +175,15 @@ export default function Categoria_Gustos() {
   if (loading)
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#fd5f81ff" />
-        <Text style={{ marginTop: 10 }}>Cargando gustos...</Text>
+        <ActivityIndicator size="large" color={PINK} />
+        <Text style={{ marginTop: 10, color: MUTED }}>Cargando gustos...</Text>
       </View>
     );
 
   if (error)
     return (
       <View style={styles.center}>
-        <Text style={{ color: "red", fontSize: 16 }}>{error}</Text>
+        <Text style={{ color: DANGER, fontSize: 16 }}>{error}</Text>
       </View>
     );
 
@@ -270,19 +271,19 @@ export default function Categoria_Gustos() {
 
 const styles = StyleSheet.create({
   backgroundImage: { flex: 1, width: "100%", height: "100%" },
-  overlay: { flex: 1, padding: 20, backgroundColor: "rgba(255,255,255,0.6)" },
+  overlay: { flex: 1, padding: 20, backgroundColor: "rgba(255,255,255,0.55)" },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   selectionContainer: { marginVertical: 12, alignItems: "center" },
-  selectionLabel: { fontSize: 14, fontWeight: "600", marginBottom: 4, color: "#444" },
+  selectionLabel: { fontSize: 14, fontWeight: "600", marginBottom: 4, color: INK },
   progressBarBackground: {
     width: "80%",
     height: 12,
-    backgroundColor: "#e0e0e0",
+    backgroundColor: "#e8e8ec",
     borderRadius: 6,
     overflow: "hidden",
   },
-  progressBarFill: { height: "100%", backgroundColor: "#fd5f81ff", borderRadius: 6 },
-  selectionCount: { marginTop: 4, fontSize: 12, color: "#555" },
+  progressBarFill: { height: "100%", backgroundColor: PINK, borderRadius: 6 },
+  selectionCount: { marginTop: 4, fontSize: 12, color: MUTED },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -294,9 +295,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     elevation: 2,
   },
-  searchInput: { flex: 1, fontSize: 14, color: "#333" },
+  searchInput: { flex: 1, fontSize: 14, color: INK },
 });

@@ -1,6 +1,7 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { BORDER, INK, PINK } from "../constants/brand";
 
 interface DropdownProps {
     label: string;
@@ -28,7 +29,7 @@ export default function Dropdown({
                         <MaterialIcons
                             name={icon}
                             size={20}
-                            color="#333"
+                            color={PINK}
                             style={{ marginRight: 8 }}
                         />
                     )}
@@ -39,7 +40,7 @@ export default function Dropdown({
                 <MaterialIcons
                     name={open ? "keyboard-arrow-up" : "keyboard-arrow-down"}
                     size={24}
-                    color="#333"
+                    color={PINK}
                 />
             </Pressable>
 
@@ -77,36 +78,36 @@ export default function Dropdown({
 const styles = StyleSheet.create({
     container: {
         marginVertical: 10,
-        borderWidth: 2,
-        borderRadius: 12, // ✅ redondea todas las esquinas
-        borderColor: "#ccc",
+        borderWidth: 1.5,
+        borderRadius: 14, // ✅ redondea todas las esquinas
+        borderColor: BORDER,
         backgroundColor: "#fff",
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+        shadowOpacity: 0.06,
+        shadowRadius: 6,
+        elevation: 2,
         overflow: "hidden", // ✅ asegura que las opciones sigan el borde redondeado
     },
-    containerOpen: { borderColor: "#6200ee" },
+    containerOpen: { borderColor: PINK },
     header: {
         padding: 14,
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        backgroundColor: "#f9f9f9",
+        backgroundColor: "#fafafa",
     },
-    label: { fontWeight: "bold", fontSize: 16 },
+    label: { fontWeight: "700", fontSize: 16, color: INK },
     dropdownList: {
         borderTopWidth: 1,
-        borderColor: "#ddd",
+        borderColor: BORDER,
     },
     option: {
         padding: 12,
         borderBottomWidth: 1,
-        borderColor: "#eee",
+        borderColor: BORDER,
     },
-    optionSelected: { backgroundColor: "#e8f5e9" },
-    optionText: { fontSize: 15 },
-    optionTextSelected: { fontWeight: "bold", color: "#388e3c" },
+    optionSelected: { backgroundColor: "#fff0f6" },
+    optionText: { fontSize: 15, color: INK },
+    optionTextSelected: { fontWeight: "700", color: PINK },
 });
