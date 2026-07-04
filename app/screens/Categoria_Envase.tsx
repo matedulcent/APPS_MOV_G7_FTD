@@ -28,8 +28,7 @@ import { BASE_URL } from "../services/apiConfig";
 const { width, height } = Dimensions.get("window");
 const isSmallScreen = width < 360;
 
-type Envase = { id: string; tipoEnvase: string; maxCantSabores: number };
-type Grupo = "Cucurucho" | "Kilo" | "Vaso" | "Otros";
+type Envase = { id: string; tipoEnvase: string; maxCantSabores: number; categoria: string };
 
 function labelForEnvase(e?: Envase): string {
   if (!e) return "Envase desconocido";
@@ -48,12 +47,12 @@ function labelForEnvase(e?: Envase): string {
   return e.tipoEnvase.replace("_", " ");
 }
 
-function grupoDe(e: Envase): Grupo {
-  const k = (e.tipoEnvase.split("_")[0] || "").toLowerCase();
-  if (k === "cucurucho") return "Cucurucho";
-  if (k === "kilo") return "Kilo";
-  if (k === "vaso") return "Vaso";
-  return "Otros";
+/** Ícono por sección; las secciones nuevas creadas por el vendedor caen en el genérico. */
+function iconForGrupo(nombre: string): React.ComponentProps<typeof Dropdown>["icon"] {
+  const n = nombre.toLowerCase();
+  if (n === "kilo") return "scale";
+  if (n === "vasos") return "local-drink";
+  return "icecream";
 }
 
 export default function Categoria_Envase() {
@@ -98,15 +97,15 @@ export default function Categoria_Envase() {
     }, [sucursalId])
   );
 
+  // Agrupar dinámicamente por la sección real del envase (ya no se adivina por el nombre)
   const grupos = useMemo(() => {
-    const g: Record<Grupo, (Envase & { display: string })[]> = {
-      Cucurucho: [],
-      Kilo: [],
-      Vaso: [],
-      Otros: [],
-    };
-    for (const e of envasesOfrecidos) g[grupoDe(e)].push({ ...e, display: labelForEnvase(e) });
-    (Object.keys(g) as Grupo[]).forEach(k => g[k].sort((a, b) => a.display.localeCompare(b.display)));
+    const g: Record<string, (Envase & { display: string })[]> = {};
+    for (const e of envasesOfrecidos) {
+      const grupo = e.categoria || "Especiales";
+      if (!g[grupo]) g[grupo] = [];
+      g[grupo].push({ ...e, display: labelForEnvase(e) });
+    }
+    Object.keys(g).forEach(k => g[k].sort((a, b) => a.display.localeCompare(b.display)));
     return g;
   }, [envasesOfrecidos]);
 
@@ -173,8 +172,7 @@ export default function Categoria_Envase() {
       </View>
     );
 
-  const ordenGrupos: Grupo[] = ["Cucurucho", "Kilo", "Vaso", "Otros"];
-  const dataGrupos = ordenGrupos.filter(g => grupos[g].length > 0);
+  const dataGrupos = Object.keys(grupos).sort();
 
   return (
     <ImageBackground
@@ -206,13 +204,7 @@ export default function Categoria_Envase() {
                     const env = envs.find(e => e.display === displayValue);
                     if (env) handleToggle(env.tipoEnvase);
                   }}
-                  icon={
-                    grupo === "Kilo"
-                      ? "scale"
-                      : grupo === "Vaso"
-                        ? "local-drink"
-                        : "icecream"
-                  }
+                  icon={iconForGrupo(grupo)}
                 />
 
                 {selecciones

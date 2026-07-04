@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -14,12 +15,42 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BASE_URL } from "./../../services/apiConfig";
 
 type Envase = { id: string; tipoEnvase: string; maxCantSabores: number };
-type Sabor = { id: string; tipoSabor: string };
+type Sabor = { id: string; tipoSabor: string; categoria: string };
+type Categoria = { id: string; nombre: string };
+
+const CATEGORIA_FALLBACK = "Especiales";
 
 async function getCatalogoSabores(): Promise<Sabor[]> {
   const r = await fetch(`${BASE_URL}/api/sabores`);
   if (!r.ok) throw new Error("No se pudo leer /api/sabores");
   return r.json();
+}
+async function getCategorias(): Promise<Categoria[]> {
+  const r = await fetch(`${BASE_URL}/api/sabores/categorias`);
+  if (!r.ok) throw new Error("No se pudo leer /api/sabores/categorias");
+  return r.json();
+}
+async function postCategoria(nombre: string): Promise<Categoria> {
+  const r = await fetch(`${BASE_URL}/api/sabores/categorias`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ nombre }),
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.error || "No se pudo crear la sección");
+  return data;
+}
+async function deleteCategoria(nombre: string): Promise<void> {
+  const r = await fetch(`${BASE_URL}/api/sabores/categorias/${encodeURIComponent(nombre)}`, {
+    method: "DELETE",
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.error || "No se pudo borrar la sección");
+}
+async function deleteSabor(id: string): Promise<void> {
+  const r = await fetch(`${BASE_URL}/api/sabores/${id}`, { method: "DELETE" });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.error || "No se pudo borrar el sabor");
 }
 async function getOferta(
   sucursalId: string
@@ -44,8 +75,8 @@ async function putOferta(
   return data;
 }
 
-// NUEVO: crear sabor global (solo nombre)
-async function postSabor(payload: { tipoSabor: string }) {
+// NUEVO: crear sabor global (nombre + sección)
+async function postSabor(payload: { tipoSabor: string; categoria: string }) {
   const r = await fetch(`${BASE_URL}/api/sabores`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -56,50 +87,17 @@ async function postSabor(payload: { tipoSabor: string }) {
   return data as Sabor;
 }
 
-/* ===== helpers de clasificación ===== */
-type Grupo =
-  | "Cremas"
-  | "Frutales"
-  | "Dulce de leche"
-  | "Chocolates"
-  | "Especiales";
-
-const ordenGrupos: Grupo[] = [
-  "Cremas",
-  "Frutales",
-  "Dulce de leche",
-  "Chocolates",
-  "Especiales",
-];
-
-function normalize(s: string) {
-  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+async function confirmAsync(title: string, message: string, confirmLabel: string): Promise<boolean> {
+  if (Platform.OS === "web") {
+    return Promise.resolve(window.confirm(`${title}\n\n${message}`));
+  }
+  return new Promise((resolve) => {
+    Alert.alert(title, message, [
+      { text: "Cancelar", style: "cancel", onPress: () => resolve(false) },
+      { text: confirmLabel, style: "destructive", onPress: () => resolve(true) },
+    ]);
+  });
 }
-
-function grupoDeSabor(nombre: string): Grupo {
-  const n = normalize(nombre);
-
-  if (/(chocolate|choco|cacao|amargo|blanco|almendra|almendras|menta)/.test(n)) {
-    return "Chocolates";
-  }
-  if (/(dulce de leche|ddl)/.test(n)) {
-    return "Dulce de leche";
-  }
-  if (
-    /(crema|americana|vainilla|tramontana|sambayon|flan|yogur|yogurt|ricota|panna|nata)/.test(n)
-  ) {
-    return "Cremas";
-  }
-  if (
-    /(frutilla|fresa|limon|naranja|frambuesa|mora|maracuya|anan|piña|mango|durazno|melocoton|kiwi|uva|manzana|pera|cereza|sandia|melon|banana|platano)/.test(
-      n
-    )
-  ) {
-    return "Frutales";
-  }
-  return "Especiales";
-}
-/* ==================================== */
 
 export default function Vendedor_Productos() {
   const { sucursalId: qp } = useLocalSearchParams<{ sucursalId?: string }>();
@@ -109,38 +107,28 @@ export default function Vendedor_Productos() {
 
   const [loading, setLoading] = useState(true);
   const [catalogoSabores, setCatalogoSabores] = useState<Sabor[]>([]);
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [seleccionSabores, setSeleccionSabores] = useState<Set<string>>(new Set());
   const [seleccionEnvases, setSeleccionEnvases] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
 
-  const [abierto, setAbierto] = useState<Record<Grupo, boolean>>({
-    Cremas: false,
-    Frutales: false,
-    "Dulce de leche": false,
-    Chocolates: false,
-    Especiales: false,
-  });
+  const [abierto, setAbierto] = useState<Record<string, boolean>>({});
+  const [nuevoSaborPorGrupo, setNuevoSaborPorGrupo] = useState<Record<string, string>>({});
+  const [nuevaSeccion, setNuevaSeccion] = useState("");
 
-  // NUEVO: inputs por grupo para "nuevo gusto"
-  const [nuevoSaborPorGrupo, setNuevoSaborPorGrupo] = useState<Record<Grupo, string>>({
-    Cremas: "",
-    Frutales: "",
-    "Dulce de leche": "",
-    Chocolates: "",
-    Especiales: "",
-  });
-
-  const onChangeNuevoSabor = (g: Grupo, v: string) =>
+  const onChangeNuevoSabor = (g: string, v: string) =>
     setNuevoSaborPorGrupo((prev) => ({ ...prev, [g]: v }));
 
   const cargar = useCallback(async () => {
     setLoading(true);
     try {
-      const [sabores, oferta] = await Promise.all([
+      const [sabores, oferta, cats] = await Promise.all([
         getCatalogoSabores(),
         getOferta(sucursalId),
+        getCategorias(),
       ]);
       setCatalogoSabores(sabores);
+      setCategorias(cats);
       setSeleccionSabores(new Set((oferta.sabores ?? []).map((s) => s.id)));
       setSeleccionEnvases(new Set((oferta.envases ?? []).map((e) => e.id)));
     } catch (e: any) {
@@ -172,20 +160,65 @@ export default function Vendedor_Productos() {
     }
   };
 
-  // NUEVO: crear gusto global (catálogo) y recargar
-  const crearSaborEnGrupo = async (g: Grupo) => {
+  // Crear gusto en el catálogo, dentro de la sección donde se tocó "+ Agregar"
+  const crearSaborEnGrupo = async (g: string) => {
     const nombre = (nuevoSaborPorGrupo[g] || "").trim();
     if (!nombre) {
       Alert.alert("Nombre requerido", "Ingresá un nombre para el nuevo gusto.");
       return;
     }
     try {
-      await postSabor({ tipoSabor: nombre });
+      await postSabor({ tipoSabor: nombre, categoria: g });
       await cargar();
       setNuevoSaborPorGrupo((prev) => ({ ...prev, [g]: "" }));
-      Alert.alert("Listo", `Se agregó "${nombre}".`);
+      Alert.alert("Listo", `Se agregó "${nombre}" en "${g}".`);
     } catch (e: any) {
       Alert.alert("Error", e?.message ?? "No se pudo crear el sabor");
+    }
+  };
+
+  const crearSeccion = async () => {
+    const nombre = nuevaSeccion.trim();
+    if (!nombre) {
+      Alert.alert("Nombre requerido", "Ingresá un nombre para la nueva sección.");
+      return;
+    }
+    try {
+      await postCategoria(nombre);
+      setNuevaSeccion("");
+      await cargar();
+    } catch (e: any) {
+      Alert.alert("Error", e?.message ?? "No se pudo crear la sección");
+    }
+  };
+
+  const borrarSeccion = async (nombre: string) => {
+    const ok = await confirmAsync(
+      "Borrar sección",
+      `¿Borrar la sección "${nombre}"? Los gustos que tenga pasan a "${CATEGORIA_FALLBACK}".`,
+      "Borrar"
+    );
+    if (!ok) return;
+    try {
+      await deleteCategoria(nombre);
+      await cargar();
+    } catch (e: any) {
+      Alert.alert("Error", e?.message ?? "No se pudo borrar la sección");
+    }
+  };
+
+  const borrarSabor = async (sabor: Sabor) => {
+    const ok = await confirmAsync(
+      "Borrar sabor",
+      `¿Borrar "${sabor.tipoSabor}" del catálogo? Esta acción no se puede deshacer.`,
+      "Borrar"
+    );
+    if (!ok) return;
+    try {
+      await deleteSabor(sabor.id);
+      await cargar();
+    } catch (e: any) {
+      Alert.alert("Error", e?.message ?? "No se pudo borrar el sabor");
     }
   };
 
@@ -195,23 +228,19 @@ export default function Vendedor_Productos() {
       params: { sucursalId },
     });
 
+  const nombresCategorias = useMemo(() => categorias.map((c) => c.nombre), [categorias]);
+
   const grupos = useMemo(() => {
-    const map: Record<Grupo, Sabor[]> = {
-      Cremas: [],
-      Frutales: [],
-      "Dulce de leche": [],
-      Chocolates: [],
-      Especiales: [],
-    };
+    const map: Record<string, Sabor[]> = {};
+    for (const nombre of nombresCategorias) map[nombre] = [];
     for (const s of catalogoSabores) {
-      const g = grupoDeSabor(s.tipoSabor); // SIEMPRE deducido por nombre
+      const g = map[s.categoria] ? s.categoria : CATEGORIA_FALLBACK;
+      if (!map[g]) map[g] = [];
       map[g].push(s);
     }
-    (Object.keys(map) as Grupo[]).forEach((g) =>
-      map[g].sort((a, b) => a.tipoSabor.localeCompare(b.tipoSabor))
-    );
+    Object.keys(map).forEach((g) => map[g].sort((a, b) => a.tipoSabor.localeCompare(b.tipoSabor)));
     return map;
-  }, [catalogoSabores]);
+  }, [catalogoSabores, nombresCategorias]);
 
   if (loading) {
     return (
@@ -221,8 +250,6 @@ export default function Vendedor_Productos() {
       </View>
     );
   }
-
-  const gruposConContenido = ordenGrupos.filter((g) => (grupos[g] ?? []).length > 0 || true);
 
   return (
     <View style={{ flex: 1, padding: 16, paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16, gap: 12 }}>
@@ -235,7 +262,7 @@ export default function Vendedor_Productos() {
 
       {/* Contenido principal */}
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 12 }}>
-        {gruposConContenido.map((g) => (
+        {nombresCategorias.map((g) => (
           <View
             key={g}
             style={{
@@ -253,21 +280,29 @@ export default function Vendedor_Productos() {
                 backgroundColor: "#f5f5f5",
                 flexDirection: "row",
                 justifyContent: "space-between",
+                alignItems: "center",
               }}
             >
               <Text style={{ fontWeight: "800" }}>{g}</Text>
-              <Text style={{ opacity: 0.7 }}>{abierto[g] ? "▲" : "▼"}</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+                {g !== CATEGORIA_FALLBACK && (
+                  <Pressable onPress={() => borrarSeccion(g)} hitSlop={8}>
+                    <Text style={{ color: "#c0392b", fontWeight: "700" }}>Borrar</Text>
+                  </Pressable>
+                )}
+                <Text style={{ opacity: 0.7 }}>{abierto[g] ? "▲" : "▼"}</Text>
+              </View>
             </TouchableOpacity>
 
             {abierto[g] &&
               (grupos[g] ?? []).map((item) => {
                 const checked = seleccionSabores.has(item.id);
                 return (
-                  <Pressable
+                  <View
                     key={item.id}
-                    onPress={() => toggleSabor(item.id)}
                     style={{
-                      padding: 12,
+                      flexDirection: "row",
+                      alignItems: "center",
                       margin: 8,
                       borderRadius: 12,
                       borderWidth: 1.5,
@@ -275,21 +310,26 @@ export default function Vendedor_Productos() {
                       backgroundColor: checked ? "#eaf3ff" : "#fff",
                     }}
                   >
-                    <Text style={{ fontWeight: "700" }}>{item.tipoSabor}</Text>
-                    <Text style={{ marginTop: 6, fontSize: 12, opacity: 0.6 }}>
-                      Tocar para {checked ? "quitar" : "agregar"} este sabor a la oferta
-                    </Text>
-                  </Pressable>
+                    <Pressable onPress={() => toggleSabor(item.id)} style={{ flex: 1, padding: 12 }}>
+                      <Text style={{ fontWeight: "700" }}>{item.tipoSabor}</Text>
+                      <Text style={{ marginTop: 6, fontSize: 12, opacity: 0.6 }}>
+                        Tocar para {checked ? "quitar" : "agregar"} este sabor a la oferta
+                      </Text>
+                    </Pressable>
+                    <Pressable onPress={() => borrarSabor(item)} style={{ paddingHorizontal: 14 }} hitSlop={8}>
+                      <Text style={{ color: "#c0392b", fontWeight: "700" }}>Borrar</Text>
+                    </Pressable>
+                  </View>
                 );
               })}
 
-            {/* NUEVO: input + botón para crear gusto en este grupo */}
+            {/* input + botón para crear gusto en este grupo */}
             {abierto[g] && (
               <View style={{ paddingHorizontal: 8, paddingBottom: 12 }}>
                 <View style={{ marginTop: 6, flexDirection: "row", alignItems: "center", gap: 8 }}>
                   <TextInput
                     placeholder={`Nuevo gusto en ${g}`}
-                    value={nuevoSaborPorGrupo[g]}
+                    value={nuevoSaborPorGrupo[g] ?? ""}
                     onChangeText={(v) => onChangeNuevoSabor(g, v)}
                     autoCapitalize="none"
                     style={{
@@ -322,6 +362,47 @@ export default function Vendedor_Productos() {
             )}
           </View>
         ))}
+
+        {/* Crear una sección nueva */}
+        <View
+          style={{
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: "#e6e6e6",
+            padding: 12,
+            marginBottom: 12,
+          }}
+        >
+          <Text style={{ fontWeight: "800", marginBottom: 8 }}>Nueva sección</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <TextInput
+              placeholder="Ej: Sin azúcar"
+              value={nuevaSeccion}
+              onChangeText={setNuevaSeccion}
+              autoCapitalize="none"
+              style={{
+                flex: 1,
+                paddingVertical: 10,
+                paddingHorizontal: 12,
+                borderWidth: 1,
+                borderColor: "#ddd",
+                borderRadius: 12,
+                backgroundColor: "#fff",
+              }}
+            />
+            <Pressable
+              onPress={crearSeccion}
+              style={{
+                paddingVertical: 10,
+                paddingHorizontal: 14,
+                borderRadius: 12,
+                backgroundColor: "#222",
+              }}
+            >
+              <Text style={{ color: "#fff", fontWeight: "700" }}>+ Crear</Text>
+            </Pressable>
+          </View>
+        </View>
       </ScrollView>
 
       {/* Botones al pie */}
