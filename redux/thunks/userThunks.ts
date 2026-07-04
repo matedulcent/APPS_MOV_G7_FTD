@@ -1,5 +1,6 @@
 // redux/thunks/userThunks.ts
 import { BASE_URL } from "../../app/services/apiConfig";
+import { parseApiError } from "../../app/services/apiError";
 import { logUserFailure, logUserPending, logUserSuccess } from "../actions/userActions";
 import { AppDispatch } from "../store";
 import { LoginCredentials, UserState } from "../types/userTypes";
@@ -24,8 +25,11 @@ export const loginUser = (credentials: LoginCredentials) => async (dispatch: App
     });
 
     if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(`HTTP ${res.status}: ${text}`);
+      const msg = await parseApiError(
+        res,
+        res.status === 401 ? "Email o contraseña incorrectos" : "No se pudo iniciar sesión"
+      );
+      throw new Error(msg);
     }
 
     const data: any = await res.json();
@@ -47,7 +51,10 @@ export const loginUser = (credentials: LoginCredentials) => async (dispatch: App
 
     console.log("[loginUser] Login OK =>", userPayload);
   } catch (err: any) {
-    console.error("[loginUser] Error:", err);
+    // Login fallido (credenciales incorrectas, red caída) es un caso esperado
+    // y ya se muestra en la UI — no usar console.error acá porque dispara el
+    // overlay rojo de LogBox en cada intento.
+    console.log("[loginUser] Login falló:", err?.message);
     dispatch(logUserFailure(err?.message || "Error al iniciar sesión"));
   }
 };

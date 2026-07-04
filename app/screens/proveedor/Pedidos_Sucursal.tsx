@@ -126,7 +126,7 @@ export default function Pedidos_Sucursal() {
     fetchSucursal(sucursalId)
       .then((sucursal) => setHeladeriaNombre(sucursal.nombre))
       .catch((e) => {
-        console.error("Error al obtener la sucursal:", e);
+        console.log("Error al obtener la sucursal:", e);
         setHeladeriaNombre("Heladería");
       });
   }, [sucursalId]);
@@ -145,7 +145,7 @@ export default function Pedidos_Sucursal() {
 
       setPedidos(merged);
     } catch (e: any) {
-      console.error("[Pedidos] ERROR cargar:", e);
+      console.log("[Pedidos] Error cargar:", e?.message ?? e);
       Alert.alert("Error", e.message ?? "No se pudieron cargar los pedidos");
     } finally {
       if (!sutil) setLoading(false);
@@ -186,7 +186,7 @@ export default function Pedidos_Sucursal() {
       const res = await terminarOrden(pedido.id);
       console.log("[Pedidos] PATCH terminar OK:", res);
     } catch (e: any) {
-      console.error("[Pedidos] PATCH terminar ERROR:", e);
+      console.log("[Pedidos] Error al marcar terminado:", e?.message ?? e);
       Alert.alert("Error", e?.message ?? "No se pudo marcar como terminado");
       setPedidos((prev) =>
         prev.map((p) => (p.id === pedido.id ? { ...p, estadoTerminado: false } : p))
