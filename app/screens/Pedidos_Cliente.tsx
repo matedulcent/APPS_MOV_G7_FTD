@@ -21,7 +21,7 @@ import { useSelector } from "react-redux";
 import type { RootState } from "../../redux/store";
 import { BASE_URL } from "../services/apiConfig";
 
-const ORD_BASE = `${BASE_URL}/api2/ordenes`;
+const ORD_BASE = `${BASE_URL}/api/ordenes`;
 
 const { width, height } = Dimensions.get("window");
 const isSmallScreen = width < 360;

@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 import { BASE_URL } from "../services/apiConfig";
-const ORD_BASE = `${BASE_URL}/api2/ordenes`;
+const ORD_BASE = `${BASE_URL}/api/ordenes`;
 
 const { width } = Dimensions.get("window");
 const isSmallScreen = width < 360;
