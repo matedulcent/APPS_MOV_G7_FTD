@@ -1,51 +1,65 @@
-# Welcome to your Expo app 👋
+# APPS_MOV_G7_FTD
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Frontend de la app de administración de heladerías (pedidos + stock por sucursal). Expo (React Native) + expo-router + Redux Toolkit.
 
-## Get started
+Necesita el backend corriendo: [`APPS_MOV_G7_FTD_BACK`](../APPS_MOV_G7_FTD_BACK).
 
-1. Install dependencies
+## Requisitos
 
-   ```bash
-   npm install
-   ```
+- Node.js 22+ y npm
+- El backend (`APPS_MOV_G7_FTD_BACK`) instalado y corriendo en el puerto 3001
+- Para probar en celular/emulador: estar en la misma red Wi-Fi que la PC donde corre el backend
 
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Instalación
 
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Configurar la IP del backend
 
-## Learn more
+El archivo [`app/services/apiConfig.ts`](app/services/apiConfig.ts) tiene una constante `LOCAL_IP` hardcodeada que apunta a la IP de la PC donde corre el backend (no hay descubrimiento automático). **Antes de correr la app**, revisá que esa IP sea la de tu máquina en la red local:
 
-To learn more about developing your project with Expo, look at the following resources:
+```bash
+# Windows
+ipconfig
+# buscar "Dirección IPv4" de tu adaptador Wi-Fi/Ethernet
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+y actualizá la línea correspondiente en `apiConfig.ts`:
 
-## Join the community
+```ts
+const LOCAL_IP = "TU_IP_AQUI";
+```
 
-Join our community of developers creating universal apps.
+Si vas a correr solo con `--web` en la misma PC, `localhost` también funciona, pero para emulador Android o celular físico hace falta la IP de LAN.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
-"# APPS_MOV_G7_FTD" 
+## Correr la app
+
+Con el backend ya levantado (`npm run dev` en `APPS_MOV_G7_FTD_BACK`):
+
+```bash
+npx expo start
+```
+
+Desde ahí podés elegir:
+
+```bash
+npx expo start --web       # navegador
+npx expo start --android   # emulador/dispositivo Android
+npx expo start --ios       # simulador iOS (solo macOS)
+```
+
+## Estructura
+
+- `app/screens/` — pantallas (login, registro, selección de sucursal, categorías, pedidos, panel de proveedor/sucursal)
+- `app/services/api.ts` — llamadas HTTP al backend
+- `app/services/apiConfig.ts` — configuración de IP/puerto del backend
+- `app/services/storage.ts` — persistencia local (AsyncStorage / localStorage en web)
+- `redux/` — store, slices, thunks y reducers de Redux
+
+## Problemas comunes
+
+- **"Network request failed" / no carga nada**: revisar `LOCAL_IP` en `apiConfig.ts` y que el backend esté corriendo (`curl http://<IP>:3001/api/health`).
+- **Warning de expo-router sobre `app/services/api.ts` o `storage.ts`** ("missing the required default export"): es un warning cosmético del bundler porque esos archivos viven dentro de `app/` (expo-router los interpreta como rutas). No afecta el funcionamiento.
+- **`expo-doctor` se queja de versiones**: correr `npx expo install --fix` para realinear los paquetes con el SDK instalado.
