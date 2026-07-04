@@ -10,6 +10,7 @@ import {
   View,
   TextInput,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BASE_URL } from "./../../services/apiConfig";
 
 type Envase = { id: string; tipoEnvase: string; maxCantSabores: number };
@@ -86,6 +87,7 @@ export default function Vendedor_Envases() {
   const { sucursalId: qp } = useLocalSearchParams<{ sucursalId?: string }>();
   const router = useRouter();
   const sucursalId = String(qp || "S1234");
+  const insets = useSafeAreaInsets();
 
   const [loading, setLoading] = useState(true);
   const [catalogoEnvases, setCatalogoEnvases] = useState<Envase[]>([]);
@@ -220,7 +222,7 @@ export default function Vendedor_Envases() {
   return (
     <View style={{ flex: 1, backgroundColor: "#fff" }}>
       {/* Header */}
-      <View style={{ padding: 16, borderBottomWidth: 1, borderColor: "#eee", alignItems: "center" }}>
+      <View style={{ padding: 16, paddingTop: insets.top + 16, borderBottomWidth: 1, borderColor: "#eee", alignItems: "center" }}>
         <Text style={{ fontSize: 20, fontWeight: "800", textAlign: "center" }}>
           Envases ofrecidos
         </Text>
@@ -281,6 +283,7 @@ export default function Vendedor_Envases() {
                     keyboardType={g === "Especiales" ? "default" : "numeric"}
                     value={nuevoPorGrupo[g].rest}
                     onChangeText={(v) => onChangeNuevo(g, "rest", v)}
+                    autoCapitalize="none"
                     style={{
                       flex: 1,
                       paddingVertical: 10,
@@ -332,7 +335,7 @@ export default function Vendedor_Envases() {
       <View
         style={{
           position: "absolute",
-          bottom: 20,
+          bottom: insets.bottom + 20,
           left: 16,
           right: 16,
           flexDirection: "row",

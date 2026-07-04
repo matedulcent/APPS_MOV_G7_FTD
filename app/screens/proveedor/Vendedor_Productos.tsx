@@ -10,6 +10,7 @@ import {
   View,
   TextInput,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BASE_URL } from "./../../services/apiConfig";
 
 type Envase = { id: string; tipoEnvase: string; maxCantSabores: number };
@@ -104,6 +105,7 @@ export default function Vendedor_Productos() {
   const { sucursalId: qp } = useLocalSearchParams<{ sucursalId?: string }>();
   const router = useRouter();
   const sucursalId = String(qp || "S1234");
+  const insets = useSafeAreaInsets();
 
   const [loading, setLoading] = useState(true);
   const [catalogoSabores, setCatalogoSabores] = useState<Sabor[]>([]);
@@ -223,7 +225,7 @@ export default function Vendedor_Productos() {
   const gruposConContenido = ordenGrupos.filter((g) => (grupos[g] ?? []).length > 0 || true);
 
   return (
-    <View style={{ flex: 1, padding: 16, gap: 12 }}>
+    <View style={{ flex: 1, padding: 16, paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16, gap: 12 }}>
       {/* TÍTULO CENTRADO */}
       <View style={{ alignItems: "center", marginBottom: 8 }}>
         <Text style={{ fontSize: 22, fontWeight: "900", textAlign: "center" }}>
@@ -289,6 +291,7 @@ export default function Vendedor_Productos() {
                     placeholder={`Nuevo gusto en ${g}`}
                     value={nuevoSaborPorGrupo[g]}
                     onChangeText={(v) => onChangeNuevoSabor(g, v)}
+                    autoCapitalize="none"
                     style={{
                       flex: 1,
                       paddingVertical: 10,

@@ -3,13 +3,16 @@ import React, { useState } from "react";
 import {
   Dimensions,
   ImageBackground,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View
 } from "react-native";
+import PasswordInput from "../../components/PasswordInput";
 import { BASE_URL } from "../services/apiConfig";
 
 const { width, height } = Dimensions.get("window");
@@ -130,6 +133,8 @@ export default function RegistroVendedor() {
       source={require("../../assets/images/backgrounds/fondo1.jpg")}
       style={styles.backgroundImage}
     >
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
       <View style={styles.container}>
         <Pressable
           style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.7 }]}
@@ -145,6 +150,7 @@ export default function RegistroVendedor() {
           placeholder="Nombre Local"
           value={nombre}
           onChangeText={(t) => { setNombre(t); if (errors.nombre) setErrors({ ...errors, nombre: undefined }); }}
+          autoCapitalize="none"
         />
         {errors.nombre ? <Text style={styles.errorText}>{errors.nombre}</Text> : null}
 
@@ -163,6 +169,7 @@ export default function RegistroVendedor() {
           placeholder="Dirección del local"
           value={direccion}
           onChangeText={(t) => { setDireccion(t); if (errors.domicilio) setErrors({ ...errors, domicilio: undefined }); }}
+          autoCapitalize="none"
         />
         {errors.domicilio ? <Text style={styles.errorText}>{errors.domicilio}</Text> : null}
 
@@ -175,21 +182,19 @@ export default function RegistroVendedor() {
         />
         {errors.urlImagen ? <Text style={styles.errorText}>{errors.urlImagen}</Text> : null}
 
-        <TextInput
+        <PasswordInput
           style={withError(styles.input, errors.password)}
           placeholder="Contraseña"
           value={password}
           onChangeText={(t) => { setPassword(t); if (errors.password) setErrors({ ...errors, password: undefined }); }}
-          secureTextEntry
         />
         {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
 
-        <TextInput
+        <PasswordInput
           style={withError(styles.input, errors.confirmPassword)}
           placeholder="Confirmar contraseña"
           value={confirmPassword}
           onChangeText={(t) => { setConfirmPassword(t); if (errors.confirmPassword) setErrors({ ...errors, confirmPassword: undefined }); }}
-          secureTextEntry
         />
         {errors.confirmPassword ? <Text style={styles.errorText}>{errors.confirmPassword}</Text> : null}
 
@@ -211,13 +216,15 @@ export default function RegistroVendedor() {
           )}
         </Pressable>
       </View>
+      </ScrollView>
+      </KeyboardAvoidingView>
     </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
+  scrollContent: { flexGrow: 1, justifyContent: "center" },
   container: {
-    flex: 1,
     justifyContent: "center",
     padding: isWeb ? 40 : width * 0.05,
     backgroundColor: "rgba(255,255,255,0.8)",

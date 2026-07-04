@@ -1,36 +1,85 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
 import {
   Dimensions,
+  Image,
   ImageBackground,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { logOut } from "../redux/actions/userActions";
 import { RootState } from "../redux/store";
 
 const { width, height } = Dimensions.get("window");
 const isSmallScreen = width < 400 || height < 700;
+const isWeb = Platform.OS === "web";
+
+const PINK = "#f4679f";
+const MINT = "#3fbfad";
+const INK = "#2c2c3a";
+
+type IconName = keyof typeof Ionicons.glyphMap;
+
+function ActionButton({
+  label,
+  icon,
+  onPress,
+  variant = "solid",
+  color = PINK,
+}: {
+  label: string;
+  icon: IconName;
+  onPress: () => void;
+  variant?: "solid" | "outline" | "ghost";
+  color?: string;
+}) {
+  const isSolid = variant === "solid";
+  const isOutline = variant === "outline";
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.button,
+        isSolid && { backgroundColor: color },
+        isOutline && { backgroundColor: "transparent", borderWidth: 1.5, borderColor: color },
+        variant === "ghost" && { backgroundColor: "transparent" },
+        pressed && { opacity: 0.8 },
+      ]}
+    >
+      <Ionicons
+        name={icon}
+        size={19}
+        color={isSolid ? "#fff" : color}
+        style={{ marginRight: 8 }}
+      />
+      <Text
+        style={[
+          styles.buttonText,
+          { color: isSolid ? "#fff" : color },
+          variant === "ghost" && { fontWeight: "600" },
+        ]}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
 
 export default function HomeScreen() {
   const router = useRouter();
-  const dispatch = useDispatch(); 
+  const dispatch = useDispatch();
   const user = useSelector((state: RootState) => state.user);
+  const insets = useSafeAreaInsets();
 
-  const handleLoginPress = () => {
-    router.push("./screens/Log_In");
-  };
-
-  const handleRegistroCliente = () => {
-    router.push("./screens/Registro_Cliente");
-  };
-
-  const handleRegistroVendedor = () => {
-    router.push("./screens/Registro_Vendedor");
-  };
+  const handleLoginPress = () => router.push("./screens/Log_In");
+  const handleRegistroCliente = () => router.push("./screens/Registro_Cliente");
+  const handleRegistroVendedor = () => router.push("./screens/Registro_Vendedor");
 
   const handleElegirSucursal = () => {
     if (user.loggedIn && user.role === "cliente" && user.userId) {
@@ -41,14 +90,18 @@ export default function HomeScreen() {
     }
   };
 
- 
-  const handleLogout = async () => {
-    try {
-      dispatch(logOut());
-      router.replace("/");
-    } catch (error) {
-      console.error("Error al cerrar sesión:", error);
+  const handleIrAPanelVendedor = () => {
+    if (user.loggedIn && user.role === "vendedor" && user.sucursalId) {
+      router.push({
+        pathname: "./screens/proveedor/Pedidos_Sucursal",
+        params: { sucursalId: user.sucursalId },
+      });
     }
+  };
+
+  const handleLogout = () => {
+    dispatch(logOut());
+    router.replace("/");
   };
 
   return (
@@ -56,53 +109,77 @@ export default function HomeScreen() {
       source={require("../assets/images/backgrounds/fondo4.jpg")}
       style={styles.backgroundImage}
     >
-      <View style={styles.container}>
-        <Text style={styles.title}>🏠 Bienvenido a la App</Text>
+      <View style={[styles.overlay, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 }]}>
+        <View style={styles.logoWrap}>
+          <Image
+            source={require("../assets/images/icons/HH sin nombre.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
 
-        {!user.loggedIn && (
-          <Pressable
-            style={[styles.actionButton, { backgroundColor: "#03a9f4" }]}
-            onPress={handleLoginPress}
-          >
-            <Text style={styles.buttonText}>Log In</Text>
-          </Pressable>
-        )}
+        <View style={styles.card}>
+          <Text style={styles.brand}>Helados Hermanos</Text>
+          <Text style={styles.subtitle}>
+            {user.loggedIn
+              ? `¡Hola, ${user.nombre || (user.role === "vendedor" ? "heladería" : "vecino")}! 🍦`
+              : "Pedí o vendé helado, todo desde acá"}
+          </Text>
 
-        {user.loggedIn && user.role === "cliente" && (
-          <>
-            <Pressable
-              style={[styles.actionButton, { backgroundColor: "#6200ee" }]}
-              onPress={handleElegirSucursal}
-            >
-              <Text style={styles.buttonText}>Elegir Sucursal</Text>
-            </Pressable>
+          <View style={styles.divider} />
 
-            <Pressable
-              style={[styles.actionButton, { backgroundColor: "#ee0044" }]}
-              onPress={handleLogout}
-            >
-              <Text style={styles.buttonText}>Deslogueate</Text>
-            </Pressable>
-          </>
-        )}
+          {!user.loggedIn && (
+            <View style={styles.section}>
+              <ActionButton label="Iniciar sesión" icon="log-in-outline" onPress={handleLoginPress} />
+              <Text style={styles.sectionLabel}>¿No tenés cuenta todavía?</Text>
+              <ActionButton
+                label="Registrarme como cliente"
+                icon="person-add-outline"
+                variant="outline"
+                color={PINK}
+                onPress={handleRegistroCliente}
+              />
+              <ActionButton
+                label="Registrar mi heladería"
+                icon="storefront-outline"
+                variant="outline"
+                color={MINT}
+                onPress={handleRegistroVendedor}
+              />
+            </View>
+          )}
 
-        <Text style={styles.infoText}>Si aún no tenés cuenta, registrate:</Text>
+          {user.loggedIn && user.role === "cliente" && (
+            <View style={styles.section}>
+              <ActionButton label="Elegir sucursal" icon="ice-cream-outline" onPress={handleElegirSucursal} />
+              <ActionButton
+                label="Cerrar sesión"
+                icon="log-out-outline"
+                variant="ghost"
+                color="#c0392b"
+                onPress={handleLogout}
+              />
+            </View>
+          )}
 
-        <Text style={styles.infoText}>Quiero comprar:</Text>
-        <Pressable
-          style={[styles.actionButton, { backgroundColor: "#4caf50" }]}
-          onPress={handleRegistroCliente}
-        >
-          <Text style={styles.buttonText}>Registro Cliente</Text>
-        </Pressable>
-
-        <Text style={styles.infoText}>Quiero vender:</Text>
-        <Pressable
-          style={[styles.actionButton, { backgroundColor: "#8bc34a" }]}
-          onPress={handleRegistroVendedor}
-        >
-          <Text style={styles.buttonText}>Registro Vendedor</Text>
-        </Pressable>
+          {user.loggedIn && user.role === "vendedor" && (
+            <View style={styles.section}>
+              <ActionButton
+                label="Ir a mi panel"
+                icon="storefront-outline"
+                color={MINT}
+                onPress={handleIrAPanelVendedor}
+              />
+              <ActionButton
+                label="Cerrar sesión"
+                icon="log-out-outline"
+                variant="ghost"
+                color="#c0392b"
+                onPress={handleLogout}
+              />
+            </View>
+          )}
+        </View>
       </View>
     </ImageBackground>
   );
@@ -110,38 +187,80 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   backgroundImage: { flex: 1, width: "100%", height: "100%", resizeMode: "cover" },
-  container: {
+  overlay: {
     flex: 1,
-    paddingHorizontal: width * 0.05,
-    paddingVertical: height * 0.02,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.85)",
-    borderRadius: 12,
-    margin: width * 0.04,
+    paddingHorizontal: width * 0.06,
   },
-  title: {
-    fontSize: isSmallScreen ? 18 : Math.min(width * 0.06, height * 0.04),
-    marginBottom: height * 0.03,
-    textAlign: "center",
-    fontWeight: "bold",
-  },
-  actionButton: {
-    width: "90%",
-    paddingVertical: Math.min(height * 0.025, 20),
-    borderRadius: 12,
+  logoWrap: {
+    width: isSmallScreen ? 96 : 116,
+    height: isSmallScreen ? 96 : 116,
+    borderRadius: 999,
+    backgroundColor: "#fff",
     alignItems: "center",
-    marginBottom: height * 0.02,
+    justifyContent: "center",
+    marginBottom: -40,
+    zIndex: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  logo: { width: "78%", height: "78%" },
+  card: {
+    width: "100%",
+    maxWidth: 420,
+    backgroundColor: "rgba(255,255,255,0.94)",
+    borderRadius: 24,
+    paddingTop: 56,
+    paddingBottom: 28,
+    paddingHorizontal: 24,
+    alignItems: "stretch",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  brand: {
+    fontSize: isSmallScreen ? 22 : 26,
+    fontWeight: "800",
+    textAlign: "center",
+    color: INK,
+  },
+  subtitle: {
+    fontSize: isSmallScreen ? 13 : 14,
+    textAlign: "center",
+    color: "#6b6b78",
+    marginTop: 6,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#eee",
+    marginVertical: 20,
+  },
+  section: { gap: 12 },
+  sectionLabel: {
+    textAlign: "center",
+    fontSize: 12,
+    color: "#8a8a95",
+    fontWeight: "600",
+    marginTop: 4,
+    marginBottom: -2,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  button: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: isWeb ? 13 : 14,
+    borderRadius: 14,
   },
   buttonText: {
-    fontWeight: "bold",
-    fontSize: isSmallScreen ? 16 : Math.min(width * 0.045, height * 0.03),
-    color: "#fff",
-  },
-  infoText: {
-    fontSize: isSmallScreen ? 14 : Math.min(width * 0.04, height * 0.025),
-    marginBottom: height * 0.02,
-    textAlign: "center",
-    fontWeight: "600",
+    fontWeight: "700",
+    fontSize: isSmallScreen ? 14.5 : 15.5,
   },
 });

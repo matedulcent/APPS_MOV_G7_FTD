@@ -104,14 +104,48 @@ Abre `http://localhost:5555` con una grilla editable por tabla (Usuario, Sucursa
 ## Estructura
 
 - `app/screens/` — pantallas (login, registro, selección de sucursal, categorías, pedidos, panel de proveedor/sucursal)
-- `app/services/api.ts` — llamadas HTTP al backend
 - `app/services/apiConfig.ts` — configuración de IP/puerto del backend
-- `app/services/storage.ts` — persistencia local (AsyncStorage / localStorage en web)
 - `redux/` — store, slices, thunks y reducers de Redux
+
+## Sesión
+
+La sesión de usuario/vendedor vive solo en memoria (Redux), a propósito: se mantiene mientras navegás dentro de la app (incluso volviendo al menú principal), pero **no sobrevive a cerrar la app** — al reabrirla, siempre arranca deslogueado. No hay persistencia en disco.
 
 ## Problemas comunes
 
 - **"Network request failed" / no carga nada**: revisar `LOCAL_IP` en `apiConfig.ts` y que el backend esté corriendo (`curl http://<IP>:3001/api/health`).
 - **El celular no puede escanear/conectar al QR**: confirmar que esté en la misma Wi-Fi que la PC, o usar `npx expo start --tunnel`.
-- **Warning de expo-router sobre `app/services/api.ts` o `storage.ts`** ("missing the required default export"): es un warning cosmético del bundler porque esos archivos viven dentro de `app/` (expo-router los interpreta como rutas). No afecta el funcionamiento.
+- **Warning de expo-router sobre `app/services/apiConfig.ts`** ("missing the required default export"): es un warning cosmético del bundler porque el archivo vive dentro de `app/` (expo-router lo interpreta como ruta). No afecta el funcionamiento.
 - **`expo-doctor` se queja de versiones**: correr `npx expo install --fix` para realinear los paquetes con el SDK instalado.
+
+
+
+
+
+Terminal 1 — Backend
+
+cd C:\Users\Usuario\Documents\Apps\APPS_MOV_G7_FTD_BACK
+npm run dev
+Dejala abierta corriendo. Deberías ver 🚀 Servidor corriendo en http://localhost:3001.
+
+(Si es la primera vez o borraste node_modules, antes corré npm install y npx prisma generate. El .env con DATABASE_URL="file:./dev.db" ya lo tenés creado de la sesión anterior.)
+
+Terminal 2 — Frontend
+
+cd C:\Users\Usuario\Documents\Apps\APPS_MOV_G7_FTD
+npx expo start
+Va a mostrar un QR en la terminal.
+
+En el celular
+Abrí Expo Go.
+Asegurate de estar en la misma Wi-Fi que esta PC.
+Escaneá el QR (Android: desde la app Expo Go; iOS: desde la cámara nativa).
+Si no conecta (redes distintas, firewall), en la Terminal 2 hacé Ctrl+C y corré npx expo start --tunnel en su lugar.
+
+Opcional — ver la base de datos en vivo
+Una tercera terminal:
+
+
+cd C:\Users\Usuario\Documents\Apps\APPS_MOV_G7_FTD_BACK
+npx prisma studio
+Abre http://localhost:5555 en el navegador.

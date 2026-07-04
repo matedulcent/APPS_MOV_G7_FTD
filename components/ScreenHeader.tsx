@@ -9,6 +9,7 @@ import {
     Text,
     View
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface ScreenHeaderProps {
     title: string;
@@ -22,11 +23,12 @@ export default function ScreenHeader({
     onToggleSearch,
 }: ScreenHeaderProps) {
     const router = useRouter();
+    const insets = useSafeAreaInsets();
 
     return (
         <LinearGradient
             colors={["#ffffff", "#f9f9f9"]}
-            style={styles.headerContainer}
+            style={[styles.headerContainer, { marginTop: insets.top }]}
         >
             <View style={styles.header}>
                 <Pressable

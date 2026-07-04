@@ -6,14 +6,17 @@ import {
   Animated,
   Dimensions,
   ImageBackground,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
+import PasswordInput from "../../components/PasswordInput";
 import type { AppDispatch, RootState } from "../../redux/store";
 import { loginUser } from "../../redux/thunks/userThunks";
 
@@ -72,6 +75,14 @@ export default function LoginScreen() {
 
   return (
     <ImageBackground source={require("../../assets/images/backgrounds/fondo4.jpg")} style={styles.backgroundImage}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
       <View style={styles.container}>
         <Pressable style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.7 }]} onPress={() => router.push("/")}>
           <Text style={styles.backText}>⬅️ Volver al inicio</Text>
@@ -102,15 +113,11 @@ export default function LoginScreen() {
           value={email}
           onChangeText={setEmail}
         />
-        <TextInput
+        <PasswordInput
           style={styles.input}
           placeholder="Password"
-          secureTextEntry
           value={password}
           onChangeText={setPassword}
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="default"
         />
 
         {user.error && (
@@ -139,13 +146,16 @@ export default function LoginScreen() {
           )}
         </Pressable>
       </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </ImageBackground>
   );
 }
 
 // --- Styles ---
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: isWeb ? 40 : width * 0.05, backgroundColor: "rgba(224,224,224,0.7)", borderRadius: isWeb ? 0 : 10, width: "100%", alignSelf: "stretch" },
+  scrollContent: { flexGrow: 1, justifyContent: "center" },
+  container: { justifyContent: "center", padding: isWeb ? 40 : width * 0.05, backgroundColor: "rgba(224,224,224,0.7)", borderRadius: isWeb ? 0 : 10, width: "100%", alignSelf: "stretch" },
   title: { fontSize: isWeb ? 32 : isSmallScreen ? 20 : width * 0.07, fontWeight: "bold", textAlign: "center", marginBottom: height * 0.04 },
   backgroundImage: { flex: 1, width: "100%", height: "100%", resizeMode: isSmallScreen ? "stretch" : "cover" },
   switchContainer: { flexDirection: "row", backgroundColor: "#e0e0e0", borderRadius: 25, marginBottom: height * 0.025, overflow: "hidden", position: "relative" },
