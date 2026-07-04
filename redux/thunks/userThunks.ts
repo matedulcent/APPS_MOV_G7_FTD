@@ -1,6 +1,5 @@
 // redux/thunks/userThunks.ts
 import { BASE_URL } from "../../app/services/apiConfig";
-import { storage } from "../../app/services/storage";
 import { logUserFailure, logUserPending, logUserSuccess } from "../actions/userActions";
 import { AppDispatch } from "../store";
 import { LoginCredentials, UserState } from "../types/userTypes";
@@ -43,11 +42,8 @@ export const loginUser = (credentials: LoginCredentials) => async (dispatch: App
       error: undefined,
     };
 
-    // Guardar en Redux
+    // Guardar en Redux (solo en memoria: la sesión no debe sobrevivir a cerrar la app)
     dispatch(logUserSuccess(userPayload as UserState));
-
-    // Persistir para hidratar luego (en web usa localStorage, en native AsyncStorage)
-    await storage.setItem("user", JSON.stringify(userPayload));
 
     console.log("[loginUser] Login OK =>", userPayload);
   } catch (err: any) {

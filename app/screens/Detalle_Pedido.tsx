@@ -56,24 +56,24 @@ async function crearOrden(payload: {
   return { ordenId, data };
 }
 
-// Mapeo de envases
-function mapEnvaseKeyToId(key: string): string {
-  const [categoria] = key.split(" ");
-  if (categoria.toLowerCase().includes("cucurucho")) {
-    const bolas = parseInt(key.match(/\((\d)\s+bolas?\)/)?.[1] ?? "1", 10);
-    return { 1: "B1", 2: "B2", 3: "B3", 4: "B4" }[bolas] ?? "B1";
+// === Mapeo dinámico de envases (sin hardcodear tipos/tamaños) ===
+async function getEnvasesMap(): Promise<Record<string, string>> {
+  const url = `${BASE_URL}/api/envases`;
+  try {
+    const r = await fetch(url);
+    const list = await r.json();
+    // genera: { "cucurucho_1": "B1", "especial_pija": "e_xxx", ... }
+    const map: Record<string, string> = {};
+    (list || []).forEach((e: any) => {
+      const tipo = (e?.tipoEnvase || "").toString().trim().toLowerCase();
+      const id = (e?.id || "").toString();
+      if (tipo && id) map[tipo] = id;
+    });
+    return map;
+  } catch (e) {
+    console.log("[getEnvasesMap] Error:", e);
+    return {};
   }
-  if (categoria.toLowerCase().includes("vaso")) {
-    const bolas = parseInt(key.match(/\((\d)\s+bolas?\)/)?.[1] ?? "1", 10);
-    return { 1: "B8", 2: "B9", 3: "B10", 4: "B11" }[bolas] ?? "B8";
-  }
-  if (categoria.toLowerCase().includes("kilo")) {
-    const opt = key.match(/\(([^)]+)\)/)?.[1]?.trim();
-    if (opt === "1/4 Kg") return "B6";
-    if (opt === "1/2 Kg") return "B5";
-    if (opt === "1 Kg") return "B7";
-  }
-  return "B1";
 }
 
 // === Mapeo dinámico de sabores (sin hardcodear) ===
@@ -145,12 +145,18 @@ export default function DetallePedidoScreen() {
 
       const items: PedidoItem[] = [];
       const saboresSinMapeo: string[] = [];
-      // obtener el mapa dinámico de sabores desde el backend
-      const saboresMap = await getSaboresMap();
-
+      const envasesSinMapeo: string[] = [];
+      // obtener los mapas dinámicos de envases y sabores desde el backend
+      const [envasesMap, saboresMap] = await Promise.all([getEnvasesMap(), getSaboresMap()]);
 
       for (const [envaseKey, gustos] of Object.entries(pedidoObj)) {
-        const envaseId = mapEnvaseKeyToId(envaseKey);
+        // envaseKey viene como "tipoEnvase|Label lindo (#N)"
+        const [tipoEnvase, labelLindo] = envaseKey.split("|");
+        const envaseId = envasesMap[tipoEnvase.trim().toLowerCase()] || null;
+        if (!envaseId) {
+          envasesSinMapeo.push(labelLindo ?? envaseKey);
+          continue;
+        }
         for (const g of gustos) {
           const saborId = saboresMap[g.trim().toLowerCase()] || null;
 
@@ -160,6 +166,12 @@ export default function DetallePedidoScreen() {
           }
           items.push({ envaseId, saborId });
         }
+      }
+
+      if (envasesSinMapeo.length) {
+        Alert.alert("Envases no reconocidos", `No se pudieron mapear: ${envasesSinMapeo.join(", ")}`);
+        console.log("[handleConfirmar] envases sin mapeo:", envasesSinMapeo);
+        return;
       }
 
       if (saboresSinMapeo.length) {
@@ -219,7 +231,7 @@ export default function DetallePedidoScreen() {
           >
             {Object.entries(pedidoObj).map(([envase, gustos]) => (
               <View key={envase} style={{ marginBottom: height * 0.015 }}>
-                <Text style={styles.cucuruchoTitle}>{envase}</Text>
+                <Text style={styles.cucuruchoTitle}>{envase.split("|")[1] ?? envase}</Text>
                 {gustos.map((gusto, i) => (
                   <Text key={i} style={styles.item}>
                     🍦 {gusto}

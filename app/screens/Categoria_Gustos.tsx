@@ -46,6 +46,9 @@ const grupoDeSabor = (nombre: string): Grupo => {
 
 const labelOf = (s: Sabor) => s.tipoSabor;
 
+/** Las keys de envase vienen como "tipoEnvase|Label lindo (#N)"; esto muestra solo la parte linda. */
+const displayLabel = (envaseKey: string) => envaseKey.split("|")[1] ?? envaseKey;
+
 const SearchBarUX = ({
   value,
   onChangeText,
@@ -67,6 +70,7 @@ const SearchBarUX = ({
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         placeholderTextColor="#999"
+        autoCapitalize="none"
       />
     </View>
   );
@@ -193,7 +197,7 @@ export default function Categoria_Gustos() {
     >
       <View style={styles.overlay}>
         <ScreenHeader
-          title={`Gustos para ${envaseActual}`}
+          title={`Gustos para ${displayLabel(envaseActual)}`}
           showSearch
           onToggleSearch={() => setShowSearch(prev => !prev)}
         />

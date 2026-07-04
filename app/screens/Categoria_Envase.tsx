@@ -125,12 +125,17 @@ export default function Categoria_Envase() {
       return;
     }
 
+    // La key incluye el tipoEnvase real (antes de "|") para poder resolver el
+    // envase correcto al confirmar el pedido, sin importar cómo se formatee
+    // el label lindo que ve el usuario (antes se perdía esa info y los
+    // envases especiales terminaban guardándose como "Cucurucho_1" por un
+    // fallback hardcodeado).
     const pedidoFinal: Record<string, number> = {};
     for (const { opcion, cantidad } of envasesValidos) {
       const env = envasesOfrecidos.find(e => e.tipoEnvase === opcion);
       const max = env?.maxCantSabores ?? 1;
       for (let i = 1; i <= cantidad; i++)
-        pedidoFinal[`${labelForEnvase(env)} (#${i})`] = max;
+        pedidoFinal[`${opcion}|${labelForEnvase(env)} (#${i})`] = max;
     }
 
     router.push({

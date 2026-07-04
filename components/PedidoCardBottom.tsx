@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { Animated, Dimensions, PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type PedidoCardProps = {
     selecciones?: { [key: string]: string[] | number };
@@ -16,19 +17,28 @@ export default function PedidoCardBottom({
     currentIndex = 0,
     totalVolumenes = 1,
 }: PedidoCardProps) {
+    const insets = useSafeAreaInsets();
     const screenHeight = Dimensions.get("window").height;
     const peekHeight = 60;
     const maxHeight = screenHeight / 2;
-    const translateY = useRef(new Animated.Value(screenHeight - peekHeight)).current;
+    // Estado colapsado: igual que antes (la tira "peek" apenas asoma).
+    // Estado expandido: se corre insets.bottom hacia arriba para que el
+    // botón de confirmar no quede pegado a la barra de gestos.
+    const collapsedY = screenHeight - peekHeight;
+    const expandedY = screenHeight - maxHeight - insets.bottom;
+    const translateY = useRef(new Animated.Value(collapsedY)).current;
 
-    // Transformamos el diccionario en estructura jerárquica
+    // Transformamos el diccionario en estructura jerárquica.
+    // Las keys de envase pueden venir como "tipoEnvase|Label lindo (#N)";
+    // acá solo nos interesa mostrar la parte linda.
     const productosJerarquicos = Object.entries(selecciones).map(([key, value]) => {
+        const nombre = key.split("|")[1] ?? key;
         if (typeof value === "number") {
-            return { nombre: key, subitems: Array.from({ length: value }, (_, i) => `Sabor ${i + 1}`) };
+            return { nombre, subitems: Array.from({ length: value }, (_, i) => `Sabor ${i + 1}`) };
         } else if (Array.isArray(value)) {
-            return { nombre: key, subitems: value };
+            return { nombre, subitems: value };
         } else {
-            return { nombre: key, subitems: [] };
+            return { nombre, subitems: [] };
         }
     });
 
@@ -42,18 +52,18 @@ export default function PedidoCardBottom({
     };
 
     useEffect(() => {
-        animateTo(visible ? screenHeight - maxHeight : screenHeight - peekHeight);
+        animateTo(visible ? expandedY : collapsedY);
     }, [visible]);
 
     const panResponder = PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onPanResponderMove: (_, gestureState) => {
-            const newY = Math.min(screenHeight - peekHeight, Math.max(screenHeight - maxHeight, screenHeight - peekHeight + gestureState.dy));
+            const newY = Math.min(collapsedY, Math.max(expandedY, collapsedY + gestureState.dy));
             translateY.setValue(newY);
         },
         onPanResponderRelease: (_, gestureState) => {
             const shouldClose = gestureState.dy > 50;
-            animateTo(shouldClose ? screenHeight - peekHeight : screenHeight - maxHeight);
+            animateTo(shouldClose ? collapsedY : expandedY);
         },
     });
 

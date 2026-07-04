@@ -35,10 +35,6 @@ export default function userReducer(state = initialState, action: Action): UserS
         case "SET_SUCURSAL":
             return { ...state, sucursalId: action.payload as string };
 
-        case "HYDRATE_USER":
-            return { ...state, ...((action.payload as Partial<UserState>) ?? {}), loggedIn: true };
-
-
         default:
             return state;
     }

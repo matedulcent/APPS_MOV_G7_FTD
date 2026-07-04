@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { RootState } from "../../../redux/store";
 import { LOG_OUT } from "../../../redux/types/userTypes";
 import { BASE_URL } from "./../../services/apiConfig";
@@ -49,32 +50,38 @@ async function confirmAsync(title: string, message: string): Promise<boolean> {
   });
 }
 
-/** PRIMERO: /api/ordenes/sucursal/:id ; fallback a ?sucursalId= */
-async function fetchOrdenesRobusto(take = 50, sucursalId?: string): Promise<OrdenLite[]> {
+/**
+ * PRIMERO: /api/ordenes/sucursal/:id — ya viene con los contenidos incluidos,
+ * así que no hace falta pedir el detalle de cada pedido por separado.
+ * Fallback (solo si esa ruta llegara a fallar): /api/ordenes?sucursalId= +
+ * detalle por pedido, como antes.
+ */
+async function fetchOrdenesRobusto(take = 50, sucursalId?: string): Promise<OrdenFull[]> {
   if (!sucursalId) throw new Error("Falta sucursalId");
-  // 1) Ruta explícita
-  let url = `${BASE_URL}/api/ordenes/sucursal/${encodeURIComponent(sucursalId)}?take=${take}`;
-  console.log("[Pedidos] GET explícito:", url);
-  let r = await fetch(url);
-  if (r.ok) {
-    const data = await r.json();
-    console.log("[Pedidos] explícito length:", Array.isArray(data) ? data.length : "N/A");
-    return data;
-  }
-  const txt = await r.text().catch(() => "");
-  console.warn("[Pedidos] explícito FALLÓ:", r.status, txt);
 
-  // 2) Fallback querystring
+  let url = `${BASE_URL}/api/ordenes/sucursal/${encodeURIComponent(sucursalId)}?take=${take}`;
+  let r = await fetch(url);
+  if (r.ok) return r.json();
+  console.warn("[Pedidos] ruta explícita falló, uso fallback:", r.status);
+
   const q = new URLSearchParams();
   q.set("take", String(take));
   q.set("sucursalId", sucursalId);
   url = `${BASE_URL}/api/ordenes?${q.toString()}`;
-  console.log("[Pedidos] GET fallback:", url);
   r = await fetch(url);
   if (!r.ok) throw new Error("No se pudo leer /api/ordenes");
-  const data = await r.json();
-  console.log("[Pedidos] fallback length:", Array.isArray(data) ? data.length : "N/A");
-  return data;
+  const lites: OrdenLite[] = await r.json();
+
+  return Promise.all(
+    lites.map(async (o) => {
+      try {
+        return await fetchOrdenDetalle(o.id);
+      } catch (err) {
+        console.warn("[Pedidos] Detalle falló para", o.id, err);
+        return { ...o, contenidos: [] };
+      }
+    })
+  );
 }
 
 async function fetchOrdenDetalle(id: string): Promise<OrdenFull> {
@@ -101,6 +108,7 @@ export default function Pedidos_Sucursal() {
 
   const router = useRouter();
   const dispatch = useDispatch();
+  const insets = useSafeAreaInsets();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -127,39 +135,13 @@ export default function Pedidos_Sucursal() {
     if (!sucursalId) return;
     if (!sutil) setLoading(true);
     try {
-      // 1) Traigo lite (filtrado en el back)
-      const lites = await fetchOrdenesRobusto(50, sucursalId);
-      console.log("[Pedidos] IDs lite:", lites.map(o => o.id).join(", ") || "(vacío)");
+      const ordenes = await fetchOrdenesRobusto(50, sucursalId);
 
-      // 2) Intento traer detalles; si alguno falla, dejo el lite
-      const detalleMap = new Map<string, OrdenFull>();
-      await Promise.all(
-        lites.map(async (o) => {
-          try {
-            const det = await fetchOrdenDetalle(o.id);
-            detalleMap.set(o.id, det);
-          } catch (err) {
-            console.warn("[Pedidos] Detalle falló para", o.id, err);
-          }
-        })
-      );
-
-      // 3) Merge lite + detalle (fallback si detalle no llegó)
-      const merged: OrdenFull[] = lites.map((o) => {
-        const det = detalleMap.get(o.id);
-        return det ? det : { ...o, contenidos: [] };
-      });
-
-      merged.sort((a, b) => {
+      const merged = [...ordenes].sort((a, b) => {
         const ta = a.fecha ? new Date(a.fecha).getTime() : 0;
         const tb = b.fecha ? new Date(b.fecha).getTime() : 0;
         return tb - ta || b.id.localeCompare(a.id);
       });
-
-      console.log("[Pedidos] Final para render:", merged.length, "Primer ID:", merged[0]?.id);
-      if (!merged.length) {
-        console.log("[Pedidos] No se encontraron pedidos para sucursal:", sucursalId);
-      }
 
       setPedidos(merged);
     } catch (e: any) {
@@ -233,7 +215,7 @@ export default function Pedidos_Sucursal() {
   }
 
   return (
-    <View style={{ flex: 1, padding: 16 }}>
+    <View style={{ flex: 1, padding: 16, paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 }}>
       <View style={{ alignItems: "center", marginBottom: 16 , flexDirection: "row", justifyContent: "space-between" }}>
         <Text style={{ fontSize: 20, fontWeight: "900" }}>
           {heladeriaNombre}

@@ -118,14 +118,17 @@ export default function Pedidos_Cliente() {
     };
   }, [reduxUserId, reduxUserName]);
 
-  /** Obtener órdenes */
+  /** Obtener órdenes (filtradas por usuario en el back, no todas las de la app) */
   const fetchOrdenes = useCallback(async () => {
+    if (!reduxUserId) {
+      setOrdenes([]);
+      return;
+    }
     try {
       setLoading(true);
-      const url = `${ORD_BASE}?take=200&_=${Date.now()}`;
-      console.log("[Pedidos_Cliente] GET", url);
+      const url = `${ORD_BASE}?usuarioId=${encodeURIComponent(reduxUserId)}&take=200&_=${Date.now()}`;
       const r = await fetch(url);
-      if (!r.ok) throw new Error(`GET /api2/ordenes ${r.status}`);
+      if (!r.ok) throw new Error(`GET /api/ordenes ${r.status}`);
       const json: OrdenResumen[] = await r.json();
       setOrdenes(Array.isArray(json) ? json : []);
     } catch (e: any) {
@@ -134,7 +137,7 @@ export default function Pedidos_Cliente() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [reduxUserId]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
