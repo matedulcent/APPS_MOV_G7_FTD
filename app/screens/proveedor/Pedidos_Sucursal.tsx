@@ -38,14 +38,18 @@ async function fetchSucursal(id: string): Promise<Sucursal> {
   return res.json();
 }
 
-async function confirmAsync(title: string, message: string): Promise<boolean> {
+async function confirmAsync(
+  title: string,
+  message: string,
+  confirmLabel = "Confirmar"
+): Promise<boolean> {
   if (Platform.OS === "web") {
     return Promise.resolve(window.confirm(`${title}\n\n${message}`));
   }
   return new Promise((resolve) => {
     Alert.alert(title, message, [
       { text: "Cancelar", style: "cancel", onPress: () => resolve(false) },
-      { text: "Terminar", style: "destructive", onPress: () => resolve(true) },
+      { text: confirmLabel, style: "destructive", onPress: () => resolve(true) },
     ]);
   });
 }
@@ -116,6 +120,8 @@ export default function Pedidos_Sucursal() {
   const [busy, setBusy] = useState<Record<string, boolean>>({});
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [heladeriaNombre, setHeladeriaNombre] = useState("Mi Heladería");
+  // Pedidos ocultados de esta lista (solo en la vista, no se tocan en la base de datos).
+  const [ocultos, setOcultos] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     console.log("[Pedidos] sucursalId usado para cargar:", sucursalId, "(param:", qp, "redux:", sidFromUser, ")");
@@ -173,7 +179,8 @@ export default function Pedidos_Sucursal() {
     if (pedido.estadoTerminado || busy[pedido.id]) return;
     const ok = await confirmAsync(
       "Marcar como terminado",
-      `¿Confirmás que el Pedido #${pedido.id} fue entregado?`
+      `¿Confirmás que el Pedido #${pedido.id} fue entregado?`,
+      "Terminar"
     );
     if (!ok) return;
 
@@ -196,9 +203,22 @@ export default function Pedidos_Sucursal() {
     }
   };
 
+  const ocultarPedido = async (pedido: OrdenFull) => {
+    if (!pedido.estadoTerminado) return; // solo se puede ocultar si ya está terminado
+    const ok = await confirmAsync(
+      "Ocultar pedido",
+      `¿Ocultar el Pedido #${pedido.id} de esta lista? No se borra de la base de datos, solo deja de mostrarse acá.`,
+      "Ocultar"
+    );
+    if (!ok) return;
+    setOcultos((prev) => new Set(prev).add(pedido.id));
+  };
+
   const toggleExpand = (id: string) => {
     setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
   };
+
+  const pedidosVisibles = pedidos.filter((p) => !ocultos.has(p.id));
 
   const handleLogout = () => {
     dispatch({ type: LOG_OUT });
@@ -223,7 +243,7 @@ export default function Pedidos_Sucursal() {
         <Text style={{ fontSize: 22, fontWeight: "700" }}>Pedidos</Text>
       </View>
 
-      {pedidos.length === 0 ? (
+      {pedidosVisibles.length === 0 ? (
         <View style={{ paddingVertical: 24, alignItems: "center" }}>
           <Text style={{ opacity: 0.6 }}>No hay pedidos por ahora.</Text>
           <Text style={{ opacity: 0.6, marginTop: 4, fontSize: 12 }}>
@@ -232,7 +252,7 @@ export default function Pedidos_Sucursal() {
         </View>
       ) : (
         <FlatList
-          data={pedidos}
+          data={pedidosVisibles}
           keyExtractor={(p) => p.id}
           refreshControl={
             <RefreshControl
@@ -330,6 +350,23 @@ export default function Pedidos_Sucursal() {
                       >
                         <Text style={{ color: "#fff", fontWeight: "700" }}>
                           {busy[item.id] ? "Terminando..." : "Marcar como terminado"}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {!isPendiente && (
+                      <TouchableOpacity
+                        onPress={() => ocultarPedido(item)}
+                        style={{
+                          marginTop: 8,
+                          paddingVertical: 10,
+                          borderRadius: 10,
+                          alignItems: "center",
+                          backgroundColor: "#eee",
+                        }}
+                      >
+                        <Text style={{ color: "#666", fontWeight: "700" }}>
+                          Ocultar de la lista
                         </Text>
                       </TouchableOpacity>
                     )}
