@@ -21,7 +21,8 @@ import { Platform } from "react-native";
 
 //const LOCAL_IP = "192.168.0.158"; //Tobio
 //const LOCAL_IP = "172.29.159.108"; //Santi
-const LOCAL_IP = "192.168.68.118"; //Mateo
+//const LOCAL_IP = "192.168.68.118"; //Mateo (IP vieja)
+const LOCAL_IP = "192.168.68.113"; //IP actual de esta PC
 //                    ▲
 //                   / \
 //                  /   \
