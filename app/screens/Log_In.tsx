@@ -1,5 +1,5 @@
 // app/screens/LoginScreen.tsx
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -28,6 +28,7 @@ export default function LoginScreen() {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
   const user = useSelector((state: RootState) => state.user);
+  const { redirectTo } = useLocalSearchParams<{ redirectTo?: string }>();
 
   const [role, setRole] = useState<"cliente" | "vendedor">("cliente");
   const [slideAnim] = useState(new Animated.Value(0));
@@ -62,15 +63,22 @@ export default function LoginScreen() {
         return;
       }
       router.push({ pathname: "/screens/proveedor/Pedidos_Sucursal", params: { sucursalId: sid } });
+    } else if (redirectTo) {
+      // Venía de "ver menú sin registrarte" y se logueó para confirmar un
+      // pedido: volvemos ahí en vez del historial, así no pierde lo que
+      // ya había armado.
+      console.log("[Login] Navegando de vuelta a:", redirectTo);
+      router.replace(redirectTo as any);
     } else {
       console.log("[Login] Navegando como cliente");
       router.replace("/cliente_tabs");
       // router.push("/screens/Seleccion_Sucursal");
     }
-  }, [user.loggedIn, user.role, (user as any).sucursalId]);
+  }, [user.loggedIn, user.role, (user as any).sucursalId, redirectTo]);
 
   const handleRegister = () => {
-    router.push(role === "cliente" ? "/screens/Registro_Cliente" : "/screens/Registro_Vendedor");
+    const pathname = role === "cliente" ? "/screens/Registro_Cliente" : "/screens/Registro_Vendedor";
+    router.push(redirectTo ? { pathname, params: { redirectTo } } : (pathname as any));
   };
 
   return (

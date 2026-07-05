@@ -28,6 +28,8 @@ export default function HomeScreen() {
   const handleRegistroCliente = () => router.push("./screens/Registro_Cliente");
   const handleRegistroVendedor = () => router.push("./screens/Registro_Vendedor");
 
+  const handleExplorarMenu = () => router.push("./screens/Seleccion_Sucursal");
+
   const handleElegirSucursal = () => {
     if (user.loggedIn && user.role === "cliente" && user.userId) {
       router.push({
@@ -77,6 +79,14 @@ export default function HomeScreen() {
 
           {!user.loggedIn && (
             <View style={styles.section}>
+              <ActionButton
+                label="Ver sabores y envases sin registrarte"
+                icon="ice-cream-outline"
+                variant="outline"
+                color={MINT}
+                onPress={handleExplorarMenu}
+              />
+              <Text style={styles.sectionLabel}>o si ya tenés cuenta</Text>
               <ActionButton label="Iniciar sesión" icon="log-in-outline" onPress={handleLoginPress} />
               <Text style={styles.sectionLabel}>¿No tenés cuenta todavía?</Text>
               <ActionButton

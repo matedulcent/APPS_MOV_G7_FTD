@@ -26,7 +26,19 @@ const isSmallScreen = width < 360;
 type UISucursal = { id: string; nombre: string; direccion: string; imagen: string };
 type BackendSucursal = { id: string; nombre?: string | null; domicilio?: string | null; urlImagen?: string | null };
 
-const esUrlValida = (s?: string) => !!s && /^https?:\/\//.test(s);
+/**
+ * La imagen puede ser una URL absoluta (vieja, alguien la pegó a mano) o una
+ * ruta relativa "/uploads/xxx.jpg" (subida con ImagePicker), que hay que
+ * completar con el BASE_URL actual — no se guarda la IP fija porque cambia
+ * entre redes/sesiones. Valores viejos tipo "img1.png" no son servibles y
+ * caen en el placeholder.
+ */
+const resolveImagenUri = (s?: string | null): string | null => {
+  if (!s) return null;
+  if (/^https?:\/\//.test(s)) return s;
+  if (s.startsWith("/uploads/")) return `${BASE_URL}${s}`;
+  return null;
+};
 
 export default function SeleccionSucursalScreen() {
   const router = useRouter();
@@ -76,6 +88,7 @@ export default function SeleccionSucursalScreen() {
 
   const renderSucursal = ({ item }: { item: UISucursal }) => {
     const isSelected = item.id === sucursalSeleccionada;
+    const imagenUri = resolveImagenUri(item.imagen);
     return (
       <Pressable
         style={({ pressed }) => [
@@ -85,8 +98,8 @@ export default function SeleccionSucursalScreen() {
         ]}
         onPress={() => handleSeleccion(item)}
       >
-        {esUrlValida(item.imagen) ? (
-          <Image source={{ uri: item.imagen }} style={styles.imagen} />
+        {imagenUri ? (
+          <Image source={{ uri: imagenUri }} style={styles.imagen} />
         ) : (
           <View style={[styles.imagen, styles.imagenPlaceholder]}>
             <Ionicons name="ice-cream" size={30} color={PINK} />

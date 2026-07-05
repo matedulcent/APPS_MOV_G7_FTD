@@ -136,12 +136,22 @@ export default function DetallePedidoScreen() {
     return res;
   }, [envases, selecciones]);
 
-  // Confirmar pedido
+  // Confirmar pedido. Si todavía no inició sesión (flujo "ver menú sin
+  // registrarte"), lo mandamos a loguearse primero y volvemos acá con las
+  // selecciones intactas (viven en pedidoSlice, no se pierden al navegar).
   const handleConfirmar = async () => {
+    if (!usuarioId) {
+      router.push({
+        pathname: "/screens/Log_In",
+        params: { redirectTo: "/screens/Detalle_Pedido" },
+      });
+      return;
+    }
+
     try {
-      if (!usuarioId || !sucursalId) {
-        Alert.alert("Error", "No se pudo identificar al usuario o la sucursal.");
-        console.log("[handleConfirmar] FALTA usuarioId o sucursalId", { usuarioId, sucursalId });
+      if (!sucursalId) {
+        Alert.alert("Error", "No se pudo identificar la sucursal.");
+        console.log("[handleConfirmar] FALTA sucursalId");
         return;
       }
 
@@ -245,8 +255,8 @@ export default function DetallePedidoScreen() {
 
           <View style={{ marginTop: 10, gap: 10 }}>
             <ActionButton
-              label="Confirmar pedido"
-              icon="checkmark-circle-outline"
+              label={usuarioId ? "Confirmar pedido" : "Iniciar sesión para confirmar"}
+              icon={usuarioId ? "checkmark-circle-outline" : "log-in-outline"}
               onPress={handleConfirmar}
               loading={enviando}
               disabled={enviando}

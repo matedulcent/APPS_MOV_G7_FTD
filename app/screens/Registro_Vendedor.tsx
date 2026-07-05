@@ -1,3 +1,5 @@
+import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -33,13 +35,34 @@ type Errors = Partial<{
   general: string;
 }>;
 
+async function subirImagen(uri: string): Promise<string> {
+  const nombreArchivo = uri.split("/").pop() || "foto.jpg";
+  const ext = (nombreArchivo.split(".").pop() || "jpg").toLowerCase();
+
+  const form = new FormData();
+  form.append("imagen", {
+    uri,
+    name: nombreArchivo,
+    type: `image/${ext === "jpg" ? "jpeg" : ext}`,
+  } as any);
+
+  const r = await fetch(`${BASE_URL}/api/upload`, {
+    method: "POST",
+    body: form,
+    headers: { Accept: "application/json" },
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.error || "No se pudo subir la imagen");
+  return data.url as string; // ruta relativa, ej: /uploads/xxx.jpg
+}
+
 export default function RegistroVendedor() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
   const [direccion, setDireccion] = useState("");
-  const [imagenLocal, setImagenLocal] = useState("");
+  const [imagenUri, setImagenUri] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -47,15 +70,6 @@ export default function RegistroVendedor() {
 
   const isEmail = (s: string) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
-
-  const isHttpUrl = (s: string) => {
-    try {
-      const u = new URL(s);
-      return u.protocol === "http:" || u.protocol === "https:";
-    } catch {
-      return false;
-    }
-  };
 
   const validate = (): Errors => {
     const e: Errors = {};
@@ -70,12 +84,20 @@ export default function RegistroVendedor() {
     if (nombre && nombre.trim().length < 2) e.nombre = "Mínimo 2 caracteres";
     if (direccion && direccion.trim().length < 3) e.domicilio = "Mínimo 3 caracteres";
 
-    if (imagenLocal) {
-      if (!isHttpUrl(imagenLocal)) {
-        e.urlImagen = "Usa una URL http(s) válida o dejalo vacío";
-      }
-    }
     return e;
+  };
+
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 0.6,
+      allowsEditing: true,
+      aspect: [4, 3],
+    });
+    if (!result.canceled && result.assets?.[0]?.uri) {
+      setImagenUri(result.assets[0].uri);
+      if (errors.urlImagen) setErrors({ ...errors, urlImagen: undefined });
+    }
   };
 
   const handleRegister = async () => {
@@ -85,6 +107,17 @@ export default function RegistroVendedor() {
 
     try {
       setLoading(true);
+
+      let urlImagen = "";
+      if (imagenUri) {
+        try {
+          urlImagen = await subirImagen(imagenUri);
+        } catch (err: any) {
+          setErrors({ urlImagen: err?.message ?? "No se pudo subir la imagen" });
+          return;
+        }
+      }
+
       const r = await fetch(`${BASE_URL}/api/sucursales/registro`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -93,7 +126,7 @@ export default function RegistroVendedor() {
           email,                 // back: mail
           password,              // back: contrasena
           domicilio: direccion,  // back: domicilio
-          urlImagen: imagenLocal // back: urlImagen
+          urlImagen              // back: urlImagen
         }),
       });
 
@@ -165,6 +198,28 @@ export default function RegistroVendedor() {
             <Text style={styles.title}>Registrá tu heladería</Text>
             <Text style={styles.subtitle}>Empezá a recibir pedidos hoy mismo</Text>
 
+            <View style={{ alignItems: "center", marginBottom: 12 }}>
+              <Pressable
+                onPress={pickImage}
+                style={[styles.imagePickerBox, errors.urlImagen && styles.inputError]}
+              >
+                {imagenUri ? (
+                  <Image source={{ uri: imagenUri }} style={styles.imagePreview} />
+                ) : (
+                  <>
+                    <Ionicons name="image-outline" size={26} color={MUTED} />
+                    <Text style={styles.imagePickerText}>Foto del local (opcional)</Text>
+                  </>
+                )}
+              </Pressable>
+              {imagenUri && (
+                <Pressable onPress={() => setImagenUri(null)}>
+                  <Text style={styles.removeImageText}>Quitar imagen</Text>
+                </Pressable>
+              )}
+              {errors.urlImagen ? <Text style={styles.errorText}>{errors.urlImagen}</Text> : null}
+            </View>
+
             <View style={styles.form}>
               <TextInput
                 style={withError(styles.input, errors.nombre)}
@@ -196,16 +251,6 @@ export default function RegistroVendedor() {
                 autoCapitalize="none"
               />
               {errors.domicilio ? <Text style={styles.errorText}>{errors.domicilio}</Text> : null}
-
-              <TextInput
-                style={withError(styles.input, errors.urlImagen)}
-                placeholder="URL de imagen del local (opcional)"
-                placeholderTextColor="#999"
-                value={imagenLocal}
-                onChangeText={(t) => { setImagenLocal(t); if (errors.urlImagen) setErrors({ ...errors, urlImagen: undefined }); }}
-                autoCapitalize="none"
-              />
-              {errors.urlImagen ? <Text style={styles.errorText}>{errors.urlImagen}</Text> : null}
 
               <PasswordInput
                 style={withError(styles.input, errors.password)}
@@ -311,6 +356,21 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 20,
   },
+  imagePickerBox: {
+    width: 120,
+    height: 90,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: BORDER,
+    borderStyle: "dashed",
+    backgroundColor: "#f7f7f9",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  imagePreview: { width: "100%", height: "100%" },
+  imagePickerText: { fontSize: 11, color: MUTED, textAlign: "center", marginTop: 4, paddingHorizontal: 6 },
+  removeImageText: { color: DANGER, fontSize: 12, marginTop: 6, fontWeight: "600" },
   form: { gap: 10 },
   input: {
     paddingVertical: 13,

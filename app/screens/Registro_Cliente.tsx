@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   Dimensions,
@@ -34,6 +34,7 @@ type Errors = Partial<{
 export default function RegistroCliente() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { redirectTo } = useLocalSearchParams<{ redirectTo?: string }>();
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -88,8 +89,12 @@ export default function RegistroCliente() {
         return;
       }
 
-      // OK → ir al login
-      router.replace("/screens/Log_In");
+      // OK → ir al login (propagando a dónde volver si venía de un pedido sin cuenta)
+      router.replace(
+        redirectTo
+          ? { pathname: "/screens/Log_In", params: { redirectTo } }
+          : ("/screens/Log_In" as any)
+      );
     } catch (err: any) {
       setErrors({ general: err?.message ?? "Error de red" });
     } finally {
@@ -200,7 +205,15 @@ export default function RegistroCliente() {
                 onPress={handleRegister}
                 loading={loading}
               />
-              <Pressable onPress={() => router.push("/screens/Log_In")}>
+              <Pressable
+                onPress={() =>
+                  router.push(
+                    redirectTo
+                      ? { pathname: "/screens/Log_In", params: { redirectTo } }
+                      : ("/screens/Log_In" as any)
+                  )
+                }
+              >
                 {({ pressed }) => (
                   <Text style={[styles.linkText, pressed && { textDecorationLine: "underline" }]}>
                     ¿Ya tenés cuenta? Iniciá sesión
