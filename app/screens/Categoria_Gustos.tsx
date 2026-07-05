@@ -152,6 +152,11 @@ export default function Categoria_Gustos() {
   };
 
   const handleConfirm = () => {
+    if (seleccionadosActual.length === 0) {
+      Alert.alert("Atención", "Debes seleccionar al menos un gusto.");
+      return;
+    }
+
     if (currentIndex < envases.length - 1) {
       setCurrentIndex(i => i + 1);
     } else {

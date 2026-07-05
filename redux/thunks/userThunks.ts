@@ -40,11 +40,18 @@ export const loginUser = (credentials: LoginCredentials) => async (dispatch: App
       nombre: data.nombre || "",
       email: data.email || credentials.email,
       role: credentials.role,                           // "cliente" | "vendedor"
-      sucursalId: data.sucursalId || data.ID_Sucursal || null,
       loggedIn: true,
       loading: false,
       error: undefined,
     };
+
+    // sucursalId solo aplica al rol vendedor (la cuenta ES la sucursal).
+    // Para un cliente NO se toca esta clave: si venía del flujo invitado
+    // (eligió sucursal antes de loguearse) hay que conservar ese valor en
+    // vez de pisarlo con null, que es lo que pasaba antes.
+    if (credentials.role === "vendedor") {
+      userPayload.sucursalId = data.sucursalId || data.ID_Sucursal || null;
+    }
 
     // Guardar en Redux (solo en memoria: la sesión no debe sobrevivir a cerrar la app)
     dispatch(logUserSuccess(userPayload as UserState));
