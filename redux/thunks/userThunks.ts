@@ -1,6 +1,6 @@
 // redux/thunks/userThunks.ts
 import { BASE_URL } from "../../app/services/apiConfig";
-import { storage } from "../../app/services/storage";
+import { parseApiError } from "../../app/services/apiError";
 import { logUserFailure, logUserPending, logUserSuccess } from "../actions/userActions";
 import { AppDispatch } from "../store";
 import { LoginCredentials, UserState } from "../types/userTypes";
@@ -25,8 +25,11 @@ export const loginUser = (credentials: LoginCredentials) => async (dispatch: App
     });
 
     if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(`HTTP ${res.status}: ${text}`);
+      const msg = await parseApiError(
+        res,
+        res.status === 401 ? "Email o contraseña incorrectos" : "No se pudo iniciar sesión"
+      );
+      throw new Error(msg);
     }
 
     const data: any = await res.json();
@@ -37,21 +40,28 @@ export const loginUser = (credentials: LoginCredentials) => async (dispatch: App
       nombre: data.nombre || "",
       email: data.email || credentials.email,
       role: credentials.role,                           // "cliente" | "vendedor"
-      sucursalId: data.sucursalId || data.ID_Sucursal || null,
       loggedIn: true,
       loading: false,
       error: undefined,
     };
 
-    // Guardar en Redux
-    dispatch(logUserSuccess(userPayload as UserState));
+    // sucursalId solo aplica al rol vendedor (la cuenta ES la sucursal).
+    // Para un cliente NO se toca esta clave: si venía del flujo invitado
+    // (eligió sucursal antes de loguearse) hay que conservar ese valor en
+    // vez de pisarlo con null, que es lo que pasaba antes.
+    if (credentials.role === "vendedor") {
+      userPayload.sucursalId = data.sucursalId || data.ID_Sucursal || null;
+    }
 
-    // Persistir para hidratar luego (en web usa localStorage, en native AsyncStorage)
-    await storage.setItem("user", JSON.stringify(userPayload));
+    // Guardar en Redux (solo en memoria: la sesión no debe sobrevivir a cerrar la app)
+    dispatch(logUserSuccess(userPayload as UserState));
 
     console.log("[loginUser] Login OK =>", userPayload);
   } catch (err: any) {
-    console.error("[loginUser] Error:", err);
+    // Login fallido (credenciales incorrectas, red caída) es un caso esperado
+    // y ya se muestra en la UI — no usar console.error acá porque dispara el
+    // overlay rojo de LogBox en cada intento.
+    console.log("[loginUser] Login falló:", err?.message);
     dispatch(logUserFailure(err?.message || "Error al iniciar sesión"));
   }
 };

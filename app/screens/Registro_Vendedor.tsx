@@ -1,20 +1,29 @@
+import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   Dimensions,
+  Image,
   ImageBackground,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import ActionButton from "../../components/ActionButton";
+import PasswordInput from "../../components/PasswordInput";
+import { BORDER, CARD_BG, DANGER, INK, MINT, MUTED } from "../../constants/brand";
+import { parseApiError } from "../services/apiError";
 import { BASE_URL } from "../services/apiConfig";
 
-const { width, height } = Dimensions.get("window");
-const isSmallScreen = width < 400 || height < 700;
-const isWeb = Platform.OS === "web";
+const { width } = Dimensions.get("window");
+const isSmallScreen = width < 400;
 
 type Errors = Partial<{
   nombre: string;
@@ -26,12 +35,34 @@ type Errors = Partial<{
   general: string;
 }>;
 
+async function subirImagen(uri: string): Promise<string> {
+  const nombreArchivo = uri.split("/").pop() || "foto.jpg";
+  const ext = (nombreArchivo.split(".").pop() || "jpg").toLowerCase();
+
+  const form = new FormData();
+  form.append("imagen", {
+    uri,
+    name: nombreArchivo,
+    type: `image/${ext === "jpg" ? "jpeg" : ext}`,
+  } as any);
+
+  const r = await fetch(`${BASE_URL}/api/upload`, {
+    method: "POST",
+    body: form,
+    headers: { Accept: "application/json" },
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.error || "No se pudo subir la imagen");
+  return data.url as string; // ruta relativa, ej: /uploads/xxx.jpg
+}
+
 export default function RegistroVendedor() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
   const [direccion, setDireccion] = useState("");
-  const [imagenLocal, setImagenLocal] = useState("");
+  const [imagenUri, setImagenUri] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -39,15 +70,6 @@ export default function RegistroVendedor() {
 
   const isEmail = (s: string) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
-
-  const isHttpUrl = (s: string) => {
-    try {
-      const u = new URL(s);
-      return u.protocol === "http:" || u.protocol === "https:";
-    } catch {
-      return false;
-    }
-  };
 
   const validate = (): Errors => {
     const e: Errors = {};
@@ -62,12 +84,20 @@ export default function RegistroVendedor() {
     if (nombre && nombre.trim().length < 2) e.nombre = "Mínimo 2 caracteres";
     if (direccion && direccion.trim().length < 3) e.domicilio = "Mínimo 3 caracteres";
 
-    if (imagenLocal) {
-      if (!isHttpUrl(imagenLocal)) {
-        e.urlImagen = "Usa una URL http(s) válida o dejalo vacío";
-      }
-    }
     return e;
+  };
+
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 0.6,
+      allowsEditing: true,
+      aspect: [4, 3],
+    });
+    if (!result.canceled && result.assets?.[0]?.uri) {
+      setImagenUri(result.assets[0].uri);
+      if (errors.urlImagen) setErrors({ ...errors, urlImagen: undefined });
+    }
   };
 
   const handleRegister = async () => {
@@ -77,6 +107,17 @@ export default function RegistroVendedor() {
 
     try {
       setLoading(true);
+
+      let urlImagen = "";
+      if (imagenUri) {
+        try {
+          urlImagen = await subirImagen(imagenUri);
+        } catch (err: any) {
+          setErrors({ urlImagen: err?.message ?? "No se pudo subir la imagen" });
+          return;
+        }
+      }
+
       const r = await fetch(`${BASE_URL}/api/sucursales/registro`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -85,12 +126,12 @@ export default function RegistroVendedor() {
           email,                 // back: mail
           password,              // back: contrasena
           domicilio: direccion,  // back: domicilio
-          urlImagen: imagenLocal // back: urlImagen
+          urlImagen              // back: urlImagen
         }),
       });
 
       if (!r.ok) {
-        const msg = (await r.text()) || `Error ${r.status}`;
+        const msg = await parseApiError(r, "No se pudo completar el registro");
         // Mapear mensajes del back a campos cuando sea posible
         const mapped: Errors = {};
         if (/email.*registrado/i.test(msg) || /email inválido/i.test(msg)) {
@@ -130,163 +171,229 @@ export default function RegistroVendedor() {
       source={require("../../assets/images/backgrounds/fondo1.jpg")}
       style={styles.backgroundImage}
     >
-      <View style={styles.container}>
-        <Pressable
-          style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.7 }]}
-          onPress={() => router.push("/")}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 },
+          ]}
+          keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.backText}>⬅️ Volver al inicio</Text>
-        </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.7 }]}
+            onPress={() => router.push("/")}
+          >
+            <Text style={styles.backText}>← Volver al inicio</Text>
+          </Pressable>
 
-        <Text style={styles.title}>Registro de Heladería</Text>
+          <View style={styles.logoWrap}>
+            <Image
+              source={require("../../assets/images/icons/HH sin nombre.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
 
-        <TextInput
-          style={withError(styles.input, errors.nombre)}
-          placeholder="Nombre Local"
-          value={nombre}
-          onChangeText={(t) => { setNombre(t); if (errors.nombre) setErrors({ ...errors, nombre: undefined }); }}
-        />
-        {errors.nombre ? <Text style={styles.errorText}>{errors.nombre}</Text> : null}
+          <View style={styles.card}>
+            <Text style={styles.title}>Registrá tu heladería</Text>
+            <Text style={styles.subtitle}>Empezá a recibir pedidos hoy mismo</Text>
 
-        <TextInput
-          style={withError(styles.input, errors.email)}
-          placeholder="Email"
-          value={email}
-          onChangeText={(t) => { setEmail(t); if (errors.email) setErrors({ ...errors, email: undefined }); }}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-        {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
+            <View style={{ alignItems: "center", marginBottom: 12 }}>
+              <Pressable
+                onPress={pickImage}
+                style={[styles.imagePickerBox, errors.urlImagen && styles.inputError]}
+              >
+                {imagenUri ? (
+                  <Image source={{ uri: imagenUri }} style={styles.imagePreview} />
+                ) : (
+                  <>
+                    <Ionicons name="image-outline" size={26} color={MUTED} />
+                    <Text style={styles.imagePickerText}>Foto del local (opcional)</Text>
+                  </>
+                )}
+              </Pressable>
+              {imagenUri && (
+                <Pressable onPress={() => setImagenUri(null)}>
+                  <Text style={styles.removeImageText}>Quitar imagen</Text>
+                </Pressable>
+              )}
+              {errors.urlImagen ? <Text style={styles.errorText}>{errors.urlImagen}</Text> : null}
+            </View>
 
-        <TextInput
-          style={withError(styles.input, errors.domicilio)}
-          placeholder="Dirección del local"
-          value={direccion}
-          onChangeText={(t) => { setDireccion(t); if (errors.domicilio) setErrors({ ...errors, domicilio: undefined }); }}
-        />
-        {errors.domicilio ? <Text style={styles.errorText}>{errors.domicilio}</Text> : null}
+            <View style={styles.form}>
+              <TextInput
+                style={withError(styles.input, errors.nombre)}
+                placeholder="Nombre del local"
+                placeholderTextColor="#999"
+                value={nombre}
+                onChangeText={(t) => { setNombre(t); if (errors.nombre) setErrors({ ...errors, nombre: undefined }); }}
+                autoCapitalize="none"
+              />
+              {errors.nombre ? <Text style={styles.errorText}>{errors.nombre}</Text> : null}
 
-        <TextInput
-          style={withError(styles.input, errors.urlImagen)}
-          placeholder="URL de imagen del local (http/https)"
-          value={imagenLocal}
-          onChangeText={(t) => { setImagenLocal(t); if (errors.urlImagen) setErrors({ ...errors, urlImagen: undefined }); }}
-          autoCapitalize="none"
-        />
-        {errors.urlImagen ? <Text style={styles.errorText}>{errors.urlImagen}</Text> : null}
+              <TextInput
+                style={withError(styles.input, errors.email)}
+                placeholder="Email"
+                placeholderTextColor="#999"
+                value={email}
+                onChangeText={(t) => { setEmail(t); if (errors.email) setErrors({ ...errors, email: undefined }); }}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
 
-        <TextInput
-          style={withError(styles.input, errors.password)}
-          placeholder="Contraseña"
-          value={password}
-          onChangeText={(t) => { setPassword(t); if (errors.password) setErrors({ ...errors, password: undefined }); }}
-          secureTextEntry
-        />
-        {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
+              <TextInput
+                style={withError(styles.input, errors.domicilio)}
+                placeholder="Dirección del local"
+                placeholderTextColor="#999"
+                value={direccion}
+                onChangeText={(t) => { setDireccion(t); if (errors.domicilio) setErrors({ ...errors, domicilio: undefined }); }}
+                autoCapitalize="none"
+              />
+              {errors.domicilio ? <Text style={styles.errorText}>{errors.domicilio}</Text> : null}
 
-        <TextInput
-          style={withError(styles.input, errors.confirmPassword)}
-          placeholder="Confirmar contraseña"
-          value={confirmPassword}
-          onChangeText={(t) => { setConfirmPassword(t); if (errors.confirmPassword) setErrors({ ...errors, confirmPassword: undefined }); }}
-          secureTextEntry
-        />
-        {errors.confirmPassword ? <Text style={styles.errorText}>{errors.confirmPassword}</Text> : null}
+              <PasswordInput
+                style={withError(styles.input, errors.password)}
+                placeholder="Contraseña"
+                placeholderTextColor="#999"
+                value={password}
+                onChangeText={(t) => { setPassword(t); if (errors.password) setErrors({ ...errors, password: undefined }); }}
+              />
+              {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
 
-        {errors.general ? <Text style={[styles.errorText, { textAlign: "center", marginBottom: 6 }]}>{errors.general}</Text> : null}
+              <PasswordInput
+                style={withError(styles.input, errors.confirmPassword)}
+                placeholder="Confirmar contraseña"
+                placeholderTextColor="#999"
+                value={confirmPassword}
+                onChangeText={(t) => { setConfirmPassword(t); if (errors.confirmPassword) setErrors({ ...errors, confirmPassword: undefined }); }}
+              />
+              {errors.confirmPassword ? <Text style={styles.errorText}>{errors.confirmPassword}</Text> : null}
 
-        <Pressable
-          style={({ pressed }) => [styles.registerButton, pressed && { opacity: 0.8 }]}
-          onPress={handleRegister}
-          disabled={loading}
-        >
-          <Text style={styles.registerText}>{loading ? "Creando..." : "Registrarse"}</Text>
-        </Pressable>
+              {errors.general ? (
+                <Text style={[styles.errorText, { textAlign: "center" }]}>{errors.general}</Text>
+              ) : null}
+            </View>
 
-        <Pressable onPress={() => router.push("/screens/Log_In")}>
-          {({ pressed }) => (
-            <Text style={[styles.linkText, pressed && { textDecorationLine: "underline" }]}>
-              ¿Ya tienes cuenta? Inicia sesión
-            </Text>
-          )}
-        </Pressable>
-      </View>
+            <View style={{ marginTop: 8, gap: 12 }}>
+              <ActionButton
+                label="Registrar heladería"
+                icon="storefront-outline"
+                color={MINT}
+                onPress={handleRegister}
+                loading={loading}
+              />
+              <Pressable onPress={() => router.push("/screens/Log_In")}>
+                {({ pressed }) => (
+                  <Text style={[styles.linkText, pressed && { textDecorationLine: "underline" }]}>
+                    ¿Ya tenés cuenta? Iniciá sesión
+                  </Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  backgroundImage: { flex: 1, width: "100%", height: "100%", resizeMode: "cover" },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: "center",
-    padding: isWeb ? 40 : width * 0.05,
-    backgroundColor: "rgba(255,255,255,0.8)",
-    borderRadius: isWeb ? 0 : 10,
-    width: "100%",
-    alignSelf: "stretch",
-  },
-  title: {
-    fontSize: isWeb ? 32 : isSmallScreen ? 20 : width * 0.07,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: height * 0.04,
-  },
-  backgroundImage: {
-    flex: 1,
-    width: "100%",
-    height: "100%",
-    resizeMode: isSmallScreen ? "stretch" : "cover",
-  },
-  input: {
-    flexDirection: "row",
     alignItems: "center",
-    padding: isWeb ? 14 : width * 0.04,
-    borderRadius: 10,
-    backgroundColor: "#f5f5f5",
-    marginBottom: height * 0.008, // más chico para dejar lugar al error
-    borderWidth: 1,
-    borderColor: "#ddd",
-    fontSize: isWeb ? 14 : width * 0.04,
-  },
-  inputError: {
-    borderColor: "#d32f2f",
-  },
-  errorText: {
-    color: "#d32f2f",
-    marginBottom: height * 0.01,
-    fontSize: isWeb ? 12 : width * 0.035,
-  },
-  registerButton: {
-    backgroundColor: "#4caf50",
-    paddingVertical: isWeb ? 12 : height * 0.02,
-    borderRadius: 12,
-    alignItems: "center",
-    marginTop: height * 0.01,
-    marginBottom: height * 0.02,
+    paddingHorizontal: width * 0.06,
   },
   backButton: {
-    paddingVertical: isWeb ? 10 : height * 0.015,
-    paddingHorizontal: isWeb ? 20 : width * 0.04,
-    borderRadius: 20,
-    alignSelf: "center",
+    alignSelf: "flex-start",
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    marginBottom: 8,
+  },
+  backText: { color: "#fff", fontSize: 14, fontWeight: "700" },
+  logoWrap: {
+    width: isSmallScreen ? 84 : 96,
+    height: isSmallScreen ? 84 : 96,
+    borderRadius: 999,
+    backgroundColor: "#fff",
+    alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.85)",
-    marginBottom: height * 0.025,
+    marginBottom: -36,
+    zIndex: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  backText: {
-    color: "#000000ff",
-    fontSize: isWeb ? 14 : width * 0.04,
-    fontWeight: "bold",
+  logo: { width: "78%", height: "78%" },
+  card: {
+    width: "100%",
+    maxWidth: 420,
+    backgroundColor: CARD_BG,
+    borderRadius: 24,
+    paddingTop: 48,
+    paddingBottom: 24,
+    paddingHorizontal: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
   },
-  registerText: {
-    color: "#fff",
-    fontSize: isWeb ? 18 : width * 0.05,
-    fontWeight: "bold",
+  title: {
+    fontSize: isSmallScreen ? 20 : 24,
+    fontWeight: "800",
+    textAlign: "center",
+    color: INK,
+  },
+  subtitle: {
+    fontSize: 13,
+    textAlign: "center",
+    color: MUTED,
+    marginTop: 4,
+    marginBottom: 20,
+  },
+  imagePickerBox: {
+    width: 120,
+    height: 90,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: BORDER,
+    borderStyle: "dashed",
+    backgroundColor: "#f7f7f9",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  imagePreview: { width: "100%", height: "100%" },
+  imagePickerText: { fontSize: 11, color: MUTED, textAlign: "center", marginTop: 4, paddingHorizontal: 6 },
+  removeImageText: { color: DANGER, fontSize: 12, marginTop: 6, fontWeight: "600" },
+  form: { gap: 10 },
+  input: {
+    paddingVertical: 13,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: "#f7f7f9",
+    borderWidth: 1,
+    borderColor: BORDER,
+    fontSize: 14.5,
+    color: INK,
+  },
+  inputError: {
+    borderColor: DANGER,
+  },
+  errorText: {
+    color: DANGER,
+    fontSize: 12,
+    marginTop: -4,
   },
   linkText: {
     textAlign: "center",
-    color: "#007AFF",
-    marginTop: height * 0.015,
-    fontSize: isWeb ? 14 : width * 0.04,
+    color: MINT,
+    fontWeight: "600",
+    fontSize: 13.5,
   },
 });

@@ -38,6 +38,20 @@
             "backgroundColor": "#000000"
           }
         }
+      ],
+      "expo-font",
+      "expo-web-browser",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Permitir a $(PRODUCT_NAME) usar la cámara para escanear el QR de la sucursal."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permitir a $(PRODUCT_NAME) acceder a tus fotos para elegir la imagen de tu heladería."
+        }
       ]
     ],
     "experiments": {

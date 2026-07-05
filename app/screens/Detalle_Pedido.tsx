@@ -2,7 +2,6 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Dimensions,
   ImageBackground,
@@ -14,7 +13,10 @@ import {
   View,
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
+import ActionButton from "../../components/ActionButton";
+import { INK, MUTED, PINK } from "../../constants/brand";
 import type { AppDispatch, RootState } from "../../redux/store";
+import { parseApiError } from "../services/apiError";
 import { BASE_URL } from "../services/apiConfig";
 
 /** ====== Configurable ====== */
@@ -41,12 +43,12 @@ async function crearOrden(payload: {
   });
 
   console.log("[crearOrden] status:", r.status);
-  const text = await r.text().catch(() => "");
-  console.log("[crearOrden] body:", text);
 
   if (!r.ok) {
-    throw new Error(`Error ${r.status}: ${text || "No se pudo crear la orden"}`);
+    throw new Error(await parseApiError(r, "No se pudo crear la orden"));
   }
+
+  const text = await r.text().catch(() => "");
 
   // Soporta respuesta nueva { id, ... } o vieja { ok, ordenId }
   let data: any = {};
@@ -56,24 +58,24 @@ async function crearOrden(payload: {
   return { ordenId, data };
 }
 
-// Mapeo de envases
-function mapEnvaseKeyToId(key: string): string {
-  const [categoria] = key.split(" ");
-  if (categoria.toLowerCase().includes("cucurucho")) {
-    const bolas = parseInt(key.match(/\((\d)\s+bolas?\)/)?.[1] ?? "1", 10);
-    return { 1: "B1", 2: "B2", 3: "B3", 4: "B4" }[bolas] ?? "B1";
+// === Mapeo dinámico de envases (sin hardcodear tipos/tamaños) ===
+async function getEnvasesMap(): Promise<Record<string, string>> {
+  const url = `${BASE_URL}/api/envases`;
+  try {
+    const r = await fetch(url);
+    const list = await r.json();
+    // genera: { "cucurucho_1": "B1", "especial_pija": "e_xxx", ... }
+    const map: Record<string, string> = {};
+    (list || []).forEach((e: any) => {
+      const tipo = (e?.tipoEnvase || "").toString().trim().toLowerCase();
+      const id = (e?.id || "").toString();
+      if (tipo && id) map[tipo] = id;
+    });
+    return map;
+  } catch (e) {
+    console.log("[getEnvasesMap] Error:", e);
+    return {};
   }
-  if (categoria.toLowerCase().includes("vaso")) {
-    const bolas = parseInt(key.match(/\((\d)\s+bolas?\)/)?.[1] ?? "1", 10);
-    return { 1: "B8", 2: "B9", 3: "B10", 4: "B11" }[bolas] ?? "B8";
-  }
-  if (categoria.toLowerCase().includes("kilo")) {
-    const opt = key.match(/\(([^)]+)\)/)?.[1]?.trim();
-    if (opt === "1/4 Kg") return "B6";
-    if (opt === "1/2 Kg") return "B5";
-    if (opt === "1 Kg") return "B7";
-  }
-  return "B1";
 }
 
 // === Mapeo dinámico de sabores (sin hardcodear) ===
@@ -134,23 +136,39 @@ export default function DetallePedidoScreen() {
     return res;
   }, [envases, selecciones]);
 
-  // Confirmar pedido
+  // Confirmar pedido. Si todavía no inició sesión (flujo "ver menú sin
+  // registrarte"), lo mandamos a loguearse primero y volvemos acá con las
+  // selecciones intactas (viven en pedidoSlice, no se pierden al navegar).
   const handleConfirmar = async () => {
+    if (!usuarioId) {
+      router.push({
+        pathname: "/screens/Log_In",
+        params: { redirectTo: "/screens/Detalle_Pedido" },
+      });
+      return;
+    }
+
     try {
-      if (!usuarioId || !sucursalId) {
-        Alert.alert("Error", "No se pudo identificar al usuario o la sucursal.");
-        console.log("[handleConfirmar] FALTA usuarioId o sucursalId", { usuarioId, sucursalId });
+      if (!sucursalId) {
+        Alert.alert("Error", "No se pudo identificar la sucursal.");
+        console.log("[handleConfirmar] FALTA sucursalId");
         return;
       }
 
       const items: PedidoItem[] = [];
       const saboresSinMapeo: string[] = [];
-      // obtener el mapa dinámico de sabores desde el backend
-      const saboresMap = await getSaboresMap();
-
+      const envasesSinMapeo: string[] = [];
+      // obtener los mapas dinámicos de envases y sabores desde el backend
+      const [envasesMap, saboresMap] = await Promise.all([getEnvasesMap(), getSaboresMap()]);
 
       for (const [envaseKey, gustos] of Object.entries(pedidoObj)) {
-        const envaseId = mapEnvaseKeyToId(envaseKey);
+        // envaseKey viene como "tipoEnvase|Label lindo (#N)"
+        const [tipoEnvase, labelLindo] = envaseKey.split("|");
+        const envaseId = envasesMap[tipoEnvase.trim().toLowerCase()] || null;
+        if (!envaseId) {
+          envasesSinMapeo.push(labelLindo ?? envaseKey);
+          continue;
+        }
         for (const g of gustos) {
           const saborId = saboresMap[g.trim().toLowerCase()] || null;
 
@@ -160,6 +178,12 @@ export default function DetallePedidoScreen() {
           }
           items.push({ envaseId, saborId });
         }
+      }
+
+      if (envasesSinMapeo.length) {
+        Alert.alert("Envases no reconocidos", `No se pudieron mapear: ${envasesSinMapeo.join(", ")}`);
+        console.log("[handleConfirmar] envases sin mapeo:", envasesSinMapeo);
+        return;
       }
 
       if (saboresSinMapeo.length) {
@@ -194,7 +218,7 @@ export default function DetallePedidoScreen() {
       }, AFTER_CONFIRM_REDIRECT_MS);
 
     } catch (e: any) {
-      console.error("[handleConfirmar] ERROR:", e);
+      console.log("[handleConfirmar] Error:", e?.message);
       Alert.alert("Error", e?.message ?? "No se pudo crear la orden.");
     } finally {
       setEnviando(false);
@@ -219,7 +243,7 @@ export default function DetallePedidoScreen() {
           >
             {Object.entries(pedidoObj).map(([envase, gustos]) => (
               <View key={envase} style={{ marginBottom: height * 0.015 }}>
-                <Text style={styles.cucuruchoTitle}>{envase}</Text>
+                <Text style={styles.cucuruchoTitle}>{envase.split("|")[1] ?? envase}</Text>
                 {gustos.map((gusto, i) => (
                   <Text key={i} style={styles.item}>
                     🍦 {gusto}
@@ -229,30 +253,21 @@ export default function DetallePedidoScreen() {
             ))}
           </ScrollView>
 
-          <View style={{ marginTop: 10 }}>
-            <Pressable
-              style={[styles.button, { backgroundColor: enviando ? "#8fdede" : "#42e9e9ff" }]}
+          <View style={{ marginTop: 10, gap: 10 }}>
+            <ActionButton
+              label={usuarioId ? "Confirmar pedido" : "Iniciar sesión para confirmar"}
+              icon={usuarioId ? "checkmark-circle-outline" : "log-in-outline"}
               onPress={handleConfirmar}
+              loading={enviando}
               disabled={enviando}
-            >
-              {enviando ? (
-                <ActivityIndicator />
-              ) : (
-                <Text style={[styles.buttonText, { fontSize: isWeb ? 18 : width * 0.045 }]}>
-                  Confirmar Pedido
-                </Text>
-              )}
-            </Pressable>
-
-            <Pressable
-              style={[styles.button, { backgroundColor: "#f4679fff", marginTop: 10 }]}
+            />
+            <ActionButton
+              label="Volver"
+              icon="arrow-back"
+              variant="outline"
               onPress={() => router.back()}
               disabled={enviando}
-            >
-              <Text style={[styles.buttonText, { fontSize: isWeb ? 16 : width * 0.04 }]}>
-                Volver
-              </Text>
-            </Pressable>
+            />
           </View>
         </View>
       </View>
@@ -267,51 +282,47 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: isWeb ? 40 : width * 0.05,
-    backgroundColor: "rgba(255,255,255,0.6)",
+    backgroundColor: "rgba(255,255,255,0.55)",
   },
   ticket: {
     width: "90%",
-    backgroundColor: "#fff8e1",
-    borderRadius: 16,
-    padding: isWeb ? 20 : width * 0.05,
+    backgroundColor: "rgba(255,255,255,0.96)",
+    borderRadius: 24,
+    padding: isWeb ? 24 : width * 0.06,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
     flex: 1,
   },
   ticketNotch: {
     width: isWeb ? 40 : width * 0.12,
     height: isWeb ? 5 : height * 0.008,
-    backgroundColor: "#ffd54f",
+    backgroundColor: "#e0e0e6",
     borderRadius: 3,
     alignSelf: "center",
     marginBottom: height * 0.02,
   },
   title: {
     fontSize: isWeb ? 22 : width * 0.055,
-    fontWeight: "bold",
+    fontWeight: "800",
     textAlign: "center",
     marginBottom: height * 0.02,
+    color: INK,
   },
   cucuruchoTitle: {
     fontSize: isWeb ? 18 : width * 0.045,
-    fontWeight: "bold",
+    fontWeight: "700",
     marginBottom: height * 0.005,
     textAlign: "center",
+    color: PINK,
   },
   content: { flexGrow: 1 },
   item: {
     fontSize: isWeb ? 16 : width * 0.04,
     marginLeft: width * 0.03,
     marginBottom: height * 0.005,
+    color: MUTED,
   },
-  button: {
-    paddingVertical: isWeb ? 12 : height * 0.02,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 10,
-  },
-  buttonText: { color: "#fff", fontWeight: "bold", fontSize: isWeb ? 16 : width * 0.04 },
 });

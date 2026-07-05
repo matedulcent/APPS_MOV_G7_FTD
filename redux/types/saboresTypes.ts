@@ -2,4 +2,5 @@
 export interface Sabor {
     id: string;
     tipoSabor: string;
+    categoria: string;
 }

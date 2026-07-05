@@ -1,51 +1,119 @@
-# Welcome to your Expo app 👋
+# APPS_MOV_G7_FTD
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Frontend de la app de administración de heladerías (pedidos + stock por sucursal). Expo (React Native) + expo-router + Redux Toolkit.
 
-## Get started
+Necesita el backend corriendo: [`APPS_MOV_G7_FTD_BACK`](../APPS_MOV_G7_FTD_BACK).
 
-1. Install dependencies
+## Correr todo de punta a punta (back + front + Expo Go)
 
-   ```bash
-   npm install
-   ```
+Guía completa para levantar el proyecto entero desde cero, incluyendo probarlo en el celular.
 
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+### 1. Backend
 
 ```bash
-npm run reset-project
+cd APPS_MOV_G7_FTD_BACK
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Crear el archivo `.env` en esa carpeta (no se versiona) con:
 
-## Learn more
+```
+DATABASE_URL="file:./dev.db"
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+Generar el cliente de Prisma y levantar el servidor:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```bash
+npx prisma generate
+npm run dev
+```
 
-## Join the community
+Queda escuchando en `http://localhost:3001`. Probar con `curl http://localhost:3001/api/health` (debería devolver `{"ok":true,...}`). Más detalle en el [README del backend](../APPS_MOV_G7_FTD_BACK/README.md).
 
-Join our community of developers creating universal apps.
+### 2. Configurar la IP para el front
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
-"# APPS_MOV_G7_FTD" 
+Con el backend corriendo en tu PC, el celular necesita saber a qué IP de la red local conectarse (ver sección [Configurar la IP del backend](#configurar-la-ip-del-backend) más abajo). Este paso es el que más rompe cuando cambiás de red o de PC — revisalo siempre primero si algo no conecta.
+
+### 3. Frontend
+
+En otra terminal:
+
+```bash
+cd APPS_MOV_G7_FTD
+npm install
+npx expo start
+```
+
+Esto levanta Metro (el bundler) en `http://localhost:8081` y muestra un QR en la terminal.
+
+### 4. Abrir la app en el celular con Expo Go
+
+1. Instalá **Expo Go** desde Play Store (Android) o App Store (iOS).
+2. Conectá el celular a la **misma red Wi-Fi** que la PC donde corren el backend y `expo start`.
+3. Escaneá el QR que aparece en la terminal:
+   - Android: desde la propia app Expo Go (botón "Scan QR code").
+   - iOS: desde la cámara nativa del sistema (te va a ofrecer abrirlo en Expo Go).
+4. Si el celular no puede resolver la IP (redes distintas, firewall bloqueando el puerto 8081 o 3001), usar en su lugar:
+   ```bash
+   npx expo start --tunnel
+   ```
+   Es más lento pero no depende de estar en la misma red.
+
+### Otras formas de correr el front
+
+```bash
+npx expo start --web       # navegador, usa localhost, no requiere el paso de la IP
+npx expo start --android   # emulador/dispositivo Android por USB
+npx expo start --ios       # simulador iOS (solo macOS)
+```
+
+## Instalación
+
+```bash
+npm install
+```
+
+## Configurar la IP del backend
+
+El archivo [`app/services/apiConfig.ts`](app/services/apiConfig.ts) tiene una constante `LOCAL_IP` hardcodeada que apunta a la IP de la PC donde corre el backend (no hay descubrimiento automático). **Antes de correr la app**, revisá que esa IP sea la de tu máquina en la red local:
+
+```bash
+# Windows
+ipconfig
+# buscar "Dirección IPv4" de tu adaptador Wi-Fi/Ethernet
+```
+
+y actualizá la línea correspondiente en `apiConfig.ts`:
+
+```ts
+const LOCAL_IP = "TU_IP_AQUI";
+```
+
+Si vas a correr solo con `--web` en la misma PC, `localhost` también funciona, pero para emulador Android o celular físico hace falta la IP de LAN.
+
+## Ver los datos de la base a medida que probás
+
+El backend usa SQLite vía Prisma. Para ver/editar las tablas en vivo mientras usás la app (útil para diagnosticar qué se está guardando), corré en la carpeta del backend:
+
+```bash
+npx prisma studio
+```
+
+Abre `http://localhost:5555` con una grilla editable por tabla (Usuario, Sucursal, Orden, Envase, Sabor, ContenidoPedido).
+
+## Estructura
+
+- `app/screens/` — pantallas (login, registro, selección de sucursal, categorías, pedidos, panel de proveedor/sucursal)
+- `app/services/apiConfig.ts` — configuración de IP/puerto del backend
+- `redux/` — store, slices, thunks y reducers de Redux
+
+## Sesión
+
+La sesión de usuario/vendedor vive solo en memoria (Redux), a propósito: se mantiene mientras navegás dentro de la app (incluso volviendo al menú principal), pero **no sobrevive a cerrar la app** — al reabrirla, siempre arranca deslogueado. No hay persistencia en disco.
+
+## Problemas comunes
+
+- **"Network request failed" / no carga nada**: revisar `LOCAL_IP` en `apiConfig.ts` y que el backend esté corriendo (`curl http://<IP>:3001/api/health`).
+- **El celular no puede escanear/conectar al QR**: confirmar que esté en la misma Wi-Fi que la PC, o usar `npx expo start --tunnel`.
+- **Warning de expo-router sobre `app/services/apiConfig.ts`** ("missing the required default export"): es un warning cosmético del bundler porque el archivo vive dentro de `app/` (expo-router lo interpreta como ruta). No afecta el funcionamiento.
+- **`expo-doctor` se queja de versiones**: correr `npx expo install --fix` para realinear los paquetes con el SDK instalado.

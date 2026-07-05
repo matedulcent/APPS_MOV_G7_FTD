@@ -9,6 +9,8 @@ import {
     Text,
     View
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { INK, PINK } from "../constants/brand";
 
 interface ScreenHeaderProps {
     title: string;
@@ -22,25 +24,26 @@ export default function ScreenHeader({
     onToggleSearch,
 }: ScreenHeaderProps) {
     const router = useRouter();
+    const insets = useSafeAreaInsets();
 
     return (
         <LinearGradient
-            colors={["#ffffff", "#f9f9f9"]}
-            style={styles.headerContainer}
+            colors={["#ffffff", "#fff3f8"]}
+            style={[styles.headerContainer, { marginTop: insets.top }]}
         >
             <View style={styles.header}>
                 <Pressable
                     onPress={() => router.back()}
                     style={styles.iconButton}
                 >
-                    <Ionicons name="arrow-back" size={24} color="#333" />
+                    <Ionicons name="arrow-back" size={24} color={PINK} />
                 </Pressable>
 
                 <Text style={styles.title}>{title}</Text>
 
                 {onToggleSearch ? (
                     <Pressable onPress={onToggleSearch} style={styles.iconButton}>
-                        <Ionicons name="search" size={24} color="#333" />
+                        <Ionicons name="search" size={24} color={PINK} />
                     </Pressable>
                 ) : (
                     <View style={styles.iconButton} />
@@ -82,6 +85,6 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         textAlign: "center",
         flex: 1,
-        color: "#222",
+        color: INK,
     },
 });

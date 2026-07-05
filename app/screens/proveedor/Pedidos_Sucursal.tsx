@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -12,6 +13,8 @@ import {
   View,
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { MINT } from "../../../constants/brand";
 import type { RootState } from "../../../redux/store";
 import { LOG_OUT } from "../../../redux/types/userTypes";
 import { BASE_URL } from "./../../services/apiConfig";
@@ -37,44 +40,54 @@ async function fetchSucursal(id: string): Promise<Sucursal> {
   return res.json();
 }
 
-async function confirmAsync(title: string, message: string): Promise<boolean> {
+async function confirmAsync(
+  title: string,
+  message: string,
+  confirmLabel = "Confirmar"
+): Promise<boolean> {
   if (Platform.OS === "web") {
     return Promise.resolve(window.confirm(`${title}\n\n${message}`));
   }
   return new Promise((resolve) => {
     Alert.alert(title, message, [
       { text: "Cancelar", style: "cancel", onPress: () => resolve(false) },
-      { text: "Terminar", style: "destructive", onPress: () => resolve(true) },
+      { text: confirmLabel, style: "destructive", onPress: () => resolve(true) },
     ]);
   });
 }
 
-/** PRIMERO: /api/ordenes/sucursal/:id ; fallback a ?sucursalId= */
-async function fetchOrdenesRobusto(take = 50, sucursalId?: string): Promise<OrdenLite[]> {
+/**
+ * PRIMERO: /api/ordenes/sucursal/:id — ya viene con los contenidos incluidos,
+ * así que no hace falta pedir el detalle de cada pedido por separado.
+ * Fallback (solo si esa ruta llegara a fallar): /api/ordenes?sucursalId= +
+ * detalle por pedido, como antes.
+ */
+async function fetchOrdenesRobusto(take = 50, sucursalId?: string): Promise<OrdenFull[]> {
   if (!sucursalId) throw new Error("Falta sucursalId");
-  // 1) Ruta explícita
-  let url = `${BASE_URL}/api/ordenes/sucursal/${encodeURIComponent(sucursalId)}?take=${take}`;
-  console.log("[Pedidos] GET explícito:", url);
-  let r = await fetch(url);
-  if (r.ok) {
-    const data = await r.json();
-    console.log("[Pedidos] explícito length:", Array.isArray(data) ? data.length : "N/A");
-    return data;
-  }
-  const txt = await r.text().catch(() => "");
-  console.warn("[Pedidos] explícito FALLÓ:", r.status, txt);
 
-  // 2) Fallback querystring
+  let url = `${BASE_URL}/api/ordenes/sucursal/${encodeURIComponent(sucursalId)}?take=${take}`;
+  let r = await fetch(url);
+  if (r.ok) return r.json();
+  console.warn("[Pedidos] ruta explícita falló, uso fallback:", r.status);
+
   const q = new URLSearchParams();
   q.set("take", String(take));
   q.set("sucursalId", sucursalId);
   url = `${BASE_URL}/api/ordenes?${q.toString()}`;
-  console.log("[Pedidos] GET fallback:", url);
   r = await fetch(url);
   if (!r.ok) throw new Error("No se pudo leer /api/ordenes");
-  const data = await r.json();
-  console.log("[Pedidos] fallback length:", Array.isArray(data) ? data.length : "N/A");
-  return data;
+  const lites: OrdenLite[] = await r.json();
+
+  return Promise.all(
+    lites.map(async (o) => {
+      try {
+        return await fetchOrdenDetalle(o.id);
+      } catch (err) {
+        console.warn("[Pedidos] Detalle falló para", o.id, err);
+        return { ...o, contenidos: [] };
+      }
+    })
+  );
 }
 
 async function fetchOrdenDetalle(id: string): Promise<OrdenFull> {
@@ -101,6 +114,7 @@ export default function Pedidos_Sucursal() {
 
   const router = useRouter();
   const dispatch = useDispatch();
+  const insets = useSafeAreaInsets();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -108,6 +122,8 @@ export default function Pedidos_Sucursal() {
   const [busy, setBusy] = useState<Record<string, boolean>>({});
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [heladeriaNombre, setHeladeriaNombre] = useState("Mi Heladería");
+  // Pedidos ocultados de esta lista (solo en la vista, no se tocan en la base de datos).
+  const [ocultos, setOcultos] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     console.log("[Pedidos] sucursalId usado para cargar:", sucursalId, "(param:", qp, "redux:", sidFromUser, ")");
@@ -118,7 +134,7 @@ export default function Pedidos_Sucursal() {
     fetchSucursal(sucursalId)
       .then((sucursal) => setHeladeriaNombre(sucursal.nombre))
       .catch((e) => {
-        console.error("Error al obtener la sucursal:", e);
+        console.log("Error al obtener la sucursal:", e);
         setHeladeriaNombre("Heladería");
       });
   }, [sucursalId]);
@@ -127,43 +143,17 @@ export default function Pedidos_Sucursal() {
     if (!sucursalId) return;
     if (!sutil) setLoading(true);
     try {
-      // 1) Traigo lite (filtrado en el back)
-      const lites = await fetchOrdenesRobusto(50, sucursalId);
-      console.log("[Pedidos] IDs lite:", lites.map(o => o.id).join(", ") || "(vacío)");
+      const ordenes = await fetchOrdenesRobusto(50, sucursalId);
 
-      // 2) Intento traer detalles; si alguno falla, dejo el lite
-      const detalleMap = new Map<string, OrdenFull>();
-      await Promise.all(
-        lites.map(async (o) => {
-          try {
-            const det = await fetchOrdenDetalle(o.id);
-            detalleMap.set(o.id, det);
-          } catch (err) {
-            console.warn("[Pedidos] Detalle falló para", o.id, err);
-          }
-        })
-      );
-
-      // 3) Merge lite + detalle (fallback si detalle no llegó)
-      const merged: OrdenFull[] = lites.map((o) => {
-        const det = detalleMap.get(o.id);
-        return det ? det : { ...o, contenidos: [] };
-      });
-
-      merged.sort((a, b) => {
+      const merged = [...ordenes].sort((a, b) => {
         const ta = a.fecha ? new Date(a.fecha).getTime() : 0;
         const tb = b.fecha ? new Date(b.fecha).getTime() : 0;
         return tb - ta || b.id.localeCompare(a.id);
       });
 
-      console.log("[Pedidos] Final para render:", merged.length, "Primer ID:", merged[0]?.id);
-      if (!merged.length) {
-        console.log("[Pedidos] No se encontraron pedidos para sucursal:", sucursalId);
-      }
-
       setPedidos(merged);
     } catch (e: any) {
-      console.error("[Pedidos] ERROR cargar:", e);
+      console.log("[Pedidos] Error cargar:", e?.message ?? e);
       Alert.alert("Error", e.message ?? "No se pudieron cargar los pedidos");
     } finally {
       if (!sutil) setLoading(false);
@@ -191,7 +181,8 @@ export default function Pedidos_Sucursal() {
     if (pedido.estadoTerminado || busy[pedido.id]) return;
     const ok = await confirmAsync(
       "Marcar como terminado",
-      `¿Confirmás que el Pedido #${pedido.id} fue entregado?`
+      `¿Confirmás que el Pedido #${pedido.id} fue entregado?`,
+      "Terminar"
     );
     if (!ok) return;
 
@@ -204,7 +195,7 @@ export default function Pedidos_Sucursal() {
       const res = await terminarOrden(pedido.id);
       console.log("[Pedidos] PATCH terminar OK:", res);
     } catch (e: any) {
-      console.error("[Pedidos] PATCH terminar ERROR:", e);
+      console.log("[Pedidos] Error al marcar terminado:", e?.message ?? e);
       Alert.alert("Error", e?.message ?? "No se pudo marcar como terminado");
       setPedidos((prev) =>
         prev.map((p) => (p.id === pedido.id ? { ...p, estadoTerminado: false } : p))
@@ -214,13 +205,33 @@ export default function Pedidos_Sucursal() {
     }
   };
 
+  const ocultarPedido = async (pedido: OrdenFull) => {
+    if (!pedido.estadoTerminado) return; // solo se puede ocultar si ya está terminado
+    const ok = await confirmAsync(
+      "Ocultar pedido",
+      `¿Ocultar el Pedido #${pedido.id} de esta lista? No se borra de la base de datos, solo deja de mostrarse acá.`,
+      "Ocultar"
+    );
+    if (!ok) return;
+    setOcultos((prev) => new Set(prev).add(pedido.id));
+  };
+
   const toggleExpand = (id: string) => {
     setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  const pedidosVisibles = pedidos.filter((p) => !ocultos.has(p.id));
+
   const handleLogout = () => {
     dispatch({ type: LOG_OUT });
     router.replace("/");
+  };
+
+  const handleMostrarQR = () => {
+    router.push({
+      pathname: "/screens/proveedor/MostrarQR",
+      params: { sucursalId, nombre: heladeriaNombre },
+    });
   };
 
   if (loading) {
@@ -233,15 +244,37 @@ export default function Pedidos_Sucursal() {
   }
 
   return (
-    <View style={{ flex: 1, padding: 16 }}>
-      <View style={{ alignItems: "center", marginBottom: 16 , flexDirection: "row", justifyContent: "space-between" }}>
-        <Text style={{ fontSize: 20, fontWeight: "900" }}>
-          {heladeriaNombre}
+    <View style={{ flex: 1, padding: 16, paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 }}>
+      <View style={{ marginBottom: 16 }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          <Text style={{ fontSize: 20, fontWeight: "900", flexShrink: 1 }} numberOfLines={1}>
+            {heladeriaNombre}
+          </Text>
+          <Pressable
+            onPress={handleMostrarQR}
+            style={({ pressed }) => [
+              {
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+                paddingVertical: 8,
+                paddingHorizontal: 12,
+                borderRadius: 20,
+                backgroundColor: MINT,
+              },
+              pressed && { opacity: 0.85 },
+            ]}
+          >
+            <Ionicons name="qr-code-outline" size={16} color="#fff" />
+            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>Mostrar QR</Text>
+          </Pressable>
+        </View>
+        <Text style={{ fontSize: 22, fontWeight: "700", textAlign: "center", marginTop: 8 }}>
+          Pedidos
         </Text>
-        <Text style={{ fontSize: 22, fontWeight: "700" }}>Pedidos</Text>
       </View>
 
-      {pedidos.length === 0 ? (
+      {pedidosVisibles.length === 0 ? (
         <View style={{ paddingVertical: 24, alignItems: "center" }}>
           <Text style={{ opacity: 0.6 }}>No hay pedidos por ahora.</Text>
           <Text style={{ opacity: 0.6, marginTop: 4, fontSize: 12 }}>
@@ -250,7 +283,7 @@ export default function Pedidos_Sucursal() {
         </View>
       ) : (
         <FlatList
-          data={pedidos}
+          data={pedidosVisibles}
           keyExtractor={(p) => p.id}
           refreshControl={
             <RefreshControl
@@ -348,6 +381,23 @@ export default function Pedidos_Sucursal() {
                       >
                         <Text style={{ color: "#fff", fontWeight: "700" }}>
                           {busy[item.id] ? "Terminando..." : "Marcar como terminado"}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {!isPendiente && (
+                      <TouchableOpacity
+                        onPress={() => ocultarPedido(item)}
+                        style={{
+                          marginTop: 8,
+                          paddingVertical: 10,
+                          borderRadius: 10,
+                          alignItems: "center",
+                          backgroundColor: "#eee",
+                        }}
+                      >
+                        <Text style={{ color: "#666", fontWeight: "700" }}>
+                          Ocultar de la lista
                         </Text>
                       </TouchableOpacity>
                     )}

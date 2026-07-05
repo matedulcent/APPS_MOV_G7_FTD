@@ -17,34 +17,30 @@ import { useDispatch, useSelector } from "react-redux";
 import Dropdown from "../../components/Dropdown";
 import PedidoCardBottom from "../../components/PedidoCardBottom";
 import ScreenHeader from "../../components/ScreenHeader";
+import { DANGER, INK, MUTED, PINK } from "../../constants/brand";
 import { fetchSabores } from "../../redux/actions/saboresActions";
 import { limpiarPedido, setSeleccion, toggleEnvase } from "../../redux/slices/pedidoSlice";
 import type { AppDispatch, RootState } from "../../redux/store";
 
 const { height } = Dimensions.get("window");
 
-type Sabor = { id: string; tipoSabor: string };
-type Grupo = "Frutales" | "Cremas" | "Chocolates" | "Dulce de leche" | "Otros";
+type Sabor = { id: string; tipoSabor: string; categoria: string };
 
-const normalize = (s: string) =>
-  s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+const normalize = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().trim();
 
-const grupoDeSabor = (nombre: string): Grupo => {
+/** Ícono por sección; las secciones nuevas creadas por el vendedor caen en el genérico. */
+const iconForGrupo = (nombre: string): React.ComponentProps<typeof Dropdown>["icon"] => {
   const n = normalize(nombre);
-  if (/(chocolate|choco|cacao|amargo|blanco)/.test(n)) return "Chocolates";
-  if (/(dulce de leche|ddl)/.test(n)) return "Dulce de leche";
-  if (
-    /(frutilla|fresa|limon|naranja|frambuesa|mora|maracuya|anan|piña|mango|durazno|kiwi|uva|manzana|pera|cereza|sandia|melon|banana|platano)/.test(
-      n
-    )
-  )
-    return "Frutales";
-  if (/(crema|americana|vainilla|tramontana|sambayon|flan|yogur|yogurt|ricota|panna)/.test(n))
-    return "Cremas";
-  return "Otros";
+  if (n === "frutales") return "local-florist";
+  if (n === "chocolates") return "cookie";
+  if (n === "dulce de leche") return "favorite";
+  return "icecream";
 };
 
 const labelOf = (s: Sabor) => s.tipoSabor;
+
+/** Las keys de envase vienen como "tipoEnvase|Label lindo (#N)"; esto muestra solo la parte linda. */
+const displayLabel = (envaseKey: string) => envaseKey.split("|")[1] ?? envaseKey;
 
 const SearchBarUX = ({
   value,
@@ -57,7 +53,7 @@ const SearchBarUX = ({
 }) => {
   const [focused, setFocused] = useState(false);
   return (
-    <View style={[styles.searchContainer, { borderColor: focused ? "#fd5f81ff" : "#ccc" }]}>
+    <View style={[styles.searchContainer, { borderColor: focused ? PINK : "#ddd" }]}>
       <Ionicons name="search" size={20} color="#999" style={{ marginRight: 8 }} />
       <TextInput
         style={styles.searchInput}
@@ -67,6 +63,7 @@ const SearchBarUX = ({
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         placeholderTextColor="#999"
+        autoCapitalize="none"
       />
     </View>
   );
@@ -77,7 +74,7 @@ export default function Categoria_Gustos() {
   const { pedido } = useLocalSearchParams<{ pedido: string }>();
   const dispatch = useDispatch<AppDispatch>();
 
-  const sabores = useSelector((state: RootState) => state.sabores.items);
+  const sabores = useSelector((state: RootState) => state.sabores.items) as Sabor[];
   const loading = useSelector((state: RootState) => state.sabores.loading);
   const error = useSelector((state: RootState) => state.sabores.error);
   const sucursalId = useSelector((state: RootState) => state.user.sucursalId);
@@ -124,23 +121,18 @@ export default function Categoria_Gustos() {
     if (sucursalId) dispatch(fetchSabores(sucursalId));
   }, [sucursalId]);
 
+  // Agrupar dinámicamente por la sección real del sabor (ya no se adivina por el nombre)
   const grupos = useMemo(() => {
-    const res: Record<Grupo, (Sabor & { label: string })[]> = {
-      Frutales: [],
-      Cremas: [],
-      Chocolates: [],
-      "Dulce de leche": [],
-      Otros: [],
-    };
+    const res: Record<string, (Sabor & { label: string })[]> = {};
     const q = normalize(searchText);
     for (const s of sabores) {
       const label = labelOf(s);
       if (q && !normalize(label).includes(q)) continue;
-      res[grupoDeSabor(label)].push({ ...s, label });
+      const g = s.categoria || "Especiales";
+      if (!res[g]) res[g] = [];
+      res[g].push({ ...s, label });
     }
-    (Object.keys(res) as Grupo[]).forEach(g =>
-      res[g].sort((a, b) => a.label.localeCompare(b.label))
-    );
+    Object.keys(res).forEach(g => res[g].sort((a, b) => a.label.localeCompare(b.label)));
     return res;
   }, [sabores, searchText]);
 
@@ -160,6 +152,11 @@ export default function Categoria_Gustos() {
   };
 
   const handleConfirm = () => {
+    if (seleccionadosActual.length === 0) {
+      Alert.alert("Atención", "Debes seleccionar al menos un gusto.");
+      return;
+    }
+
     if (currentIndex < envases.length - 1) {
       setCurrentIndex(i => i + 1);
     } else {
@@ -170,20 +167,19 @@ export default function Categoria_Gustos() {
   if (loading)
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#fd5f81ff" />
-        <Text style={{ marginTop: 10 }}>Cargando gustos...</Text>
+        <ActivityIndicator size="large" color={PINK} />
+        <Text style={{ marginTop: 10, color: MUTED }}>Cargando gustos...</Text>
       </View>
     );
 
   if (error)
     return (
       <View style={styles.center}>
-        <Text style={{ color: "red", fontSize: 16 }}>{error}</Text>
+        <Text style={{ color: DANGER, fontSize: 16 }}>{error}</Text>
       </View>
     );
 
-  const ordenGrupos: Grupo[] = ["Frutales", "Cremas", "Chocolates", "Dulce de leche", "Otros"];
-  const dataGrupos = ordenGrupos.filter(g => grupos[g].length > 0);
+  const dataGrupos = Object.keys(grupos).sort();
 
   return (
     <ImageBackground
@@ -193,7 +189,7 @@ export default function Categoria_Gustos() {
     >
       <View style={styles.overlay}>
         <ScreenHeader
-          title={`Gustos para ${envaseActual}`}
+          title={`Gustos para ${displayLabel(envaseActual)}`}
           showSearch
           onToggleSearch={() => setShowSearch(prev => !prev)}
         />
@@ -237,15 +233,7 @@ export default function Categoria_Gustos() {
                   options={opciones}
                   selected={seleccionadasGrupo}
                   onSelect={toggleSeleccion}
-                  icon={
-                    grupo === "Frutales"
-                      ? "local-florist"
-                      : grupo === "Chocolates"
-                        ? "cookie"
-                        : grupo === "Dulce de leche"
-                          ? "favorite"
-                          : "icecream"
-                  }
+                  icon={iconForGrupo(grupo)}
                 />
               </View>
             );
@@ -266,19 +254,19 @@ export default function Categoria_Gustos() {
 
 const styles = StyleSheet.create({
   backgroundImage: { flex: 1, width: "100%", height: "100%" },
-  overlay: { flex: 1, padding: 20, backgroundColor: "rgba(255,255,255,0.6)" },
+  overlay: { flex: 1, padding: 20, backgroundColor: "rgba(255,255,255,0.55)" },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   selectionContainer: { marginVertical: 12, alignItems: "center" },
-  selectionLabel: { fontSize: 14, fontWeight: "600", marginBottom: 4, color: "#444" },
+  selectionLabel: { fontSize: 14, fontWeight: "600", marginBottom: 4, color: INK },
   progressBarBackground: {
     width: "80%",
     height: 12,
-    backgroundColor: "#e0e0e0",
+    backgroundColor: "#e8e8ec",
     borderRadius: 6,
     overflow: "hidden",
   },
-  progressBarFill: { height: "100%", backgroundColor: "#fd5f81ff", borderRadius: 6 },
-  selectionCount: { marginTop: 4, fontSize: 12, color: "#555" },
+  progressBarFill: { height: "100%", backgroundColor: PINK, borderRadius: 6 },
+  selectionCount: { marginTop: 4, fontSize: 12, color: MUTED },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -290,9 +278,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     elevation: 2,
   },
-  searchInput: { flex: 1, fontSize: 14, color: "#333" },
+  searchInput: { flex: 1, fontSize: 14, color: INK },
 });

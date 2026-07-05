@@ -1,4 +1,5 @@
 // app/screens/Pedidos_Cliente.tsx
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router"; // 👈 para navegar hacia atrás
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -18,10 +19,13 @@ import {
   View,
 } from "react-native";
 import { useSelector } from "react-redux";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import ActionButton from "../../components/ActionButton";
+import { BORDER, CARD_BG, DANGER, INK, MINT, MUTED, PINK } from "../../constants/brand";
 import type { RootState } from "../../redux/store";
 import { BASE_URL } from "../services/apiConfig";
 
-const ORD_BASE = `${BASE_URL}/api2/ordenes`;
+const ORD_BASE = `${BASE_URL}/api/ordenes`;
 
 const { width, height } = Dimensions.get("window");
 const isSmallScreen = width < 360;
@@ -57,6 +61,7 @@ const nombreSabor = (s?: Sabor | null) => s?.tipoSabor || s?.nombre || s?.id || 
 
 export default function Pedidos_Cliente() {
   const router = useRouter(); // 👈 para volver
+  const insets = useSafeAreaInsets();
   const reduxUserId = useSelector((s: RootState) => s.user.userId) || "";
   const reduxUserName = useSelector((s: RootState) => s.user.nombre) || "";
 
@@ -118,14 +123,17 @@ export default function Pedidos_Cliente() {
     };
   }, [reduxUserId, reduxUserName]);
 
-  /** Obtener órdenes */
+  /** Obtener órdenes (filtradas por usuario en el back, no todas las de la app) */
   const fetchOrdenes = useCallback(async () => {
+    if (!reduxUserId) {
+      setOrdenes([]);
+      return;
+    }
     try {
       setLoading(true);
-      const url = `${ORD_BASE}?take=200&_=${Date.now()}`;
-      console.log("[Pedidos_Cliente] GET", url);
+      const url = `${ORD_BASE}?usuarioId=${encodeURIComponent(reduxUserId)}&take=200&_=${Date.now()}`;
       const r = await fetch(url);
-      if (!r.ok) throw new Error(`GET /api2/ordenes ${r.status}`);
+      if (!r.ok) throw new Error(`GET /api/ordenes ${r.status}`);
       const json: OrdenResumen[] = await r.json();
       setOrdenes(Array.isArray(json) ? json : []);
     } catch (e: any) {
@@ -134,7 +142,7 @@ export default function Pedidos_Cliente() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [reduxUserId]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -186,7 +194,7 @@ export default function Pedidos_Cliente() {
     if (det === "error")
       return (
         <View style={styles.detalleBox}>
-          <Text style={{ color: "#c0392b" }}>No se pudo cargar el detalle.</Text>
+          <Text style={{ color: DANGER }}>No se pudo cargar el detalle.</Text>
         </View>
       );
 
@@ -222,7 +230,7 @@ export default function Pedidos_Cliente() {
       <View style={styles.card}>
         <Pressable style={styles.cardHeader} onPress={() => toggleItem(item.id)}>
           <Text style={styles.cardTitle}>Pedido #{numeroSolo}</Text>
-          <View style={[styles.pill, { backgroundColor: terminado ? "#43a047" : "#f39c12" }]}>
+          <View style={[styles.pill, { backgroundColor: terminado ? MINT : "#f39c12" }]}>
             <Text style={styles.pillText}>{terminado ? "Terminado" : "Pendiente"}</Text>
           </View>
         </Pressable>
@@ -232,9 +240,12 @@ export default function Pedidos_Cliente() {
         <Text style={styles.cardLine}>Sucursal: {nombreSucursal(item.sucursalId)}</Text>
         {renderDetalle(item.id)}
         <Pressable style={styles.verDetalleBtn} onPress={() => toggleItem(item.id)}>
-          <Text style={styles.verDetalleText}>
-            {abierto[item.id] ? "Ocultar detalle ▲" : "Ver detalle ▼"}
-          </Text>
+          <Text style={styles.verDetalleText}>{abierto[item.id] ? "Ocultar detalle" : "Ver detalle"}</Text>
+          <Ionicons
+            name={abierto[item.id] ? "chevron-up" : "chevron-down"}
+            size={16}
+            color={PINK}
+          />
         </Pressable>
       </View>
     );
@@ -247,16 +258,14 @@ return (
     style={styles.backgroundImage}
     resizeMode={isSmallScreen ? "stretch" : "cover"}
   >
-    <View style={styles.overlay}>
+    <View style={[styles.overlay, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 }]}>
       <View style={styles.ticket}>
         <View style={styles.ticketNotch} />
-        <Text style={styles.title}>Mis Pedidos</Text>
-        <Text style={{ textAlign: "center", opacity: 0.5, marginBottom: 8 }}>
-          {displayName || "Usuario"}
-        </Text>
+        <Text style={styles.title}>Mis pedidos</Text>
+        <Text style={styles.subtitle}>{displayName || "Usuario"}</Text>
 
         {loading ? (
-          <ActivityIndicator size="large" />
+          <ActivityIndicator size="large" color={PINK} />
         ) : (
           <FlatList
             data={misOrdenes}
@@ -264,24 +273,17 @@ return (
             renderItem={renderItem}
             contentContainerStyle={{ paddingBottom: 20 }}
             showsVerticalScrollIndicator={false}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={PINK} colors={[PINK]} />}
             ListEmptyComponent={
-              <Text style={styles.emptyText}>No hay pedidos para este usuario.</Text>
+              <Text style={styles.emptyText}>Todavía no hiciste ningún pedido.</Text>
             }
           />
         )}
       </View>
 
-      {/*  Botón abajo del rectángulo crema  onPress={() => router.replace("/cliente_tabs")}*/}
-      <Pressable
-        onPress={() => router.replace("/")}
-        style={({ pressed }) => [
-          styles.backButtonBottom,
-          pressed && { opacity: 0.8 },
-        ]}
-      >
-        <Text style={styles.backText}>⬅️ Volver</Text>
-      </Pressable>
+      <View style={{ width: "60%", marginTop: 14 }}>
+        <ActionButton label="Volver" icon="home-outline" variant="ghost" onPress={() => router.replace("/")} />
+      </View>
     </View>
   </ImageBackground>
 );
@@ -293,66 +295,45 @@ const styles = StyleSheet.create({
   backgroundImage: { flex: 1, width: "100%", height: "100%" },
   overlay: {
     flex: 1,
-    justifyContent: "center",
     alignItems: "center",
     padding: isWeb ? 40 : width * 0.05,
-    backgroundColor: "rgba(255,255,255,0.6)",
+    backgroundColor: "rgba(255,255,255,0.55)",
   },
   ticket: {
     width: "90%",
-    backgroundColor: "#fff8e1",
-    borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.96)",
+    borderRadius: 24,
     padding: isWeb ? 20 : width * 0.05,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
     flex: 1,
   },
-  backButtonBottom: {
-  backgroundColor: "rgba(255, 255, 255, 0.9)",
-  paddingVertical: 10,
-  paddingHorizontal: 22,
-  borderRadius: 25,
-  marginTop: 15,
-  alignSelf: "center",
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.2,
-  shadowRadius: 4,
-  elevation: 3,
-},
-backText: {
-  color: "#000000",
-  fontWeight: "bold",
-  fontSize: isWeb ? 14 : width * 0.04,
-},
-
   ticketNotch: {
     width: isWeb ? 40 : width * 0.12,
     height: isWeb ? 5 : 4,
-    backgroundColor: "#ffd54f",
+    backgroundColor: "#e0e0e6",
     borderRadius: 3,
     alignSelf: "center",
     marginBottom: 16,
   },
   title: {
     fontSize: isWeb ? 22 : width * 0.055,
-    fontWeight: "bold",
+    fontWeight: "800",
     textAlign: "center",
-    marginBottom: 6,
+    marginBottom: 2,
+    color: INK,
   },
+  subtitle: { textAlign: "center", color: MUTED, marginBottom: 8, fontSize: 13 },
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
+    backgroundColor: CARD_BG,
+    borderRadius: 16,
     padding: isWeb ? 16 : width * 0.04,
     marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 3,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: BORDER,
   },
   cardHeader: {
     flexDirection: "row",
@@ -360,16 +341,16 @@ backText: {
     alignItems: "center",
     marginBottom: 6,
   },
-  cardTitle: { fontSize: isWeb ? 18 : width * 0.045, fontWeight: "bold" },
+  cardTitle: { fontSize: isWeb ? 18 : width * 0.045, fontWeight: "700", color: INK },
   pill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
-  pillText: { color: "#fff", fontWeight: "bold" },
-  cardLine: { fontSize: isWeb ? 14 : width * 0.038, marginBottom: 2 },
-  verDetalleBtn: { marginTop: 8 },
-  verDetalleText: { fontWeight: "600", textAlign: "right" },
-  emptyText: { textAlign: "center", opacity: 0.7, marginTop: 24 },
+  pillText: { color: "#fff", fontWeight: "700", fontSize: 12 },
+  cardLine: { fontSize: isWeb ? 14 : width * 0.038, marginBottom: 2, color: MUTED },
+  verDetalleBtn: { marginTop: 8, flexDirection: "row", justifyContent: "flex-end", alignItems: "center", gap: 4 },
+  verDetalleText: { fontWeight: "600", color: PINK, fontSize: 13 },
+  emptyText: { textAlign: "center", color: MUTED, marginTop: 24 },
   detalleBox: {
-    backgroundColor: "#fffaf0",
-    borderRadius: 10,
+    backgroundColor: "#faf8fb",
+    borderRadius: 12,
     padding: isWeb ? 12 : width * 0.035,
     marginTop: 8,
   },
@@ -378,7 +359,9 @@ backText: {
     borderRadius: 10,
     padding: isWeb ? 10 : width * 0.03,
     marginBottom: 6,
+    borderWidth: 1,
+    borderColor: BORDER,
   },
-  itemLine: { fontSize: isWeb ? 15 : width * 0.038 },
-  detalleLine: { marginBottom: 6, fontSize: isWeb ? 15 : width * 0.038 },
+  itemLine: { fontSize: isWeb ? 15 : width * 0.038, color: INK },
+  detalleLine: { marginBottom: 6, fontSize: isWeb ? 15 : width * 0.038, color: MUTED },
 });
