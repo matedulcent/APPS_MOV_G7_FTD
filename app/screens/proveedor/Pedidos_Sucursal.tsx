@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -13,6 +14,7 @@ import {
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { MINT } from "../../../constants/brand";
 import type { RootState } from "../../../redux/store";
 import { LOG_OUT } from "../../../redux/types/userTypes";
 import { BASE_URL } from "./../../services/apiConfig";
@@ -225,6 +227,13 @@ export default function Pedidos_Sucursal() {
     router.replace("/");
   };
 
+  const handleMostrarQR = () => {
+    router.push({
+      pathname: "/screens/proveedor/MostrarQR",
+      params: { sucursalId, nombre: heladeriaNombre },
+    });
+  };
+
   if (loading) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
@@ -236,11 +245,33 @@ export default function Pedidos_Sucursal() {
 
   return (
     <View style={{ flex: 1, padding: 16, paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 }}>
-      <View style={{ alignItems: "center", marginBottom: 16 , flexDirection: "row", justifyContent: "space-between" }}>
-        <Text style={{ fontSize: 20, fontWeight: "900" }}>
-          {heladeriaNombre}
+      <View style={{ marginBottom: 16 }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          <Text style={{ fontSize: 20, fontWeight: "900", flexShrink: 1 }} numberOfLines={1}>
+            {heladeriaNombre}
+          </Text>
+          <Pressable
+            onPress={handleMostrarQR}
+            style={({ pressed }) => [
+              {
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+                paddingVertical: 8,
+                paddingHorizontal: 12,
+                borderRadius: 20,
+                backgroundColor: MINT,
+              },
+              pressed && { opacity: 0.85 },
+            ]}
+          >
+            <Ionicons name="qr-code-outline" size={16} color="#fff" />
+            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>Mostrar QR</Text>
+          </Pressable>
+        </View>
+        <Text style={{ fontSize: 22, fontWeight: "700", textAlign: "center", marginTop: 8 }}>
+          Pedidos
         </Text>
-        <Text style={{ fontSize: 22, fontWeight: "700" }}>Pedidos</Text>
       </View>
 
       {pedidosVisibles.length === 0 ? (

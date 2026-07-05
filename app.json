@@ -40,7 +40,13 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Permitir a $(PRODUCT_NAME) usar la cámara para escanear el QR de la sucursal."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

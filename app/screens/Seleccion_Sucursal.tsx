@@ -13,8 +13,9 @@ import {
   View,
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
+import ActionButton from "../../components/ActionButton";
 import ScreenHeader from "../../components/ScreenHeader";
-import { BORDER, CARD_BG, DANGER, INK, MUTED, PINK } from "../../constants/brand";
+import { BORDER, CARD_BG, DANGER, INK, MINT, MUTED, PINK } from "../../constants/brand";
 import { setSucursal } from "../../redux/actions/userActions"; // <--- acción Redux
 import type { RootState } from "../../redux/store";
 import { BASE_URL } from "../services/apiConfig";
@@ -112,6 +113,15 @@ export default function SeleccionSucursalScreen() {
     >
       <View style={styles.overlay}>
         <ScreenHeader title="Elegí tu heladería" />
+
+        <View style={{ marginBottom: 14 }}>
+          <ActionButton
+            label="Escanear QR"
+            icon="qr-code-outline"
+            color={MINT}
+            onPress={() => router.push("/screens/EscanearQR")}
+          />
+        </View>
 
         {loading && (
           <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingTop: 20 }}>
