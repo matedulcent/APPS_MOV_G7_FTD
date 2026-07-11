@@ -24,6 +24,7 @@ import ActionButton from "../../components/ActionButton";
 import { BORDER, CARD_BG, DANGER, INK, MINT, MUTED, PINK } from "../../constants/brand";
 import type { RootState } from "../../redux/store";
 import { BASE_URL } from "../services/apiConfig";
+import { agruparContenidos, colorDeGrupo, type EnvaseLike, type SaborLike } from "../services/agruparContenidos";
 
 const ORD_BASE = `${BASE_URL}/api/ordenes`;
 
@@ -44,7 +45,7 @@ type OrdenResumen = {
 };
 type Envase = { id: string; tipoEnvase?: string | null; nombre?: string | null };
 type Sabor = { id: string; tipoSabor?: string | null; nombre?: string | null };
-type Contenido = { id?: number | string; envase: Envase | null; sabor: Sabor | null };
+type Contenido = { id?: number | string; grupo?: number | null; envase: Envase | null; sabor: Sabor | null };
 type OrdenDetalle = {
   id: string;
   fecha: string | null;
@@ -56,8 +57,8 @@ type OrdenDetalle = {
 type SucursalLite = { id: string; nombre?: string | null; domicilio?: string | null };
 type UsuarioLite = { id: string; nombre?: string | null; mail?: string | null };
 
-const nombreEnvase = (e?: Envase | null) => e?.tipoEnvase || e?.nombre || e?.id || "—";
-const nombreSabor = (s?: Sabor | null) => s?.tipoSabor || s?.nombre || s?.id || "—";
+const nombreEnvase = (e?: EnvaseLike) => e?.tipoEnvase || e?.nombre || e?.id || "—";
+const nombreSabor = (s?: SaborLike) => s?.tipoSabor || s?.nombre || s?.id || "—";
 
 export default function Pedidos_Cliente() {
   const router = useRouter(); // 👈 para volver
@@ -207,12 +208,31 @@ export default function Pedidos_Cliente() {
         <Text style={styles.detalleLine}>Sucursal: {nombreSucursal(det.sucursalId)}</Text>
         <ScrollView style={{ maxHeight: height * 0.25 }}>
           {det.contenidos?.length ? (
-            det.contenidos.map((c, idx) => (
-              <View key={String(c.id ?? idx)} style={styles.itemBox}>
-                <Text style={styles.itemLine}>Envase: {nombreEnvase(c.envase)}</Text>
-                <Text style={styles.itemLine}>Sabor: {nombreSabor(c.sabor)}</Text>
-              </View>
-            ))
+            agruparContenidos(det.contenidos).map((g, i) => {
+              const color = colorDeGrupo(i);
+              return (
+                <View
+                  key={g.key}
+                  style={[
+                    styles.itemBox,
+                    { borderColor: color.border, backgroundColor: color.bg, padding: 0, overflow: "hidden" },
+                  ]}
+                >
+                  <View style={{ paddingVertical: 6, paddingHorizontal: 10, backgroundColor: color.border }}>
+                    <Text style={{ fontWeight: "800", color: "#fff" }}>
+                      {nombreEnvase(g.envase)} #{i + 1}
+                    </Text>
+                  </View>
+                  <View style={{ paddingVertical: 6, paddingHorizontal: 10 }}>
+                    {g.sabores.map((s, si) => (
+                      <Text key={si} style={{ fontSize: 14, color: color.texto, fontWeight: "600" }}>
+                        🍦 {nombreSabor(s)}
+                      </Text>
+                    ))}
+                  </View>
+                </View>
+              );
+            })
           ) : (
             <Text style={{ opacity: 0.6 }}>Sin contenidos.</Text>
           )}

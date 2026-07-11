@@ -18,11 +18,12 @@ import { MINT } from "../../../constants/brand";
 import type { RootState } from "../../../redux/store";
 import { LOG_OUT } from "../../../redux/types/userTypes";
 import { BASE_URL } from "./../../services/apiConfig";
+import { agruparContenidos, colorDeGrupo } from "../../services/agruparContenidos";
 
 type Sucursal = { id: string; nombre: string; };
 type Envase = { id: string; tipoEnvase: string; maxCantSabores: number };
 type Sabor = { id: string; tipoSabor: string };
-type Contenido = { id: number; envase: Envase | null; sabor: Sabor | null };
+type Contenido = { id: number; grupo?: number | null; envase: Envase | null; sabor: Sabor | null };
 
 type OrdenLite = {
   id: string;
@@ -339,27 +340,41 @@ export default function Pedidos_Sucursal() {
                     <Text style={{ opacity: 0.7, marginBottom: 8 }}>{fecha}</Text>
 
                     {item.contenidos?.length ? (
-                      item.contenidos.map((c) => (
-                        <View
-                          key={c.id}
-                          style={{
-                            paddingVertical: 6,
-                            paddingHorizontal: 8,
-                            borderRadius: 10,
-                            borderWidth: 1,
-                            borderColor: "#e6e6e6",
-                            backgroundColor: "#f9fbff",
-                            marginBottom: 6,
-                          }}
-                        >
-                          <Text style={{ fontWeight: "700" }}>
-                            {c.envase?.tipoEnvase?.replaceAll("_", " ") ?? "Envase"}
-                          </Text>
-                          <Text style={{ opacity: 0.75, fontSize: 12 }}>
-                            Sabor: {c.sabor?.tipoSabor ?? "—"}
-                          </Text>
-                        </View>
-                      ))
+                      agruparContenidos(item.contenidos).map((g, i) => {
+                        const color = colorDeGrupo(i);
+                        return (
+                          <View
+                            key={g.key}
+                            style={{
+                              borderRadius: 10,
+                              borderWidth: 1.5,
+                              borderColor: color.border,
+                              backgroundColor: color.bg,
+                              marginBottom: 8,
+                              overflow: "hidden",
+                            }}
+                          >
+                            <View
+                              style={{
+                                paddingVertical: 6,
+                                paddingHorizontal: 10,
+                                backgroundColor: color.border,
+                              }}
+                            >
+                              <Text style={{ fontWeight: "800", color: "#fff" }}>
+                                {g.envase?.tipoEnvase?.replaceAll("_", " ") ?? "Envase"} #{i + 1}
+                              </Text>
+                            </View>
+                            <View style={{ paddingVertical: 6, paddingHorizontal: 10 }}>
+                              {g.sabores.map((s, si) => (
+                                <Text key={si} style={{ fontSize: 13, color: color.texto, fontWeight: "600" }}>
+                                  🍦 {s?.tipoSabor ?? "—"}
+                                </Text>
+                              ))}
+                            </View>
+                          </View>
+                        );
+                      })
                     ) : (
                       <Text style={{ opacity: 0.6 }}>Sin contenidos.</Text>
                     )}

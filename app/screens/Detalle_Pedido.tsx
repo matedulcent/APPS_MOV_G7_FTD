@@ -26,12 +26,12 @@ const { width, height } = Dimensions.get("window");
 const isSmallScreen = width < 360;
 const isWeb = Platform.OS === "web";
 
-type PedidoItem = { envaseId: string; saborId: string };
+type PedidoItem = { envaseId: string; saborId: string; grupo: number };
 
 async function crearOrden(payload: {
   usuarioId: string;
   sucursalId: string;
-  items: { envaseId: string; saborId: string }[];
+  items: PedidoItem[];
 }) {
   const url = `${BASE_URL}/api/ordenes`;
   console.log("[crearOrden] POST", url, payload);
@@ -161,13 +161,17 @@ export default function DetallePedidoScreen() {
       // obtener los mapas dinámicos de envases y sabores desde el backend
       const [envasesMap, saboresMap] = await Promise.all([getEnvasesMap(), getSaboresMap()]);
 
-      for (const [envaseKey, gustos] of Object.entries(pedidoObj)) {
+      // Cada entrada de pedidoObj es un envase físico distinto del pedido (p. ej.
+      // "Kilo 1" y "Kilo 2" son entradas separadas aunque sean el mismo tipo de
+      // envase). Le asignamos un número de grupo para que el back y la heladería
+      // puedan reconstruir qué gustos van juntos en cada envase.
+      Object.entries(pedidoObj).forEach(([envaseKey, gustos], grupo) => {
         // envaseKey viene como "tipoEnvase|Label lindo (#N)"
         const [tipoEnvase, labelLindo] = envaseKey.split("|");
         const envaseId = envasesMap[tipoEnvase.trim().toLowerCase()] || null;
         if (!envaseId) {
           envasesSinMapeo.push(labelLindo ?? envaseKey);
-          continue;
+          return;
         }
         for (const g of gustos) {
           const saborId = saboresMap[g.trim().toLowerCase()] || null;
@@ -176,9 +180,9 @@ export default function DetallePedidoScreen() {
             saboresSinMapeo.push(g);
             continue;
           }
-          items.push({ envaseId, saborId });
+          items.push({ envaseId, saborId, grupo });
         }
-      }
+      });
 
       if (envasesSinMapeo.length) {
         Alert.alert("Envases no reconocidos", `No se pudieron mapear: ${envasesSinMapeo.join(", ")}`);

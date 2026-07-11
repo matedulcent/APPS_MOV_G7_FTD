@@ -41,6 +41,7 @@ En otra terminal:
 ```bash
 cd APPS_MOV_G7_FTD
 npm install
+cp .env.example .env   # y editar EXPO_PUBLIC_LOCAL_IP con tu IP (ver más abajo)
 npx expo start
 ```
 
@@ -75,7 +76,13 @@ npm install
 
 ## Configurar la IP del backend
 
-El archivo [`app/services/apiConfig.ts`](app/services/apiConfig.ts) tiene una constante `LOCAL_IP` hardcodeada que apunta a la IP de la PC donde corre el backend (no hay descubrimiento automático). **Antes de correr la app**, revisá que esa IP sea la de tu máquina en la red local:
+La IP de la PC donde corre el backend se lee desde un archivo `.env` en la raíz del proyecto (no se versiona, cada uno pone la suya). **Antes de correr la app**, creá ese archivo copiando el ejemplo:
+
+```bash
+cp .env.example .env
+```
+
+y buscá tu IP de LAN:
 
 ```bash
 # Windows
@@ -83,13 +90,15 @@ ipconfig
 # buscar "Dirección IPv4" de tu adaptador Wi-Fi/Ethernet
 ```
 
-y actualizá la línea correspondiente en `apiConfig.ts`:
+Editá `.env` con esa IP:
 
-```ts
-const LOCAL_IP = "TU_IP_AQUI";
+```
+EXPO_PUBLIC_LOCAL_IP=TU_IP_AQUI
 ```
 
-Si vas a correr solo con `--web` en la misma PC, `localhost` también funciona, pero para emulador Android o celular físico hace falta la IP de LAN.
+Expo carga automáticamente las variables `EXPO_PUBLIC_*` del `.env` (no hace falta ninguna librería extra). Si cambiás el valor con Metro ya corriendo, reiniciá `expo start` para que lo tome.
+
+Si vas a correr solo con `--web` en la misma PC, `localhost` también funciona, pero para emulador Android o celular físico hace falta la IP de LAN. Sin este archivo `.env` la app no arranca: [`apiConfig.ts`](app/services/apiConfig.ts) tira un error explícito pidiéndolo.
 
 ## Ver los datos de la base a medida que probás
 

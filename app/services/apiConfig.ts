@@ -1,42 +1,17 @@
 // src/config/apiConfig.ts
 import { Platform } from "react-native";
-//   ________________________________________
-//  /                                        \
-// | POR FAVOR CAMBIAR ESTA IP A LA DE SU PC |
-// \________________________________________/
-//                    █
-//                    █
-//                    █
-//                    █
-//                    █
-//                    █
-//                    █
-//               _____█______
-//               \         /
-//                \       /
-//                 \     /
-//                  \   /
-//                   \ /
-//                    ▼
 
-//const LOCAL_IP = "192.168.0.158"; //Tobio
-//const LOCAL_IP = "172.29.159.108"; //Santi
-//const LOCAL_IP = "192.168.68.118"; //Mateo (IP vieja)
-const LOCAL_IP = "192.168.68.113"; //IP actual de esta PC
-//                    ▲
-//                   / \
-//                  /   \
-//                 /     \
-//                /       \
-//               /         \
-//              / __________\
-//                    █
-//                    █
-//                    █
-//                    █
-//                    █
-//                    █
-//                    █
+// IP de la PC donde corre el backend. Se define en el archivo .env
+// (no versionado) como EXPO_PUBLIC_LOCAL_IP. Ver .env.example y el README.
+const LOCAL_IP = process.env.EXPO_PUBLIC_LOCAL_IP;
+
+if (!LOCAL_IP) {
+    throw new Error(
+        "Falta EXPO_PUBLIC_LOCAL_IP. Creá un archivo .env en la raíz del proyecto " +
+            "(podés copiar .env.example) con la IP de tu PC en la red local."
+    );
+}
+
 const PORT = 3001;
 
 export const BASE_URL =
