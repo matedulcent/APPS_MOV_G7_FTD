@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Dimensions,
   Image,
@@ -19,8 +19,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ActionButton from "../../components/ActionButton";
 import PasswordInput from "../../components/PasswordInput";
 import { BORDER, CARD_BG, DANGER, INK, MINT, MUTED } from "../../constants/brand";
-import { parseApiError } from "../services/apiError";
 import { BASE_URL } from "../services/apiConfig";
+import { parseApiError } from "../services/apiError";
 
 const { width } = Dimensions.get("window");
 const isSmallScreen = width < 400;
@@ -36,24 +36,55 @@ type Errors = Partial<{
 }>;
 
 async function subirImagen(uri: string): Promise<string> {
-  const nombreArchivo = uri.split("/").pop() || "foto.jpg";
-  const ext = (nombreArchivo.split(".").pop() || "jpg").toLowerCase();
+  const nombreArchivo =
+    uri.split("/").pop()?.split("?")[0] || "foto.jpg";
+
+  const extension =
+    nombreArchivo.split(".").pop()?.toLowerCase() || "jpg";
+
+  const tipoMime =
+    extension === "jpg" || extension === "jpeg"
+      ? "image/jpeg"
+      : `image/${extension}`;
 
   const form = new FormData();
-  form.append("imagen", {
-    uri,
-    name: nombreArchivo,
-    type: `image/${ext === "jpg" ? "jpeg" : ext}`,
-  } as any);
+
+  if (Platform.OS === "web") {
+    const respuestaImagen = await fetch(uri);
+
+    if (!respuestaImagen.ok) {
+      throw new Error("No se pudo leer la imagen seleccionada");
+    }
+
+    const blob = await respuestaImagen.blob();
+
+    form.append("imagen", blob, nombreArchivo);
+  } else {
+    form.append(
+      "imagen",
+      {
+        uri,
+        name: nombreArchivo,
+        type: tipoMime,
+      } as any
+    );
+  }
 
   const r = await fetch(`${BASE_URL}/api/upload`, {
     method: "POST",
     body: form,
-    headers: { Accept: "application/json" },
+    headers: {
+      Accept: "application/json",
+    },
   });
+
   const data = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(data?.error || "No se pudo subir la imagen");
-  return data.url as string; // ruta relativa, ej: /uploads/xxx.jpg
+
+  if (!r.ok) {
+    throw new Error(data?.error || "No se pudo subir la imagen");
+  }
+
+  return data.url as string;
 }
 
 export default function RegistroVendedor() {
